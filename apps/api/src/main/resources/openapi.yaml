@@ -1,0 +1,444 @@
+openapi: 3.0.3
+info:
+  title: FSP Career API
+  version: 2.0.0
+  description: >-
+    JSON API. Every /api route requires a valid Keycloak access token with issuer
+    KEYCLOAK_ISSUER, audience KEYCLOAK_AUDIENCE, and candidate or employer realm/client role.
+    Accounts belong to one application role. Employer role takes precedence when both
+    appear in a token. Errors have the same JSON shape at every API endpoint.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  parameters:
+    InvitationId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: {type: string}
+    Health:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [ok]}
+    CvEntry:
+      type: object
+      properties:
+        company: {type: string, maxLength: 200}
+        role: {type: string, maxLength: 200}
+        startDate: {type: string, maxLength: 30}
+        endDate: {type: string, maxLength: 30}
+        description: {type: string, maxLength: 2000}
+    Candidate:
+      type: object
+      properties:
+        fullName: {type: string, maxLength: 200}
+        email: {type: string, description: Verified Keycloak email only; supplied values must match verified claim}
+        phone: {type: string, maxLength: 50}
+        processingConsent: {type: boolean, description: Required true for profile update, assessment and resume upload}
+        consentPublication: {type: boolean, description: Independent opt-in for employer discoverability}
+        specialization: {type: string, maxLength: 100}
+        industry: {type: string, maxLength: 100}
+        desiredGrade: {type: string, enum: [junior, middle, senior]}
+        grade: {type: string, nullable: true, readOnly: true, enum: [junior, middle, senior]}
+        score: {type: integer, nullable: true, readOnly: true, minimum: 0, maximum: 100}
+        techStack: {type: array, maxItems: 30, items: {type: string, maxLength: 100}}
+        experience: {type: string, maxLength: 4000}
+        softSkills: {type: array, maxItems: 30, items: {type: string, maxLength: 100}}
+        targetRoles: {type: array, maxItems: 30, items: {type: string, maxLength: 100}}
+        cvHistory: {type: array, maxItems: 20, items: {$ref: '#/components/schemas/CvEntry'}}
+    ResumeFields:
+      type: object
+      properties:
+        fullName: {type: string}
+        email: {type: string, description: Unverified suggestion; never applied as profile email}
+        phone: {type: string}
+        experience: {type: string}
+        techStack: {type: array, items: {type: string}}
+        softSkills: {type: array, items: {type: string}}
+        targetRoles: {type: array, items: {type: string}}
+        cvHistory: {type: array, items: {$ref: '#/components/schemas/CvEntry'}}
+    ResumeDraft:
+      type: object
+      required: [draftId, parsedFields, reviewed]
+      properties:
+        draftId: {type: string, format: uuid}
+        parsedFields: {$ref: '#/components/schemas/ResumeFields'}
+        reviewed: {type: boolean, enum: [false]}
+    ConfirmResume:
+      type: object
+      required: [draftId]
+      properties:
+        draftId: {type: string, format: uuid}
+        fullName: {type: string, maxLength: 200}
+        phone: {type: string, maxLength: 50}
+        experience: {type: string, maxLength: 4000}
+        techStack: {type: array, items: {type: string}}
+        softSkills: {type: array, items: {type: string}}
+        targetRoles: {type: array, items: {type: string}}
+        cvHistory: {type: array, items: {$ref: '#/components/schemas/CvEntry'}}
+    Option:
+      type: object
+      required: [id, label]
+      properties:
+        id: {type: string}
+        label: {type: string}
+    Question:
+      type: object
+      required: [id, prompt, options]
+      description: Correct answer is never included in API responses.
+      properties:
+        id: {type: integer, format: int64}
+        prompt: {type: string}
+        options: {type: array, items: {$ref: '#/components/schemas/Option'}}
+    QuestionSet:
+      type: object
+      required: [attemptId, questions, expiresAt]
+      properties:
+        attemptId: {type: string, format: uuid}
+        questions: {type: array, minItems: 5, maxItems: 5, items: {$ref: '#/components/schemas/Question'}}
+        expiresAt: {type: string, format: date-time}
+    Answer:
+      type: object
+      required: [questionId, optionId]
+      properties:
+        questionId: {type: integer, format: int64}
+        optionId: {type: string}
+    Submission:
+      type: object
+      required: [attemptId, answers]
+      properties:
+        attemptId: {type: string, format: uuid}
+        answers: {type: array, minItems: 5, maxItems: 5, items: {$ref: '#/components/schemas/Answer'}}
+    AssessmentResult:
+      type: object
+      required: [score, grade, specialization, submittedAt]
+      properties:
+        score: {type: integer, minimum: 0, maximum: 100}
+        grade: {type: string, enum: [junior, middle, senior]}
+        specialization: {type: string}
+        submittedAt: {type: string, format: date-time}
+    AssessmentHistory:
+      type: object
+      required: [results]
+      properties:
+        results: {type: array, items: {$ref: '#/components/schemas/AssessmentResult'}}
+    Company:
+      type: object
+      properties:
+        name: {type: string, maxLength: 200}
+        description: {type: string, maxLength: 2000}
+        website: {type: string, maxLength: 500}
+    Need:
+      type: object
+      properties:
+        specialization: {type: string, maxLength: 100}
+        industry: {type: string, maxLength: 100}
+        minGrade: {type: string, enum: [junior, middle, senior]}
+        description: {type: string, maxLength: 2000}
+    Achievement:
+      type: object
+      required: [title, issuer, points]
+      description: Server-side verified achievement; users cannot submit these through the API.
+      properties:
+        title: {type: string}
+        issuer: {type: string}
+        points: {type: integer, minimum: 1, maximum: 20}
+    Match:
+      type: object
+      required: [candidateId, fullName, specialization, grade, score, achievementScore, totalScore, explanation, achievements, techStack]
+      properties:
+        candidateId: {type: string, format: uuid}
+        fullName: {type: string}
+        specialization: {type: string}
+        grade: {type: string, enum: [junior, middle, senior]}
+        score: {type: integer}
+        achievementScore: {type: integer, description: Capped at 20}
+        totalScore: {type: integer, description: Assessment + verified achievement bonus + industry match bonus}
+        explanation: {type: string}
+        achievements: {type: array, items: {$ref: '#/components/schemas/Achievement'}}
+        techStack: {type: array, items: {type: string}, description: Self-reported skills; never contribute ranking points}
+    Matches:
+      type: object
+      required: [matches]
+      properties:
+        matches: {type: array, items: {$ref: '#/components/schemas/Match'}}
+    InviteRequest:
+      type: object
+      required: [candidateId, description, salaryMinRub, salaryMaxRub]
+      properties:
+        candidateId: {type: string, format: uuid}
+        description: {type: string, minLength: 1, maxLength: 4000}
+        salaryMinRub: {type: integer, minimum: 1}
+        salaryMaxRub: {type: integer, minimum: 1, description: Must be at least salaryMinRub}
+    Invitation:
+      type: object
+      required: [id, candidateId, employerId, description, salaryMinRub, salaryMaxRub, status, createdAt, companyName, candidateName]
+      properties:
+        id: {type: string, format: uuid}
+        candidateId: {type: string, format: uuid}
+        employerId: {type: string, format: uuid}
+        description: {type: string}
+        salaryMinRub: {type: integer}
+        salaryMaxRub: {type: integer}
+        status: {type: string, enum: [sent, viewed, accepted, rejected]}
+        createdAt: {type: string, format: date-time}
+        companyName: {type: string}
+        candidateName: {type: string}
+        contactEmail: {type: string, nullable: true, description: Null until candidate accepts}
+        contactPhone: {type: string, nullable: true, description: Null until candidate accepts}
+    Invitations:
+      type: object
+      required: [invitations]
+      properties:
+        invitations: {type: array, items: {$ref: '#/components/schemas/Invitation'}}
+  responses:
+    BadRequest:
+      description: Malformed JSON, invalid fields, missing consent, or invalid PDF.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    Unauthorized:
+      description: Missing, expired, invalid-signature, or incorrect-audience bearer token.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    Forbidden:
+      description: Insufficient role or candidate processing consent.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    NotFound:
+      description: Resource does not exist or is not owned by this principal.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    Conflict:
+      description: Retake cooldown, expired attempt, or invalid invitation status transition.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+    InternalError:
+      description: Unexpected server failure.
+      content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
+paths:
+  /health:
+    get:
+      summary: Public process liveness check
+      security: []
+      responses:
+        '200': {description: Alive, content: {application/json: {schema: {$ref: '#/components/schemas/Health'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /openapi.yaml:
+    get:
+      summary: Public OpenAPI 3 specification
+      security: []
+      responses:
+        '200': {description: YAML specification, content: {application/yaml: {schema: {type: string}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me:
+    get:
+      summary: Read own candidate profile (candidate role)
+      responses:
+        '200': {description: Profile, content: {application/json: {schema: {$ref: '#/components/schemas/Candidate'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    put:
+      summary: Update own profile with processingConsent true; publication consent is independent
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Candidate'}}}}
+      responses:
+        '200': {description: Updated profile, content: {application/json: {schema: {$ref: '#/components/schemas/Candidate'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/consent:
+    delete:
+      summary: Revoke processing and erase own profile, assessment answers, drafts, achievements and invitations
+      description: The blank account remains and can opt in again through PUT /api/candidates/me.
+      responses:
+        '200': {description: Cleared profile, content: {application/json: {schema: {$ref: '#/components/schemas/Candidate'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/resume.pdf:
+    get:
+      summary: Download own standardized branded PDF resume (candidate role)
+      description: Requires processing consent and nonblank fullName; generated on demand without persisting PDF. Unicode font is bundled.
+      responses:
+        '200':
+          description: Downloadable PDF resume
+          headers:
+            Content-Disposition: {schema: {type: string}, description: 'attachment; filename="fsp-resume.pdf"'}
+          content:
+            application/pdf:
+              schema: {type: string, format: binary}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/resume-upload:
+    post:
+      summary: Extract review-only suggestions from text-based PDF (candidate role, processing consent required)
+      description: Exactly one file part named file; at most 5 MB and 30 readable pages. No PDF file persists.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: {type: string, format: binary}
+      responses:
+        '201': {description: Unreviewed draft, content: {application/json: {schema: {$ref: '#/components/schemas/ResumeDraft'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/resume-confirm:
+    post:
+      summary: Explicitly review/edit draft fields and save profile; verified email and publication consent stay unchanged
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ConfirmResume'}}}}
+      responses:
+        '200': {description: Updated profile, content: {application/json: {schema: {$ref: '#/components/schemas/Candidate'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/assessments/history:
+    get:
+      summary: Own submitted assessment results, newest first (candidate role)
+      responses:
+        '200': {description: Results, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentHistory'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/assessments/questions:
+    get:
+      summary: Begin or resume random five-question assessment (candidate role)
+      description: Three specialty and two general questions for known specialties; otherwise five general. Attempt expires in 30 minutes. Completed assessments impose a 90-day cooldown.
+      responses:
+        '200': {description: Questions without answer key, content: {application/json: {schema: {$ref: '#/components/schemas/QuestionSet'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/assessments:
+    post:
+      summary: Submit complete answer set (candidate role); grade in same specialization cannot decrease
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Submission'}}}}
+      responses:
+        '201': {description: Assessed result, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentResult'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/company:
+    get:
+      summary: Read own employer company (employer role)
+      responses:
+        '200': {description: Company, content: {application/json: {schema: {$ref: '#/components/schemas/Company'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    put:
+      summary: Update own employer company (employer role)
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Company'}}}}
+      responses:
+        '200': {description: Updated company, content: {application/json: {schema: {$ref: '#/components/schemas/Company'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/needs:
+    get:
+      summary: Read own hiring needs (employer role)
+      responses:
+        '200': {description: Hiring needs, content: {application/json: {schema: {$ref: '#/components/schemas/Need'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    put:
+      summary: Update own hiring needs (employer role)
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Need'}}}}
+      responses:
+        '200': {description: Updated hiring needs, content: {application/json: {schema: {$ref: '#/components/schemas/Need'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/matches:
+    get:
+      summary: Search published, assessed candidates (employer role)
+      description: Ranked by assessment score + capped verified achievement points (20) + industry match (5). Self-reported skills only filter.
+      parameters:
+        - {in: query, name: specialization, schema: {type: string}, description: Defaults to employer need specialization}
+        - {in: query, name: grade, schema: {type: string, enum: [junior, middle, senior]}, description: Minimum grade; defaults to employer need}
+        - {in: query, name: techStack, schema: {type: string}, description: Comma-separated case-insensitive skills; all must match}
+        - {in: query, name: verifiedAchievements, schema: {type: boolean}, description: True requires at least one verified achievement}
+      responses:
+        '200': {description: Ranked matches, content: {application/json: {schema: {$ref: '#/components/schemas/Matches'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/invitations:
+    get:
+      summary: List own role's invitations (candidate or employer)
+      responses:
+        '200': {description: Invitations, content: {application/json: {schema: {$ref: '#/components/schemas/Invitations'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      summary: Send invitation to published candidate with mandatory RUB salary range (employer role)
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/InviteRequest'}}}}
+      responses:
+        '201': {description: Sent invitation, content: {application/json: {schema: {$ref: '#/components/schemas/Invitation'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/invitations/{id}/view:
+    post:
+      summary: Invited candidate marks sent invitation viewed
+      parameters: [{$ref: '#/components/parameters/InvitationId'}]
+      responses:
+        '200': {description: Viewed invitation, content: {application/json: {schema: {$ref: '#/components/schemas/Invitation'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/invitations/{id}/accept:
+    post:
+      summary: Invited candidate accepts sent/viewed invitation; contact disclosure begins
+      parameters: [{$ref: '#/components/parameters/InvitationId'}]
+      responses:
+        '200': {description: Accepted invitation, content: {application/json: {schema: {$ref: '#/components/schemas/Invitation'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/invitations/{id}/reject:
+    post:
+      summary: Invited candidate rejects sent/viewed invitation
+      parameters: [{$ref: '#/components/parameters/InvitationId'}]
+      responses:
+        '200': {description: Rejected invitation, content: {application/json: {schema: {$ref: '#/components/schemas/Invitation'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}

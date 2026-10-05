@@ -1,0 +1,15 @@
+# Local credentials and machine-specific configuration
+.env
+.env.*
+!.env.example
+
+# Generated data / editor noise
+.DS_Store
+.idea/
+.vscode/
+*.iml
+**/build/
+**/.gradle/
+**/node_modules/
+**/dist/
+**/.svelte-kit/

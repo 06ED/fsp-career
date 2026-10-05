@@ -1,6 +1,7 @@
 <script lang="ts">
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import type {
     Role,
     Profile,
@@ -55,9 +56,9 @@
     </p>
     <div {...sx(s.inline)}>
       <button {...sx(s.button)} onclick={() => openSection("profile")}
-        >Заполнить профиль ↗</button
+        >Заполнить профиль <ActionIcon name="arrow" /></button
       ><button {...sx(s.outline)} onclick={() => openSection("assessment")}
-        >Перейти к оценке</button
+        >Перейти к оценке <ActionIcon name="assessment" /></button
       >
     </div>
   </div>
@@ -95,9 +96,9 @@
     </p>
     <div {...sx(s.inline)}>
       <button {...sx(s.button)} onclick={() => openSection("needs")}
-        >Описать потребность ↗</button
+        >Описать потребность <ActionIcon name="need" /></button
       ><button {...sx(s.outline)} onclick={() => openSection("matches")}
-        >Смотреть подборку</button
+        >Смотреть подборку <ActionIcon name="matches" /></button
       >
     </div>
   </div>

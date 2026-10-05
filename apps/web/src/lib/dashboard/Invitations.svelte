@@ -1,6 +1,7 @@
 <script lang="ts">
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import type { Invitation, InvitationStatusAction, Role } from "./types";
   let {
     invitations,
@@ -46,17 +47,17 @@
           disabled={busy}
           {...sx(s.button)}
           onclick={() => updateInvitation(invitation, "accept")}
-          >Принять ↗</button
+          >Принять <ActionIcon name="accept" /></button
         ><button
           disabled={busy}
           {...sx(s.danger)}
           onclick={() => updateInvitation(invitation, "reject")}
-          >Отклонить</button
+          >Отклонить <ActionIcon name="reject" /></button
         >{#if invitation.status === "sent"}<button
             disabled={busy}
             {...sx(s.outline)}
             onclick={() => updateInvitation(invitation, "view")}
-            >Отметить просмотренным</button
+            >Отметить просмотренным <ActionIcon name="view" /></button
           >{/if}
       </div>{/if}{#if role === "employer" && invitation.status === "accepted"}<div
         {...sx(s.note)}

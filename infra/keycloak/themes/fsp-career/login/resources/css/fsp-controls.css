@@ -1,0 +1,82 @@
+/* Flat, gently rounded identity controls without shadows or movement. */
+.pf-v5-c-button,
+.pf-v5-c-form-control,
+.pf-v5-c-input-group__item,
+button,
+input,
+select,
+textarea {
+  border-radius: 8px;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    opacity 160ms ease;
+}
+
+.pf-v5-c-button,
+button {
+  appearance: none;
+  border: 0;
+}
+
+.pf-v5-c-form-control {
+  background: #f1f1f3;
+  border: 1px solid transparent;
+}
+
+.pf-v5-c-form-control::before,
+.pf-v5-c-form-control::after,
+.pf-v5-c-button::after {
+  border: 0 !important;
+}
+
+.pf-v5-c-button.pf-m-secondary {
+  background-color: #efedff;
+}
+
+.pf-v5-c-check__input,
+input[type="checkbox"] {
+  border-radius: 4px;
+  accent-color: #402fff;
+}
+
+@media (hover: hover) {
+  .pf-v5-c-button:not(:disabled):hover,
+  button:not(:disabled):hover {
+    opacity: 0.86;
+  }
+  .pf-v5-c-form-control:not(:focus-within):hover {
+    background: #eae9f1;
+  }
+}
+
+.pf-v5-c-button:not(:disabled):active,
+button:not(:disabled):active {
+  opacity: 0.7;
+}
+
+.pf-v5-c-form-control:focus-within {
+  background: #fff;
+  border-color: #402fff;
+}
+
+.pf-v5-c-form-control > :is(input, select, textarea):focus-visible {
+  outline: none;
+}
+
+:where(button, input, select, textarea, .pf-v5-c-button):focus-visible {
+  outline: 2px solid #402fff;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-v5-c-button,
+  .pf-v5-c-form-control,
+  .pf-v5-c-input-group__item,
+  button,
+  input,
+  select,
+  textarea {
+    transition: none !important;
+  }
+}

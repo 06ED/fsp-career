@@ -1,6 +1,7 @@
 <script lang="ts">
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import type { Need } from "./types";
   import { specializations } from "./specializations";
   let {
@@ -57,6 +58,6 @@
     bind:value={need.description}
     {...sx(s.textarea)}
   ></textarea><button type="submit" disabled={busy} {...sx(s.button)}
-    >Сохранить потребность ↗</button
+    >Сохранить потребность <ActionIcon name="save" /></button
   >
 </form>

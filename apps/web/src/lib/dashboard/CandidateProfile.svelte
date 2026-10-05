@@ -1,6 +1,7 @@
 <script lang="ts">
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import type { Profile, ResumeDraft } from "./types";
   import { specializations } from "./specializations";
   let {
@@ -51,7 +52,8 @@
       type="button"
       {...sx(s.button)}
       disabled={busy}
-      onclick={confirmResume}>Подтвердить данные из PDF ↗</button
+      onclick={confirmResume}
+      >Подтвердить данные из PDF <ActionIcon name="confirm" /></button
     >{/if}
 </div>
 <form
@@ -211,7 +213,7 @@
         onclick={() =>
           (profile.cvHistory = profile.cvHistory.filter(
             (_, position) => position !== index,
-          ))}>Удалить запись</button
+          ))}>Удалить запись <ActionIcon name="remove" /></button
       >
     </div>
   {/each}
@@ -228,7 +230,7 @@
           endDate: "",
           description: "",
         },
-      ])}>+ Добавить опыт</button
+      ])}>Добавить опыт <ActionIcon name="add" /></button
   >
   <label {...sx(s.answer)}
     ><input type="checkbox" required bind:checked={profile.processingConsent} /> Я
@@ -242,13 +244,14 @@
   >
   <div {...sx(s.inline)}>
     <button type="submit" disabled={busy} {...sx(s.button)}
-      >Сохранить профиль ↗</button
+      >Сохранить профиль <ActionIcon name="save" /></button
     >
     <button
       type="button"
       disabled={busy || !profile.processingConsent || !profile.fullName}
       {...sx(s.outline)}
-      onclick={downloadResume}>Скачать резюме PDF ↓</button
+      onclick={downloadResume}
+      >Скачать резюме PDF <ActionIcon name="download" /></button
     >
     <button
       type="button"
@@ -262,7 +265,7 @@
         )
           return;
         revokeConsent();
-      }}>Удалить мои данные</button
+      }}>Удалить мои данные <ActionIcon name="remove" /></button
     >
   </div>
 </form>

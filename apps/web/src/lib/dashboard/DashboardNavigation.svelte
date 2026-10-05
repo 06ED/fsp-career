@@ -1,6 +1,7 @@
 <script lang="ts">
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import { auth } from "$lib/client";
   import type { Role, Section } from "./types";
   let {
@@ -14,19 +15,19 @@
     identity: string;
     openSection: (id: Section) => Promise<void>;
   } = $props();
-  const candidateTabs: { id: Section; label: string }[] = [
-    { id: "overview", label: "⌂  Обзор" },
-    { id: "profile", label: "◫  Мой профиль" },
-    { id: "assessment", label: "◇  Оценка навыков" },
-    { id: "invitations", label: "↗  Приглашения" },
-  ];
-  const employerTabs: { id: Section; label: string }[] = [
-    { id: "overview", label: "⌂  Обзор" },
-    { id: "company", label: "◫  Компания" },
-    { id: "needs", label: "◎  Потребность" },
-    { id: "matches", label: "◇  Подбор кандидатов" },
-    { id: "invitations", label: "↗  Приглашения" },
-  ];
+  const candidateTabs = [
+    { id: "overview", label: "Обзор", icon: "overview" },
+    { id: "profile", label: "Мой профиль", icon: "profile" },
+    { id: "assessment", label: "Оценка навыков", icon: "assessment" },
+    { id: "invitations", label: "Приглашения", icon: "invitations" },
+  ] as const;
+  const employerTabs = [
+    { id: "overview", label: "Обзор", icon: "overview" },
+    { id: "company", label: "Компания", icon: "company" },
+    { id: "needs", label: "Потребность", icon: "need" },
+    { id: "matches", label: "Подбор кандидатов", icon: "matches" },
+    { id: "invitations", label: "Приглашения", icon: "invitations" },
+  ] as const;
 </script>
 
 <aside {...sx(s.sidebar)}>
@@ -38,7 +39,12 @@
       <button
         {...sx(s.navButton, section === tab.id && s.navActive)}
         aria-current={section === tab.id ? "page" : undefined}
-        onclick={() => openSection(tab.id)}>{tab.label}</button
+        onclick={() => openSection(tab.id)}
+        ><ActionIcon
+          name={tab.icon}
+          size={18}
+          placement="leading"
+        />{tab.label}</button
       >
     {/each}
   </nav>
@@ -48,7 +54,7 @@
     /><button
       {...sx(s.navButton)}
       onclick={() => auth.logout({ redirectUri: window.location.origin })}
-      >Выйти ↗</button
+      ><ActionIcon name="logout" placement="leading" />Выйти</button
     >
   </div>
 </aside>

@@ -1,6 +1,6 @@
 # Career API
 
-Kotlin 2.1 / Ktor 3 / PostgreSQL / Flyway. From this directory run `gradle test` or `gradle run` with Java 21. Startup migrates the database; no mock auth or public sample credentials exist. For optional live PostgreSQL integration tests, set `TEST_DATABASE_URL` (JDBC), `TEST_DATABASE_USER`, and `TEST_DATABASE_PASSWORD` before `gradle test`; without them that test is skipped.
+Kotlin 2.1 / Ktor 3 / JetBrains Exposed SQL DSL / PostgreSQL / Flyway. HikariCP pools connections; Flyway alone owns schema migrations, while Exposed maps tables and manages transactions and all runtime queries. From this directory run `gradle test` or `gradle run` with Java 21. Startup migrates the database; no mock auth or public sample credentials exist. For optional live PostgreSQL integration tests, set `TEST_DATABASE_URL` (JDBC URL), `TEST_DATABASE_USER`, and `TEST_DATABASE_PASSWORD` before `gradle test`; without them that test is skipped.
 
 Required environment:
 

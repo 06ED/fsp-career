@@ -6,10 +6,10 @@ Any FSP achievements, category labels, scores, or candidate records shown as exa
 
 ## Architecture
 
-- `apps/web`: SvelteKit/TypeScript/StyleX/GSAP frontend built with Bun; Docker serves it with adapter-node at `http://localhost:3000` (optional dev origin `http://localhost:5173`). Browser login uses a public Keycloak client and authorization code + PKCE; never place a client secret in browser code.
-- `apps/api`: Ktor API (typically `http://localhost:8080`) owns candidate/employer data, survey/test/category and invitation rules; **all authorization and contact gating must be enforced server-side**, not merely hidden in UI.
+- `apps/web`: SvelteKit/TypeScript/StyleX/GSAP frontend built with Bun; Docker serves it with adapter-node at `http://localhost:3000` (optional dev origin `http://localhost:5173`). Browser login uses a public Keycloak client and authorization code + PKCE; never place a client secret in browser code. Buttons, cards, tags and fields share 8px corners; light actions gain a visible violet/rose tint on hover. Locally bundled Nunito (body) and Play (headings and labels) fonts come from the supplied archive with SIL OFL licenses in `apps/web/static/fonts/`. Moving Icons animate on parent button/link hover and keyboard focus, unless reduced motion is requested. Website action icons use MIT-licensed [Moving Icons](https://movingicons.dev/icons) (`@jis3r/icons`), with official [Lucide Svelte](https://lucide.dev/guide/packages/lucide-svelte) fallback where that collection lacks an icon; this does not affect the Keycloak theme.
+- `apps/api`: Ktor API (typically `http://localhost:8080`) owns candidate/employer data, survey/test/category and invitation rules. JetBrains Exposed SQL DSL manages PostgreSQL access and transactions through HikariCP; Flyway owns schema migrations. **All authorization and contact gating must be enforced server-side**, not merely hidden in UI.
 - `compose.yaml`: builds and runs **web + API + PostgreSQL + Keycloak + private Keycloak PostgreSQL + Mailpit**. Web `localhost:3000`, API `localhost:8080`, Keycloak `localhost:8081`, Mailpit `localhost:8025`, PostgreSQL `localhost:5432` are bound to loopback. Persistent named volumes survive ordinary `docker compose down`.
-- `infra/keycloak/fsp-career-realm.json`: import of `fsp-career` realm, `candidate`/`employer` roles and public `fsp-web` client. New self-registrations receive `candidate` by default; only trusted administration should assign `employer`. Access tokens issued to the web client have the `fsp-api` audience.
+- `infra/keycloak/fsp-career-realm.json`: import of `fsp-career` realm, `candidate`/`employer` roles and public `fsp-web` client. New self-registrations receive `candidate` by default; only trusted administration should assign `employer`. Access tokens issued to the web client have the `fsp-api` audience. The bundled `infra/keycloak/themes/fsp-career` login theme gives registration and verification forms the same gently rounded controls and reduced-motion-aware interactions; existing local realms must select this theme in their realm settings after rebuilding the image.
 
 ## Start locally
 
@@ -47,7 +47,7 @@ This setup uses Keycloak `start-dev`, HTTP, example passwords, and local-only po
 
 ## Validation and remaining checks
 
-The six-service stack, Bun production build, Keycloak issuer (`localhost:8081`), API, Mailpit and browser-facing web endpoints were started and smoke-tested locally. With `TEST_DATABASE_URL` configured, **8 unit + 1 PostgreSQL migration/constraint tests passed**. The synthetic authenticated recruitment path (including reviewed PDF import/export and invitation privacy) also passed through real Keycloak-issued JWTs; the synthetic Mailpit verification *message* was delivered. To reproduce the local-only smoke runs after Compose is healthy:
+The six-service stack, Bun production build, Keycloak issuer (`localhost:8081`), API, Mailpit and browser-facing web endpoints were started and smoke-tested locally. With `TEST_DATABASE_URL` configured, **8 unit + 1 PostgreSQL migration/constraint/Exposed mapping tests passed**. The synthetic authenticated recruitment path (including reviewed PDF import/export and invitation privacy) also passed through real Keycloak-issued JWTs; a synthetic admin-created account received a Mailpit verification link and became `emailVerified=true` after its localhost confirmation action. To reproduce the local-only smoke runs after Compose is healthy:
 
 ```sh
 export KEYCLOAK_ADMIN_PASSWORD='<value from .env>'
@@ -57,7 +57,7 @@ python3 docs/smoke_ranking.py
 python3 docs/smoke_assessment.py
 ```
 
-These scripts create temporary synthetic accounts and remove their Keycloak identities and exact API subjects; the end-to-end script uses a temporary password-grant **test-only** client and never changes the browser client's PKCE-only configuration. The ranking/retake matrices inject labeled synthetic assessment/achievement rows into the **local** database to make boundary checks deterministic; they do not establish scoring validity or official award verification. It admin-marks test emails verified and therefore does **not** prove interactive self-registration, browser email confirmation or real mailbox ownership. Full security, fairness, psychometric and employer-pair validation remains outstanding.
+These scripts create temporary synthetic accounts and remove their Keycloak identities and exact API subjects; the end-to-end script uses a temporary password-grant **test-only** client and never changes the browser client's PKCE-only configuration. The ranking/retake matrices inject labeled synthetic assessment/achievement rows into the **local** database to make boundary checks deterministic; they do not establish scoring validity or official award verification. The recruitment smoke test admin-marks accounts verified; the separate email-action script confirms one synthetic, admin-created account via Mailpit while adapting Python's stricter Secure-cookie policy for HTTP localhost. Neither script proves interactive browser self-registration or ownership of a real mailbox. Full security, fairness, psychometric and employer-pair validation remains outstanding.
 
 Further validation plan:
 

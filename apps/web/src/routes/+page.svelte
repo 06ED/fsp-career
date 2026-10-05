@@ -1,5 +1,6 @@
 <script lang="ts">
   import { sx } from "$lib/svelte-stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import { onMount } from "svelte";
   import { landing as s } from "$lib/landing.stylex";
 
@@ -43,7 +44,9 @@
     >
     <nav {...sx(s.headerRight)} aria-label="Основная навигация">
       <a href="#how-it-works" {...sx(s.headerLink)}>Как это работает</a>
-      <a href="/app" {...sx(s.headerButton)}>Войти в платформу ↗</a>
+      <a href="/app" data-interactive {...sx(s.headerButton)}
+        >Войти в платформу <ActionIcon name="login" size={16} /></a
+      >
     </nav>
   </header>
 
@@ -65,16 +68,28 @@
         предложения от компаний, которым нужен именно ты.
       </p>
       <div data-reveal {...sx(s.actions)}>
-        <a href="/app?role=candidate" {...sx(s.primary)}
-          >Я специалист <span aria-hidden="true">↗</span></a
+        <a href="/app?role=candidate" data-interactive {...sx(s.primary)}
+          >Я специалист <ActionIcon
+            name="arrow"
+            size={18}
+            placement="solo"
+          /></a
         >
-        <a href="/app?role=employer" {...sx(s.secondary)}
-          >Я работодатель <span aria-hidden="true">↗</span></a
+        <a href="/app?role=employer" data-interactive {...sx(s.secondary)}
+          >Я работодатель <ActionIcon
+            name="arrow"
+            size={18}
+            placement="solo"
+          /></a
         >
       </div>
       <div {...sx(s.floating)}>
         <div {...sx(s.floatingTop)}>
-          <span>ПРОВЕРЕНО НА ПРАКТИКЕ</span><span>↗</span>
+          <span>ПРОВЕРЕНО НА ПРАКТИКЕ</span><ActionIcon
+            name="arrow"
+            size={15}
+            placement="solo"
+          />
         </div>
         <div {...sx(s.floatingNumber)}>01 / 03</div>
         <div>Профиль → Оценка → Предложение</div>

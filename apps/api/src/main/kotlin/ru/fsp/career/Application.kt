@@ -21,18 +21,38 @@ import java.util.concurrent.TimeUnit
 fun main() {
     val issuer = required("KEYCLOAK_ISSUER").trimEnd('/')
     val audience = required("KEYCLOAK_AUDIENCE")
-    val jwksUrl = System.getenv("KEYCLOAK_JWKS_URL")?.takeIf { it.isNotBlank() }
+    val jwksUrl = System.getenv("KEYCLOAK_JWKS_URL")
+        ?.takeIf { it.isNotBlank() }
         ?: "$issuer/protocol/openid-connect/certs"
-    val db = Database(required("DATABASE_URL"), required("DATABASE_USER"), required("DATABASE_PASSWORD"))
+
+    val db = Database(
+        required("DATABASE_URL"),
+        required("DATABASE_USER"),
+        required("DATABASE_PASSWORD")
+    )
+
     Runtime.getRuntime().addShutdownHook(Thread { db.close() })
-    embeddedServer(Netty, port = System.getenv("PORT")?.toIntOrNull() ?: 8080, host = "0.0.0.0") {
+
+    embeddedServer(
+        Netty,
+        port = System.getenv("PORT")?.toIntOrNull() ?: 8080,
+        host = "0.0.0.0"
+    ) {
         careerModule(db, issuer, audience, jwksUrl)
     }.start(wait = true)
 }
-private fun required(name: String): String = System.getenv(name)?.takeIf { it.isNotBlank() } ?: error("$name is required")
 
-fun Application.careerModule(db: Database, issuer: String, audience: String, jwksUrl: String = "$issuer/protocol/openid-connect/certs") {
+private fun required(name: String): String =
+    System.getenv(name)?.takeIf { it.isNotBlank() } ?: error("$name is required")
+
+fun Application.careerModule(
+    db: Database,
+    issuer: String,
+    audience: String,
+    jwksUrl: String = "$issuer/protocol/openid-connect/certs"
+) {
     val logger = environment.log
+
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = false; encodeDefaults = true }) }
     install(CORS) {
         allowHost("localhost:5173", schemes = listOf("http"))
@@ -46,17 +66,32 @@ fun Application.careerModule(db: Database, issuer: String, audience: String, jwk
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Delete)
     }
+
     install(StatusPages) {
         exception<ApiError> { call, cause -> call.respond(cause.status, ErrorResponse(cause.message)) }
-        exception<BadRequestException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorResponse("Malformed request body")) }
-        exception<kotlinx.serialization.SerializationException> { call, _ -> call.respond(HttpStatusCode.BadRequest, ErrorResponse("Malformed request body")) }
+        exception<BadRequestException> { call, _ ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Malformed request body")
+            )
+        }
+        exception<kotlinx.serialization.SerializationException> { call, _ ->
+            call.respond(
+                HttpStatusCode.BadRequest,
+                ErrorResponse("Malformed request body")
+            )
+        }
         exception<Throwable> { call, cause ->
             logger.error("Request failed", cause)
             call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Internal server error"))
         }
     }
+
     val keys = JwkProviderBuilder(URI(jwksUrl).toURL())
-        .cached(10, 24, TimeUnit.HOURS).rateLimited(10, 1, TimeUnit.MINUTES).build()
+        .cached(10, 24, TimeUnit.HOURS)
+        .rateLimited(10, 1, TimeUnit.MINUTES)
+        .build()
+
     install(Authentication) {
         jwt("keycloak") {
             realm = "career"
@@ -64,26 +99,43 @@ fun Application.careerModule(db: Database, issuer: String, audience: String, jwk
             validate { credential ->
                 val token = credential.payload
                 val realmRoles = token.getClaim("realm_access").asMap()?.get("roles") as? List<*>
-                val clientRoles = (token.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)?.get("roles") as? List<*>
+                val clientRoles =
+                    (token.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)?.get("roles") as? List<*>
                 if (token.subject.isNullOrBlank() || (realmRoles.orEmpty() + clientRoles.orEmpty()).none { it == "candidate" || it == "employer" }) null
                 else JWTPrincipal(token)
             }
-            challenge { _, _ -> call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Valid Keycloak bearer token required")) }
+            challenge { _, _ ->
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    ErrorResponse("Valid Keycloak bearer token required")
+                )
+            }
         }
     }
     routing {
         get("/health") { call.respond(mapOf("status" to "ok")) }
-        get("/openapi.yaml") { call.respondText(javaClass.classLoader.getResource("openapi.yaml")!!.readText(), ContentType.parse("application/yaml")) }
+        get("/openapi.yaml") {
+            call.respondText(
+                javaClass.classLoader.getResource("openapi.yaml")!!.readText(),
+                ContentType.parse("application/yaml")
+            )
+        }
         authenticate("keycloak") { careerRoutes(db, audience) }
     }
 }
 
 fun ApplicationCall.role(audience: String, requiredRole: String): String {
-    val principal = principal<JWTPrincipal>() ?: throw ApiError(HttpStatusCode.Unauthorized,"Authentication required")
-    val payload = principal.payload
-    val realm = payload.getClaim("realm_access").asMap()?.get("roles") as? List<*>
-    val client = (payload.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)?.get("roles") as? List<*>
+    val principal = principal<JWTPrincipal>()
+        ?: throw ApiError(HttpStatusCode.Unauthorized, "Authentication required")
+    val realm = principal.payload.getClaim("realm_access")
+        .asMap()
+        ?.get("roles") as? List<*>
+    val client = (principal.payload.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)
+        ?.get("roles") as? List<*>
     val roles = realm.orEmpty() + client.orEmpty()
-    if (roles.none { it == requiredRole } || (requiredRole == "candidate" && roles.contains("employer"))) forbidden("$requiredRole role required")
-    return payload.subject
+
+    if (roles.none { it == requiredRole } || (requiredRole == "candidate" && roles.contains("employer")))
+        forbidden("$requiredRole role required")
+
+    return principal.payload.subject
 }

@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import { auth } from "$lib/client";
   import { sx } from "$lib/svelte-stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import { ui as s } from "$lib/dashboard.stylex";
   import { dashboardApi } from "$lib/dashboard/service";
   import type {
@@ -330,12 +331,12 @@
           <button
             {...sx(s.button)}
             onclick={() => auth.login({ redirectUri: window.location.href })}
-            >Войти ↗</button
+            >Войти <ActionIcon name="login" /></button
           >
           <button
             {...sx(s.outline)}
             onclick={() => auth.register({ redirectUri: window.location.href })}
-            >Создать аккаунт</button
+            >Создать аккаунт <ActionIcon name="signup" /></button
           >
         </div>
       </div>

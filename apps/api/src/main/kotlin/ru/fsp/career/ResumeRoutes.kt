@@ -6,10 +6,12 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.utils.io.readAvailable
-import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.sql.*
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.text.PDFTextStripper
 import java.io.ByteArrayOutputStream
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.util.UUID
 
 private const val MAX_PDF_BYTES = 5 * 1024 * 1024
@@ -35,14 +37,14 @@ internal fun extractResume(pdf: ByteArray): ResumeFields {
 fun Route.resumeRoutes(db: Database, audience: String) {
     get("/candidates/me/resume.pdf") {
         val sub = call.role(audience,"candidate")
-        val profile = db.tx { c -> c.profile(c.account(sub,"candidate")) }
+        val profile = db.tx { profile(account(sub, "candidate")) }
         val bytes = resumePdf(profile)
         call.response.header(HttpHeaders.ContentDisposition,"attachment; filename=\"fsp-resume.pdf\"")
         call.respondBytes(bytes,ContentType.Application.Pdf)
     }
     post("/candidates/me/resume-upload") {
         val sub = call.role(audience,"candidate")
-        db.tx { c -> if (!c.profile(c.account(sub,"candidate")).processingConsent) forbidden("Grant processing consent before uploading a resume") }
+        db.tx { if (!profile(account(sub, "candidate")).processingConsent) forbidden("Grant processing consent before uploading a resume") }
         val multipart = call.receiveMultipart()
         var pdf: ByteArray? = null
         multipart.forEachPart { part ->
@@ -64,11 +66,17 @@ fun Route.resumeRoutes(db: Database, audience: String) {
             } finally { part.dispose() }
         }
         val parsed = extractResume(pdf ?: bad("Missing file field"))
-        call.respond(HttpStatusCode.Created,db.tx { c ->
-            val id = c.account(sub,"candidate")
-            if (!c.profile(id).processingConsent) forbidden("Processing consent was revoked during upload")
-            val draft = c.rows("INSERT INTO resume_drafts(candidate_id,parsed_fields) VALUES (?,?::jsonb) RETURNING id",id,Json.encodeToString(parsed)) { it.getObject(1,UUID::class.java) }.single()
-            ResumeDraft(draft.toString(),parsed)
+        call.respond(HttpStatusCode.Created, db.tx {
+            val id = account(sub, "candidate")
+            if (!profile(id).processingConsent) forbidden("Processing consent was revoked during upload")
+            val draft = UUID.randomUUID()
+            ResumeDrafts.insert {
+                it[ResumeDrafts.id] = draft
+                it[candidateId] = id
+                it[parsedFields] = parsed
+                it[uploadedAt] = OffsetDateTime.now(ZoneOffset.UTC)
+            }
+            ResumeDraft(draft.toString(), parsed)
         })
     }
     post("/candidates/me/resume-confirm") {
@@ -76,13 +84,28 @@ fun Route.resumeRoutes(db: Database, audience: String) {
         val reviewed = call.receive<ConfirmResume>()
         validateCareerFields(reviewed.experience,reviewed.techStack,reviewed.softSkills,reviewed.targetRoles,reviewed.cvHistory)
         if (reviewed.fullName.length > 200 || reviewed.phone.length > 50) bad("Reviewed contact fields too long")
-        call.respond(db.tx { c ->
-            val id = c.account(sub,"candidate")
-            if (!c.profile(id).processingConsent) forbidden("Grant processing consent before confirming a resume")
-            val changed = c.exec("UPDATE resume_drafts SET confirmed_at=now() WHERE id=? AND candidate_id=? AND confirmed_at IS NULL AND uploaded_at>now()-interval '1 day'",uuid(reviewed.draftId),id)
+        call.respond(db.tx {
+            val id = account(sub, "candidate")
+            if (!profile(id).processingConsent) forbidden("Grant processing consent before confirming a resume")
+            val confirmed = OffsetDateTime.now(ZoneOffset.UTC)
+            val changed = ResumeDrafts.update({
+                (ResumeDrafts.id eq uuid(reviewed.draftId)) and
+                    (ResumeDrafts.candidateId eq id) and
+                    ResumeDrafts.confirmedAt.isNull() and
+                    (ResumeDrafts.uploadedAt greater confirmed.minusDays(1))
+            }) { it[confirmedAt] = confirmed }
             if (changed == 0) missing("Unconfirmed resume draft not found or expired")
-            c.exec("UPDATE candidate_profiles SET full_name=?,phone=?,experience=?,tech_stack=?::jsonb,soft_skills=?::jsonb,target_roles=?::jsonb,cv_history=?::jsonb,updated_at=now() WHERE account_id=?",reviewed.fullName.trim(),reviewed.phone.trim(),reviewed.experience.trim(),Json.encodeToString(reviewed.techStack),Json.encodeToString(reviewed.softSkills),Json.encodeToString(reviewed.targetRoles),Json.encodeToString(reviewed.cvHistory),id)
-            c.profile(id)
+            CandidateProfiles.update({ CandidateProfiles.accountId eq id }) {
+                it[fullName] = reviewed.fullName.trim()
+                it[phone] = reviewed.phone.trim()
+                it[experience] = reviewed.experience.trim()
+                it[techStack] = reviewed.techStack
+                it[softSkills] = reviewed.softSkills
+                it[targetRoles] = reviewed.targetRoles
+                it[cvHistory] = reviewed.cvHistory
+                it[updatedAt] = confirmed
+            }
+            profile(id)
         })
     }
 }

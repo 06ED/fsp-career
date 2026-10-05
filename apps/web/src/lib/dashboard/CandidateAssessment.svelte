@@ -1,6 +1,7 @@
 <script lang="ts">
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import type { Profile, Assessment, Result } from "./types";
   let {
     profile,
@@ -38,7 +39,8 @@
   {#if !assessment}<button
       disabled={busy || !profile.specialization}
       {...sx(s.button)}
-      onclick={() => startAssessment()}>Начать оценку ↗</button
+      onclick={() => startAssessment()}
+      >Начать оценку <ActionIcon name="assessment" /></button
     >{#if !profile.specialization}<p {...sx(s.muted)}>
         Сначала заполните специализацию в профиле.
       </p>{/if}{/if}
@@ -72,7 +74,7 @@
             {option.label}</label
           >{/each}
       </fieldset>{/each}<button disabled={busy} type="submit" {...sx(s.button)}
-      >Завершить тест ↗</button
+      >Завершить тест <ActionIcon name="accept" /></button
     >
   </form>{/if}
 <div {...sx(s.panel)}>

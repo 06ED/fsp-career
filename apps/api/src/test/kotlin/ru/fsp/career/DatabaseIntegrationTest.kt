@@ -1,6 +1,12 @@
 package ru.fsp.career
 
 import org.junit.jupiter.api.Assumptions.assumeTrue
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
+import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFails
@@ -11,11 +17,27 @@ class DatabaseIntegrationTest {
         assumeTrue(!url.isNullOrBlank(), "TEST_DATABASE_URL not configured")
         Database(url!!, System.getenv("TEST_DATABASE_USER") ?: "career", System.getenv("TEST_DATABASE_PASSWORD") ?: "career").use { db ->
             kotlinx.coroutines.runBlocking {
-                db.tx { connection ->
-                    assertEquals(25, connection.rows("SELECT count(*) FROM questions") { it.getInt(1) }.single())
-                }
+                db.tx { assertEquals(25, Questions.selectAll().count()) }
                 assertFails {
-                    db.tx { connection -> connection.exec("INSERT INTO accounts(subject,role) VALUES ('invalid-role-test','admin')") }
+                    db.tx {
+                        Accounts.insert {
+                            it[id] = UUID.randomUUID()
+                            it[subject] = "invalid-role-test-${UUID.randomUUID()}"
+                            it[role] = "admin"
+                        }
+                    }
+                }
+                val id = db.tx { account("exposed-test-${UUID.randomUUID()}", "candidate") }
+                try {
+                    db.tx {
+                        assertEquals(false, profile(id).processingConsent)
+                        CandidateProfiles.update({ CandidateProfiles.accountId eq id }) {
+                            it[techStack] = listOf("Kotlin", "SQL")
+                        }
+                        assertEquals(listOf("Kotlin", "SQL"), profile(id).techStack)
+                    }
+                } finally {
+                    db.tx { Accounts.deleteWhere { Accounts.id eq id } }
                 }
             }
         }

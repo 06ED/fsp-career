@@ -1,6 +1,7 @@
 <script lang="ts">
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
+  import ActionIcon from "$lib/ActionIcon.svelte";
   import type { Match, Offer } from "./types";
   let {
     matches,
@@ -65,7 +66,9 @@
         достижений. Официальная интеграция ФСП пока отсутствует.
       </p>
     </div>
-    <button {...sx(s.outline)} onclick={findMatches}>Обновить ↻</button>
+    <button {...sx(s.outline)} onclick={findMatches}
+      >Обновить <ActionIcon name="refresh" /></button
+    >
   </div>
   <div {...sx(s.grid)}>
     <div>
@@ -141,7 +144,7 @@
           salaryMinRub: 120000,
           salaryMaxRub: 200000,
         };
-      }}>Пригласить кандидата ↗</button
+      }}>Пригласить кандидата <ActionIcon name="send" /></button
     >
   </article>{:else}<div {...sx(s.panel)}>
     <p {...sx(s.muted)}>
@@ -168,7 +171,8 @@
       <button
         type="button"
         {...sx(s.outline)}
-        onclick={() => (selectedCandidate = null)}>Закрыть ✕</button
+        onclick={() => (selectedCandidate = null)}
+        >Закрыть <ActionIcon name="close" /></button
       >
     </div>
     <label for="offerDescription" {...sx(s.label)}>Описание предложения</label
@@ -206,6 +210,6 @@
     <button
       type="submit"
       disabled={busy || offer.salaryMaxRub < offer.salaryMinRub}
-      {...sx(s.button)}>Отправить приглашение ↗</button
+      {...sx(s.button)}>Отправить приглашение <ActionIcon name="send" /></button
     >
   </form>{/if}

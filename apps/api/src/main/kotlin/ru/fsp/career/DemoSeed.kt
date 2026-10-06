@@ -5,9 +5,13 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.insert
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
+import ru.fsp.career.assessment.*
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
-import ru.fsp.career.assessment.AssessmentCatalog
 import ru.fsp.career.fsp.MockFspRegistry
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -114,6 +118,7 @@ internal class DemoSeed(private val db: Database) {
         if (employerSubject != null) db.tx { seedDemoEmployer(employerSubject) }
         if (assessedSubject != null) {
             db.tx { seedAssessedCandidate(assessedSubject) }
+            db.tx { boundRole(assessedSubject)?.first?.let { realAssessment(it) } }
             registry.lookup("FSP-100004")?.let { record ->
                 db.tx { boundRole(assessedSubject)?.first?.let { id -> val linked = CandidateProfiles.selectAll().where { CandidateProfiles.accountId eq id }.single()[CandidateProfiles.fspId]
                     if (linked == null) importFsp(id, record, registry) } }
@@ -148,7 +153,7 @@ internal class DemoSeed(private val db: Database) {
 
     private fun gradeFor(n: Int) = when (n % 8) { 0, 1, 2 -> "junior"; 3, 4, 5 -> "middle"; else -> "senior" }
 
-    private fun Transaction.fillCandidate(id: UUID, name: String, email: String, spec: String, grade: String, fspCandidate: Boolean) {
+    private fun Transaction.fillCandidate(id: UUID, name: String, email: String, spec: String, grade: String, fspCandidate: Boolean, attempt: Boolean = true) {
         val track = tracks.getValue(spec)
         val years = when (grade) { "junior" -> rnd.nextInt(0, 2); "middle" -> rnd.nextInt(2, 5); else -> rnd.nextInt(5, 11) }
         val stack = track.skills.shuffled(rnd).take(rnd.nextInt(4, 7))
@@ -185,7 +190,7 @@ internal class DemoSeed(private val db: Database) {
             it[cvHistory] = history
             it[updatedAt] = now.minusDays(rnd.nextLong(1, 200))
         }
-        insertAttempt(id, spec, grade)
+        if (attempt) insertAttempt(id, spec, grade)
     }
 
     /** A completed attempt consistent with the grade (score = 100·Φ(θ), cut-points as in the assessment engine). */
@@ -355,7 +360,7 @@ internal class DemoSeed(private val db: Database) {
     private fun Transaction.seedAssessedCandidate(subject: String) {
         if (boundRole(subject) != null) return
         val id = createAccount(subject, "candidate")
-        fillCandidate(id, "Мария Волкова", "maria.volkova@demo.fsp.local", "backend", "middle", fspCandidate = true)
+        fillCandidate(id, "Мария Волкова", "maria.volkova@demo.fsp.local", "backend", "middle", fspCandidate = true, attempt = false)
         CandidateProfiles.update({ CandidateProfiles.accountId eq id }) {
             it[techStack] = listOf("Kotlin", "PostgreSQL", "Kafka", "Docker", "Redis")
             it[industry] = "fintech"
@@ -375,6 +380,42 @@ internal class DemoSeed(private val db: Database) {
             it[contactMethod] = "Telegram @north_logistics_hr"
             it[createdAt] = now.minusDays(1)
             it[updatedAt] = now.minusDays(1)
+        }
+    }
+
+    /**
+     * The demo login's history should look like a real one (survey, served items, θ), so its attempt goes through the
+     * production engine — startAttempt/answerItem — answered by a simulated middle-level candidate. Replaces an
+     * earlier synthetic row from older seeds; does nothing once a real attempt exists.
+     */
+    private fun Transaction.realAssessment(id: UUID) {
+        val attempts = AssessmentAttempts.selectAll().where { AssessmentAttempts.candidateId eq id }.toList()
+        if (attempts.any { it[AssessmentAttempts.engineVersion] == ENGINE_VERSION }) return
+        AssessmentAttempts.deleteWhere { AssessmentAttempts.candidateId eq id }
+        val sim = Random(7)
+        val plan = planStart(StartAssessmentRequest(
+            AssessmentSurvey(industry = "fintech", specialization = "backend", experienceYears = 3,
+                teamRoles = listOf("individual", "mentor"), workFormat = "hybrid"),
+            targetGrade = "middle", vacancyId = "fintech-backend",
+        ))
+        var clock = now.minusDays(12)
+        val started = startAttempt(id, plan, clock) as? StartOutcome.Started ?: return
+        val attemptId = UUID.fromString(started.attempt.attemptId)
+        repeat(Cat.TEST_LENGTH) {
+            val item = AssessmentItems.selectAll()
+                .where { (AssessmentItems.attemptId eq attemptId) and AssessmentItems.answeredAt.isNull() }
+                .singleOrNull() ?: return
+            val view = item[AssessmentItems.view]
+            val key = item[AssessmentItems.answerKey]
+            val right = sim.nextDouble() < 0.8
+            val answer = when {
+                view.format == "choice" && right -> AnswerKey.optionIds[key.toInt()]
+                view.format == "choice" -> view.options.first { it.id != AnswerKey.optionIds[key.toInt()] }.id
+                right -> key
+                else -> (key.toDouble() + item[AssessmentItems.tolerance] * 10 + 13).toString()
+            }
+            clock = clock.plusSeconds(70L + sim.nextLong(0, 80))
+            if (answerItem(id, attemptId, AssessmentAnswerRequest(item[AssessmentItems.position], answer), clock).done) return
         }
     }
 

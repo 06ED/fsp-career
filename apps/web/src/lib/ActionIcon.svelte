@@ -19,6 +19,16 @@
     UserRound,
     X,
   } from "@jis3r/icons";
+  // Vacancies, applications and short tasks screens.
+  import {
+    Archive,
+    Briefcase,
+    ClipboardList,
+    Lightbulb,
+    Pencil,
+    Star,
+    Undo,
+  } from "@jis3r/icons";
   // Moving Icons doesn't currently include these four shapes.
   import { Building2, Save, Target, UserPlus } from "@lucide/svelte";
 
@@ -41,6 +51,13 @@
     remove: Trash2,
     add: Plus,
     confirm: FileCheck,
+    vacancies: Briefcase,
+    applications: ClipboardList,
+    tasks: Lightbulb,
+    edit: Pencil,
+    archive: Archive,
+    undo: Undo,
+    star: Star,
   } as const;
   const fallbackIcons = {
     signup: UserPlus,

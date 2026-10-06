@@ -6,7 +6,10 @@ export type Section =
   | "company"
   | "needs"
   | "matches"
-  | "invitations";
+  | "invitations"
+  | "vacancies"
+  | "applications"
+  | "tasks";
 
 export type CvEntry = {
   company: string;
@@ -98,3 +101,149 @@ export type RunAction = (
   job: () => Promise<void>,
   confirmation: string,
 ) => Promise<void>;
+
+// ---- Vacancies, applications and regular short tasks (VacancyRoutes.kt / TaskRoutes.kt) ----
+export type WorkFormat = "office" | "remote" | "hybrid";
+export type ApplicationStatus = "sent" | "viewed" | "accepted" | "rejected";
+export type VacancyInput = {
+  title: string;
+  description: string;
+  specialization: string;
+  grade: string;
+  techStack: string[];
+  salaryMinRub: number;
+  salaryMaxRub: number;
+  workFormat: WorkFormat;
+  city: string;
+};
+export type ApplicationCounts = {
+  total: number;
+  sent: number;
+  viewed: number;
+  accepted: number;
+  rejected: number;
+};
+export type EmployerVacancy = VacancyInput & {
+  id: string;
+  status: "open" | "closed";
+  createdAt: string;
+  updatedAt: string;
+  applications: ApplicationCounts;
+};
+export type VacancyCard = VacancyInput & {
+  id: string;
+  companyName: string;
+  companyDescription: string;
+  companyWebsite: string;
+  createdAt: string;
+  categoryMatch: boolean;
+  stackOverlap: string[];
+  fit: string;
+  myApplicationId?: string | null;
+  myApplicationStatus?: ApplicationStatus | null;
+};
+export type VacancyFilters = {
+  specialization: string;
+  grade: string;
+  techStack: string;
+  salaryFrom: string | number | null;
+  workFormat: string;
+  q: string;
+};
+export type CandidateApplication = {
+  id: string;
+  vacancyId: string;
+  vacancyTitle: string;
+  vacancyStatus: "open" | "closed";
+  companyName: string;
+  specialization: string;
+  grade: string;
+  salaryMinRub: number;
+  salaryMaxRub: number;
+  workFormat: WorkFormat;
+  city: string;
+  coverNote: string;
+  status: ApplicationStatus;
+  createdAt: string;
+  updatedAt: string;
+};
+export type Applicant = {
+  id: string;
+  vacancyId: string;
+  candidateId: string;
+  fullName: string;
+  specialization: string;
+  assessedGrade?: string | null;
+  score?: number | null;
+  techStack: string[];
+  experience: string;
+  coverNote: string;
+  status: ApplicationStatus;
+  createdAt: string;
+  updatedAt: string;
+  contactEmail: string;
+  contactPhone: string;
+  categoryMatch: boolean;
+  stackOverlap: string[];
+  fit: string;
+  taskSubmissions: number;
+  taskAverageRating?: number | null;
+  lastTaskActivityAt?: string | null;
+};
+export type ShortTaskInput = {
+  title: string;
+  body: string;
+  specialization: string;
+  grade: string | null;
+};
+export type EmployerShortTask = ShortTaskInput & {
+  id: string;
+  active: boolean;
+  createdAt: string;
+  submissions: number;
+  unrated: number;
+};
+export type SubmissionKind = "solution" | "approach";
+export type CandidateTaskSubmission = {
+  id: string;
+  taskId: string;
+  taskTitle: string;
+  companyName: string;
+  kind: SubmissionKind;
+  answer: string;
+  submittedAt: string;
+  rating?: number | null;
+  ratingComment: string;
+  ratedAt?: string | null;
+};
+export type OfferedTask = {
+  id: string;
+  title: string;
+  body: string;
+  specialization: string;
+  grade?: string | null;
+  companyName: string;
+};
+export type CurrentShortTask = {
+  periodStart: string;
+  nextRotationAt: string;
+  state: "offered" | "answered" | "none";
+  task?: OfferedTask | null;
+  submission?: CandidateTaskSubmission | null;
+  lastActivityAt?: string | null;
+};
+export type EmployerTaskSubmission = {
+  id: string;
+  taskId: string;
+  candidateId: string;
+  candidateName: string;
+  specialization: string;
+  assessedGrade?: string | null;
+  score?: number | null;
+  kind: SubmissionKind;
+  answer: string;
+  submittedAt: string;
+  rating?: number | null;
+  ratingComment: string;
+  ratedAt?: string | null;
+};

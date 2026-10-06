@@ -20,6 +20,9 @@
     { id: "profile", label: "Мой профиль", icon: "profile" },
     { id: "assessment", label: "Оценка навыков", icon: "assessment" },
     { id: "invitations", label: "Приглашения", icon: "invitations" },
+    { id: "vacancies", label: "Вакансии", icon: "vacancies" },
+    { id: "applications", label: "Мои отклики", icon: "applications" },
+    { id: "tasks", label: "Задания", icon: "tasks" },
   ] as const;
   const employerTabs = [
     { id: "overview", label: "Обзор", icon: "overview" },
@@ -27,6 +30,8 @@
     { id: "needs", label: "Потребность", icon: "need" },
     { id: "matches", label: "Подбор кандидатов", icon: "matches" },
     { id: "invitations", label: "Приглашения", icon: "invitations" },
+    { id: "vacancies", label: "Вакансии", icon: "vacancies" },
+    { id: "tasks", label: "Задания", icon: "tasks" },
   ] as const;
 </script>
 

@@ -27,6 +27,12 @@
   import EmployerNeeds from "$lib/dashboard/EmployerNeeds.svelte";
   import EmployerMatches from "$lib/dashboard/EmployerMatches.svelte";
   import Invitations from "$lib/dashboard/Invitations.svelte";
+  import CandidateVacancies from "$lib/dashboard/CandidateVacancies.svelte";
+  import CandidateApplications from "$lib/dashboard/CandidateApplications.svelte";
+  import CandidateTasks from "$lib/dashboard/CandidateTasks.svelte";
+  import EmployerVacancies from "$lib/dashboard/EmployerVacancies.svelte";
+  import EmployerTasks from "$lib/dashboard/EmployerTasks.svelte";
+  import { vacancySectionTitles } from "$lib/dashboard/vacancyLabels";
 
   let ready = $state(false);
   let authenticated = $state(false);
@@ -364,7 +370,9 @@
                       ? "Потребность команды"
                       : section === "matches"
                         ? "Подбор кандидатов"
-                        : "Приглашения"}
+                        : section === "invitations"
+                          ? "Приглашения"
+                          : (vacancySectionTitles[section] ?? "")}
           </h1>
           <p {...sx(s.subtitle)}>
             {role === "candidate"
@@ -417,6 +425,16 @@
         <EmployerMatches {matches} {busy} {findMatches} {sendInvitation} />
       {:else if section === "invitations"}
         <Invitations {invitations} {role} {busy} {updateInvitation} />
+      {:else if section === "vacancies" && role === "candidate"}
+        <CandidateVacancies {profile} {busy} run={action} {openSection} />
+      {:else if section === "applications" && role === "candidate"}
+        <CandidateApplications {busy} run={action} {openSection} />
+      {:else if section === "tasks" && role === "candidate"}
+        <CandidateTasks {profile} {busy} run={action} {openSection} />
+      {:else if section === "vacancies" && role === "employer"}
+        <EmployerVacancies {busy} run={action} />
+      {:else if section === "tasks" && role === "employer"}
+        <EmployerTasks {busy} run={action} />
       {/if}
     </main>
   </div>

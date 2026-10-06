@@ -1,8 +1,8 @@
 # Server overrides, applied on top of compose.yaml by infra/deploy/deploy.sh.
-# Only Caddy is published to the internet (80/443 with automatic HTTPS) and serves one origin:
-#   /        -> web
-#   /api/*   -> API (prefix stripped)
-#   /auth/*  -> Keycloak
+# Only Traefik is published to the internet (80/443, Let's Encrypt) and routes one origin by labels:
+#   /auth/*                   -> Keycloak
+#   /api/*, /openapi.yaml     -> API
+#   everything else           -> web
 # The ports published in compose.yaml stay bound to the server's loopback interface.
 services:
   postgres:
@@ -24,35 +24,70 @@ services:
     healthcheck:
       # Production mode re-augments the server on start, which is slower than start-dev.
       start_period: 180s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.fsp-auth.rule=Host(`${PUBLIC_HOST}`) && PathPrefix(`/auth`)
+      - traefik.http.routers.fsp-auth.entrypoints=websecure
+      - traefik.http.routers.fsp-auth.tls.certresolver=le
+      - traefik.http.services.fsp-auth.loadbalancer.server.port=8080
     restart: unless-stopped
 
   api:
     environment:
       KEYCLOAK_ISSUER: https://${PUBLIC_HOST}/auth/realms/fsp-career
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/fsp-career/protocol/openid-connect/certs
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.fsp-api.rule=Host(`${PUBLIC_HOST}`) && (PathPrefix(`/api`) || Path(`/openapi.yaml`))
+      - traefik.http.routers.fsp-api.entrypoints=websecure
+      - traefik.http.routers.fsp-api.tls.certresolver=le
+      - traefik.http.routers.fsp-api.middlewares=fsp-same-origin
+      # The browser calls the API on this same origin; the API's CORS allowlist only knows
+      # localhost and would reject the public Origin header, so drop it (empty value removes).
+      - traefik.http.middlewares.fsp-same-origin.headers.customrequestheaders.Origin=
+      - traefik.http.services.fsp-api.loadbalancer.server.port=8080
     restart: unless-stopped
 
   web:
     build:
       args:
-        VITE_API_URL: https://${PUBLIC_HOST}/api
+        VITE_API_URL: https://${PUBLIC_HOST}
         VITE_KEYCLOAK_URL: https://${PUBLIC_HOST}/auth
     environment:
       ORIGIN: https://${PUBLIC_HOST}
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.fsp-web.rule=Host(`${PUBLIC_HOST}`)
+      - traefik.http.routers.fsp-web.entrypoints=websecure
+      - traefik.http.routers.fsp-web.tls.certresolver=le
+      - traefik.http.routers.fsp-www.rule=Host(`www.${PUBLIC_HOST}`)
+      - traefik.http.routers.fsp-www.entrypoints=websecure
+      - traefik.http.routers.fsp-www.tls.certresolver=le
+      - traefik.http.routers.fsp-www.middlewares=fsp-www-to-apex
+      - traefik.http.middlewares.fsp-www-to-apex.redirectregex.regex=^https://www\.(.*)
+      - traefik.http.middlewares.fsp-www-to-apex.redirectregex.replacement=https://$${1}
+      - traefik.http.middlewares.fsp-www-to-apex.redirectregex.permanent=true
+      - traefik.http.services.fsp-web.loadbalancer.server.port=3000
     restart: unless-stopped
 
-  caddy:
-    image: caddy:2-alpine
-    environment:
-      PUBLIC_HOST: ${PUBLIC_HOST}
+  traefik:
+    image: traefik:v3.7.13
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
     ports:
       - "80:80"
       - "443:443"
-      - "443:443/udp"
     volumes:
-      - ./infra/caddy:/etc/caddy:ro
-      - caddy_data:/data
-      - caddy_config:/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
     depends_on:
       - web
       - api
@@ -60,5 +95,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  caddy_data:
-  caddy_config:
+  traefik_letsencrypt:

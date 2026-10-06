@@ -39,7 +39,6 @@ PUBLIC_HOST="$(sed -n 's/^PUBLIC_HOST=//p' "$ENV_FILE")"
 # Images are built before anything is replaced, so a failed build leaves the running version untouched.
 compose build
 compose up -d --remove-orphans --wait --wait-timeout 600
-compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
 
 # The realm JSON is imported only into an empty Keycloak database and lists localhost URLs,
 # so point the browser client at the public origin on every deploy.

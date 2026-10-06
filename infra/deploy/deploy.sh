@@ -75,5 +75,7 @@ compose exec -T -e PUBLIC_URL="https://$PUBLIC_HOST" \
   fi
 '
 
+# The server disk is small: drop replaced images and build cache untouched for a week.
 docker image prune -f >/dev/null
+docker builder prune -f --filter until=168h >/dev/null
 echo "Deployed https://$PUBLIC_HOST"

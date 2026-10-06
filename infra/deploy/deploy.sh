@@ -63,6 +63,9 @@ compose exec -T -e PUBLIC_URL="https://$PUBLIC_HOST" \
   id=$(kcadm get clients -r fsp-career -q clientId=fsp-web --fields id --format csv --noquotes)
   kcadm update "clients/$id" -r fsp-career \
     -s "redirectUris=[\"$PUBLIC_URL/*\"]" -s "webOrigins=[\"$PUBLIC_URL\"]"
+  # The imported realm is named for local development and has no locales; the public login page is Russian.
+  kcadm update realms/fsp-career -s "displayName=ФСП Карьера" -s "displayNameHtml=ФСП Карьера" \
+    -s internationalizationEnabled=true -s "supportedLocales=[\"ru\",\"en\"]" -s defaultLocale=ru
   if [ -n "$SMTP_HOST" ]; then
     starttls=${SMTP_STARTTLS:-false}
     ssl=true; [ "$starttls" = true ] && ssl=false

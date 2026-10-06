@@ -6,14 +6,12 @@
   import { ui as s } from "$lib/dashboard.stylex";
   import { dashboardApi } from "$lib/dashboard/service";
   import type {
-    Assessment,
     Company,
     Invitation,
     InvitationStatusAction,
     Need,
     Offer,
     Profile,
-    Result,
     ResumeDraft,
     Role,
     Section,
@@ -80,10 +78,6 @@
     techStack: [],
   });
   let invitations = $state<Invitation[]>([]);
-  let assessment = $state<Assessment | null>(null);
-  let answers = $state<Record<string, string>>({});
-  let result = $state<Result | null>(null);
-  let history = $state<Result[]>([]);
   let resumeDraft = $state<ResumeDraft | null>(null);
   let techStackText = $state("");
   let softSkillsText = $state("");
@@ -183,16 +177,10 @@
     section = id;
     error = "";
     success = "";
-    if (id === "assessment") await loadHistory();
     if (id === "invitations")
       await action(async () => {
         invitations = await dashboardApi.invitations();
       }, "");
-  }
-  async function loadHistory() {
-    await action(async () => {
-      history = await dashboardApi.assessmentHistory();
-    }, "");
   }
   function splitTags(value: string): string[] {
     return [
@@ -236,7 +224,6 @@
   async function revokeConsent() {
     await action(async () => {
       profile = await dashboardApi.revokeConsent();
-      history = [];
       invitations = [];
       resumeDraft = null;
       techStackText = "";
@@ -275,24 +262,6 @@
       profile = await dashboardApi.confirmResume(resumeDraft!.draftId, profile);
       resumeDraft = null;
     }, "Проверенные данные из резюме сохранены. Публикация профиля не менялась.");
-  }
-  async function startAssessment() {
-    await action(async () => {
-      assessment = await dashboardApi.questions();
-      answers = {};
-    }, "");
-  }
-  async function submitAssessment() {
-    if (!assessment) return;
-    await action(async () => {
-      result = await dashboardApi.submitAssessment(
-        assessment!.attemptId,
-        answers,
-      );
-      assessment = null;
-      await refresh();
-      history = await dashboardApi.assessmentHistory();
-    }, "Оценка завершена. Категория обновлена.");
   }
   async function saveCompany() {
     await action(async () => {
@@ -460,16 +429,7 @@
           run={action}
         />
       {:else if section === "assessment" && role === "candidate"}
-        <CandidateAssessment
-          {profile}
-          {assessment}
-          bind:answers
-          {result}
-          {history}
-          {busy}
-          {startAssessment}
-          {submitAssessment}
-        />
+        <CandidateAssessment {profile} refreshProfile={refresh} />
       {:else if section === "company" && role === "employer"}
         <EmployerCompany bind:company {busy} {saveCompany} />
       {:else if section === "needs" && role === "employer"}

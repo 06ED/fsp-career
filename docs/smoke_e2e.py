@@ -8,6 +8,7 @@ This is functional smoke coverage, not assessment calibration or email ownership
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import secrets
@@ -58,10 +59,29 @@ def admin(path, method="GET", body=None, expected=200):
 
 
 def token(client_id, username):
-    return http(BASE + "/realms/" + REALM + "/protocol/openid-connect/token", "POST", {
+    access = http(BASE + "/realms/" + REALM + "/protocol/openid-connect/token", "POST", {
         "client_id": client_id, "grant_type": "password", "username": username,
         "password": PASSWORD,
     }, form=True)["access_token"]
+    bind_role(access)
+    return access
+
+
+def bind_role(access):
+    """The app binds the role once per account (POST /api/me/role); test users carry it as a realm role."""
+    payload = access.split(".")[1]
+    claims = json.loads(base64.urlsafe_b64decode(payload + "=" * (-len(payload) % 4)))
+    roles = claims.get("realm_access", {}).get("roles", [])
+    role = "employer" if "employer" in roles else "candidate" if "candidate" in roles else None
+    if role is None:
+        return
+    try:
+        with urlopen(Request(API + "/api/me/role", data=json.dumps({"role": role}).encode(), method="POST",
+                             headers={"Authorization": "Bearer " + access, "Content-Type": "application/json"}), timeout=20):
+            pass
+    except HTTPError as error:
+        if error.code != 409:  # 409: already bound to the other role, which the calling test asserts itself
+            raise
 
 
 def api(path, bearer, method="GET", body=None, expected=200):
@@ -165,17 +185,30 @@ def main():
         "experience": profile["experience"], "techStack": profile["techStack"],
     })
     assert reviewed["email"] == profile["email"] and reviewed["consentPublication"] is True
-    questions = api("/api/assessments/questions", candidate)
-    assert len(questions["questions"]) == 5
-    assert all("correctOption" not in item for item in questions["questions"])
-    answers = [{"questionId": item["id"], "optionId": item["options"][0]["id"]}
-               for item in questions["questions"]]
-    outcome = api("/api/assessments", candidate, "POST", {
-        "attemptId": questions["attemptId"], "answers": answers,
+    # Survey → declared grade → adaptive test (12 generated items, one at a time, keys stay on the server).
+    attempt = api("/api/assessments/attempts", candidate, "POST", {
+        "survey": {"industry": "fintech", "specialization": "backend", "experienceYears": 2,
+                   "teamRoles": ["individual"], "workFormat": "hybrid"},
+        "targetGrade": "junior",
     }, 201)
-    assert outcome["grade"] in ("junior", "middle", "senior")
+    while True:
+        item = attempt["item"]
+        assert not {"answer", "answerKey", "tolerance"} & item.keys()
+        reply = item["options"][0]["id"] if item["format"] == "choice" else "1"
+        step = api("/api/assessments/attempts/" + attempt["attemptId"] + "/answers", candidate, "POST",
+                   {"position": attempt["position"], "answer": reply})
+        if step["done"]:
+            outcome = step["result"]
+            break
+        attempt = step["attempt"]
+    assert outcome["grade"] in ("junior", "middle", "senior") and outcome["answered"] == 12
     assert len(api("/api/assessments/history", candidate)["results"]) == 1
-    api("/api/assessments/questions", candidate, expected=409)
+    # Junior has no lower level: whatever the outcome, re-testing junior waits for the 90-day window.
+    api("/api/assessments/attempts", candidate, "POST", {
+        "survey": {"industry": "fintech", "specialization": "backend", "experienceYears": 2,
+                   "teamRoles": [], "workFormat": "hybrid"},
+        "targetGrade": "junior",
+    }, expected=409)
     api("/api/employers/company", employer, "PUT", {"name": "Тестовая компания"})
     api("/api/employers/needs", employer, "PUT", {
         "specialization": "backend", "industry": "fintech", "minGrade": "junior",
@@ -204,7 +237,7 @@ def main():
     audience_mapper = next(item for item in mappers if item["name"] == "fsp-api-audience")
     admin("/clients/" + created_client + "/protocol-mappers/models/" + audience_mapper["id"], "DELETE", expected=204)
     api("/api/candidates/me", token(client_id, candidate_name), expected=401)
-    print("PASS: real Keycloak JWT, bad-signature/audience rejection, role boundaries, consent, five-question assessment, cooldown, matching, reviewed PDF import/export, invitation contact gate, erasure")
+    print("PASS: real Keycloak JWT, bad-signature/audience rejection, role boundaries, consent, survey + adaptive assessment, retake rule, matching, reviewed PDF import/export, invitation contact gate, erasure")
     print("NOTE: accounts are synthetic admin-created/verified; browser self-registration and psychometric quality are not tested")
 
 

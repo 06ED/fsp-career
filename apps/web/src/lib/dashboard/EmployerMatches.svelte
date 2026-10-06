@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { industryLabel } from "./industries";
   import { onMount } from "svelte";
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
@@ -84,7 +85,7 @@
           [
             m.fullName,
             m.category,
-            m.industry,
+            industryLabel(m.industry),
             m.explanation,
             ...m.techStack,
             ...m.achievements.map((a) => a.eventName ?? a.title),
@@ -234,7 +235,8 @@
             ?.label ?? need.specialization} · {gradeLabel(
             need.minGrade,
           )}</strong
-        >{need.industry ? ` · ${need.industry}` : ""}{need.techStack?.length
+        >{need.industry ? ` · ${industryLabel(need.industry)}` : ""}{need
+          .techStack?.length
           ? ` · стек: ${need.techStack.join(", ")}`
           : ""}
         <button

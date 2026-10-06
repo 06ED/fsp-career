@@ -1,6 +1,5 @@
 import { api, apiBlob, save } from "$lib/client";
 import type {
-  Assessment,
   CandidateCard,
   CandidatePrivacy,
   Company,
@@ -14,7 +13,6 @@ import type {
   Need,
   Offer,
   Profile,
-  Result,
   ResumeDraft,
   Role,
 } from "./types";
@@ -63,21 +61,6 @@ export const dashboardApi = {
         softSkills: profile.softSkills,
         targetRoles: profile.targetRoles,
         cvHistory: profile.cvHistory,
-      },
-      "POST",
-    ),
-  questions: () => api<Assessment>("/api/assessments/questions"),
-  assessmentHistory: async () =>
-    (await api<{ results: Result[] }>("/api/assessments/history")).results,
-  submitAssessment: (attemptId: string, answers: Record<string, string>) =>
-    save<Result>(
-      "/api/assessments",
-      {
-        attemptId,
-        answers: Object.entries(answers).map(([questionId, optionId]) => ({
-          questionId: Number(questionId),
-          optionId,
-        })),
       },
       "POST",
     ),

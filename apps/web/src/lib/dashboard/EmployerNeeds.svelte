@@ -5,6 +5,7 @@
   import ActionIcon from "$lib/ActionIcon.svelte";
   import type { Need } from "./types";
   import { specializations } from "./specializations";
+  import { industries } from "./industries";
   import { splitTags, stackSuggestions } from "./matching";
   let {
     need = $bindable(),
@@ -75,13 +76,16 @@
     Точное совпадение грейда — выше в выдаче; кандидаты с грейдом выше
     показываются с пометкой, ниже — только по вашему запросу.
   </p>
-  <label for="needIndustry" {...sx(s.label)}>Отрасль</label><input
+  <label for="needIndustry" {...sx(s.label)}>Отрасль</label><select
     id="needIndustry"
-    maxlength="100"
-    placeholder="Финтех, e-commerce, образование…"
     bind:value={need.industry}
     {...sx(s.field)}
-  />
+    ><option value="">Не важно</option>{#each industries as item}<option
+        value={item.id}>{item.label}</option
+      >{/each}{#if need.industry && !industries.some((i) => i.id === need.industry)}<option
+        value={need.industry}>{need.industry}</option
+      >{/if}</select
+  >
   <label for="needStack" {...sx(s.label)}
     >Требуемый стек · через запятую (до 15)</label
   ><input

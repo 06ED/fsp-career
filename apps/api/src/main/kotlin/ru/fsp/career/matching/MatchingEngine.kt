@@ -1,5 +1,7 @@
 package ru.fsp.career.matching
 
+import ru.fsp.career.assessment.AssessmentCatalog
+
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -565,13 +567,26 @@ class MatchingEngine(
 
     private data class StackCoverage(val value: Double, val matched: List<String>, val text: String)
 
+    /**
+     * Industries are compared through the survey catalog key (candidates pick a catalog id, employers may type free
+     * text such as «банки»), falling back to plain term overlap for industries outside the catalog.
+     */
     private fun industry(needIndustry: String, c: CandidateSignals, pool: PreparedPool): Pair<Double, String> {
         val wanted = TextAnalysis.terms(needIndustry).toSet()
+        val needId = AssessmentCatalog.industryId(needIndustry)
+        val candidateId = AssessmentCatalog.industryId(c.industry)
+        val needLabel = AssessmentCatalog.industryLabel(needIndustry)
+        val candidateLabel = AssessmentCatalog.industryLabel(c.industry)
+        val mentioned = if (needId != null) {
+            val stems = AssessmentCatalog.industryStemsFor(needId)
+            pool.termSets.getValue(c.id).any { term -> stems.any { term.startsWith(it) || it.startsWith(term) && term.length >= 4 } }
+        } else wanted.isNotEmpty() && pool.termSets.getValue(c.id).containsAll(wanted)
         return when {
-            wanted.isNotEmpty() && TextAnalysis.terms(c.industry).any { it in wanted } -> 1.0 to "Отрасль совпадает: ${c.industry}"
-            wanted.isNotEmpty() && pool.termSets.getValue(c.id).containsAll(wanted) -> 0.5 to "Отрасль «$needIndustry» упоминается в опыте"
+            needId != null && needId == candidateId -> 1.0 to "Отрасль совпадает: $candidateLabel"
+            needId == null && wanted.isNotEmpty() && TextAnalysis.terms(c.industry).any { it in wanted } -> 1.0 to "Отрасль совпадает: $candidateLabel"
+            mentioned -> 0.5 to "Отрасль «$needLabel» упоминается в опыте"
             c.industry.isBlank() -> 0.0 to "Отрасль кандидата не указана"
-            else -> 0.0 to "Отрасль кандидата: ${c.industry} (нужна: $needIndustry)"
+            else -> 0.0 to "Отрасль кандидата: $candidateLabel (нужна: $needLabel)"
         }
     }
 

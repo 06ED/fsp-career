@@ -4,6 +4,7 @@
   import ActionIcon from "$lib/ActionIcon.svelte";
   import type { Profile, ResumeDraft } from "./types";
   import { specializations } from "./specializations";
+  import { industries } from "./industries";
   let {
     profile = $bindable(),
     resumeDraft,
@@ -98,12 +99,16 @@
       >
     </div>
     <div>
-      <label for="industry" {...sx(s.label)}>Отрасль / интерес</label><input
+      <label for="industry" {...sx(s.label)}>Отрасль / интерес</label><select
         id="industry"
-        placeholder="Финтех, образование…"
         bind:value={profile.industry}
         {...sx(s.field)}
-      />
+        ><option value="">Не указана</option>{#each industries as item}<option
+            value={item.id}>{item.label}</option
+          >{/each}{#if profile.industry && !industries.some((i) => i.id === profile.industry)}<option
+            value={profile.industry}>{profile.industry}</option
+          >{/if}</select
+      >
     </div>
     <div>
       <label for="grade" {...sx(s.label)}>Предполагаемый грейд</label><select

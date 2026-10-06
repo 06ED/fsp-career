@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { industryLabel } from "./industries";
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
   import { mx } from "./matching.stylex";
@@ -92,7 +93,7 @@
       </p>
     {/if}
     <p {...sx(s.muted)}>
-      Отрасль: {card.industry || "не указана"}{card.assessedAt
+      Отрасль: {industryLabel(card.industry) || "не указана"}{card.assessedAt
         ? ` · тест пройден ${new Date(card.assessedAt).toLocaleDateString("ru-RU")}`
         : ""}
     </p>

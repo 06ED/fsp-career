@@ -7,6 +7,7 @@ import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
+import ru.fsp.career.assessment.AssessmentCatalog
 import ru.fsp.career.fsp.MockFspRegistry
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -48,7 +49,8 @@ internal class DemoSeed(private val db: Database) {
     // FSP-100004 belongs to the assessed demo login.
     private val reservedFsp = setOf("FSP-100001", "FSP-100002", "FSP-100003", "FSP-100004")
 
-    private val industries = listOf("финтех", "e-commerce", "образование", "логистика", "госсектор", "телеком", "медицина", "игры")
+    // Survey catalog ids (AssessmentCatalog.industries), the same values real candidates get from the survey.
+    private val industries = listOf("fintech", "ecommerce", "edtech", "logistics", "govtech", "telecom", "healthtech", "gamedev")
 
     private val tracks = mapOf(
         "backend" to Track(
@@ -154,7 +156,7 @@ internal class DemoSeed(private val db: Database) {
         val duties = track.duties.shuffled(rnd).take(3)
         val experience = buildString {
             append("${if (years == 0) "Меньше года" else "$years ${yearsWord(years)}"} опыта: разработка и развитие ${track.projects.random(rnd)} ")
-            append("в компании из сферы «$industry». Основной стек — ${stack.take(3).joinToString(", ")}. ")
+            append("в компании из сферы «${AssessmentCatalog.industryLabel(industry)}». Основной стек — ${stack.take(3).joinToString(", ")}. ")
             append("Задачи: ${duties.joinToString("; ")}. ")
             if (fspCandidate) append("Участвую в соревнованиях по спортивному программированию.")
         }
@@ -292,7 +294,7 @@ internal class DemoSeed(private val db: Database) {
             "hr@fintech.demo.fsp.local", "@demo_fintech_hr")
         EmployerNeeds.update({ EmployerNeeds.accountId eq id }) {
             it[specialization] = "backend"
-            it[industry] = "финтех"
+            it[industry] = "fintech"
             it[minGrade] = "middle"
             it[techStack] = listOf("Kotlin", "PostgreSQL", "Kafka", "Docker")
             it[description] = "Ищем backend-разработчика в команду платёжного шлюза: микросервисы на Kotlin, транзакции в PostgreSQL, " +
@@ -356,7 +358,7 @@ internal class DemoSeed(private val db: Database) {
         fillCandidate(id, "Мария Волкова", "maria.volkova@demo.fsp.local", "backend", "middle", fspCandidate = true)
         CandidateProfiles.update({ CandidateProfiles.accountId eq id }) {
             it[techStack] = listOf("Kotlin", "PostgreSQL", "Kafka", "Docker", "Redis")
-            it[industry] = "финтех"
+            it[industry] = "fintech"
             it[experience] = "3 года опыта: разработка платёжных микросервисов на Kotlin и Ktor в финтех-компании. Транзакции и индексы в PostgreSQL, " +
                 "события через Kafka, деплой в Docker и Kubernetes. Задачи: идемпотентная обработка платежей, интеграции с банками, антифрод-правила. " +
                 "Участвую в соревнованиях по спортивному программированию."

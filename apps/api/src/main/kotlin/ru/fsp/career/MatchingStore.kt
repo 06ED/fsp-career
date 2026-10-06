@@ -1,5 +1,9 @@
 package ru.fsp.career
 
+import ru.fsp.career.matching.TextAnalysis
+
+import ru.fsp.career.assessment.confirmedSkills
+
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.Transaction
@@ -62,6 +66,8 @@ internal fun Transaction.poolCandidates(rows: List<ResultRow>): List<PoolCandida
         .groupBy { it[Achievements.candidateId] }
     // Answers to the weekly short tasks are the "fresh signal" the spec asks regular tasks to provide.
     val taskActivity = lastTaskActivity(ids)
+    // Topics answered correctly in adaptive tests count as confirmed skills (weight 1.0 in the stack factor).
+    val testedSkills = confirmedSkills(ids)
 
     return rows.map { row ->
         val id = row[CandidateProfiles.accountId]
@@ -98,6 +104,7 @@ internal fun Transaction.poolCandidates(rows: List<ResultRow>): List<PoolCandida
             achievements = visibleAchievements.map(::achievementSignal),
             fspLinked = row[CandidateProfiles.fspId] != null,
             lastActiveAt = lastActive,
+            confirmedSkills = testedSkills[id].orEmpty().map(TextAnalysis::skillKey).toSet(),
             stackHidden = !privacy.techStack,
             textHidden = !privacy.experience && !privacy.cvHistory,
             achievementsHidden = !privacy.fspAchievements,

@@ -43,3 +43,12 @@ tasks.register<JavaExec>("validateMatching") {
     mainClass.set("ru.fsp.career.matching.validation.ValidateMatchingKt")
     args(layout.projectDirectory.dir("../../docs/validation").asFile.absolutePath)
 }
+
+// Synthetic validation study of the adaptive assessment → docs/validation/assessment-results.{md,json}
+tasks.register<JavaExec>("validateAssessment") {
+    group = "verification"
+    description = "Simulates candidates through the production assessment engine and writes the validation report"
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass.set("ru.fsp.career.assessment.validation.AssessmentValidationKt")
+    args(layout.projectDirectory.dir("../../docs/validation").asFile.path)
+}

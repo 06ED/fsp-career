@@ -129,46 +129,215 @@ components:
       properties:
         id: {type: string}
         label: {type: string}
-    Question:
+    AssessmentCatalogEntry:
       type: object
-      required: [id, prompt, options]
-      description: Correct answer is never included in API responses.
+      required: [id, label, description]
       properties:
-        id: {type: integer, format: int64}
+        id: {type: string}
+        label: {type: string, description: Russian display label}
+        description: {type: string}
+    AssessmentGrade:
+      type: object
+      required: [id, label, description, thetaCut, scoreCut]
+      properties:
+        id: {type: string, enum: [junior, middle, senior]}
+        label: {type: string}
+        description: {type: string}
+        thetaCut: {type: number, description: Cut-point on the ability scale θ (junior = entry level)}
+        scoreCut: {type: integer, description: "The same cut on the 0..100 score scale, 100·Φ(thetaCut)"}
+    AssessmentVacancy:
+      type: object
+      required: [id, title, company, specialization, industry, grade, text]
+      description: Demo vacancy used to show how a job description becomes a test blueprint.
+      properties:
+        id: {type: string}
+        title: {type: string}
+        company: {type: string}
+        specialization: {type: string}
+        industry: {type: string}
+        grade: {type: string, enum: [junior, middle, senior]}
+        text: {type: string}
+    AssessmentCatalog:
+      type: object
+      required: [specializations, industries, teamRoles, workFormats, grades, topics, vacancies, testLength, timeLimitMinutes, cooldownDays, decisionMargin, familyCount]
+      properties:
+        specializations: {type: array, items: {$ref: '#/components/schemas/AssessmentCatalogEntry'}}
+        industries: {type: array, items: {$ref: '#/components/schemas/AssessmentCatalogEntry'}}
+        teamRoles: {type: array, items: {$ref: '#/components/schemas/AssessmentCatalogEntry'}}
+        workFormats: {type: array, items: {$ref: '#/components/schemas/AssessmentCatalogEntry'}}
+        grades: {type: array, items: {$ref: '#/components/schemas/AssessmentGrade'}}
+        topics: {type: array, items: {$ref: '#/components/schemas/AssessmentCatalogEntry'}}
+        vacancies: {type: array, items: {$ref: '#/components/schemas/AssessmentVacancy'}}
+        testLength: {type: integer, example: 12}
+        timeLimitMinutes: {type: integer, example: 30}
+        cooldownDays: {type: integer, example: 90}
+        decisionMargin: {type: number, description: "k in the pass rule θ̂ − k·SE ≥ cut"}
+        familyCount: {type: integer}
+    AssessmentSurvey:
+      type: object
+      required: [industry, specialization, experienceYears, workFormat]
+      description: Survey answered before every attempt; stored with the attempt and copied to the profile (specialization, industry; desiredGrade = targetGrade).
+      properties:
+        industry: {type: string, description: Catalog industry id}
+        specialization: {type: string, enum: [backend, frontend, data, product, design]}
+        experienceYears: {type: integer, minimum: 0, maximum: 50}
+        teamRoles: {type: array, uniqueItems: true, items: {type: string, description: Catalog team role id}}
+        workFormat: {type: string, enum: [office, hybrid, remote]}
+    AssessmentStartRequest:
+      type: object
+      required: [survey, targetGrade]
+      properties:
+        survey: {$ref: '#/components/schemas/AssessmentSurvey'}
+        targetGrade: {type: string, enum: [junior, middle, senior], description: Declared grade the test is for}
+        vacancyId: {type: string, nullable: true, description: "Demo vacancy of the same specialization (test for this vacancy)"}
+        vacancyText: {type: string, nullable: true, maxLength: 6000, description: Free vacancy text; mutually exclusive with vacancyId}
+    AssessmentItem:
+      type: object
+      required: [topic, topicLabel, prompt, format, options]
+      description: One generated task instance. Never contains the answer key.
+      properties:
+        topic: {type: string}
+        topicLabel: {type: string}
         prompt: {type: string}
+        code: {type: string, nullable: true}
+        language: {type: string, nullable: true}
+        format: {type: string, enum: [choice, number], description: "choice: answer with an option id; number: answer with a number (comma or dot)"}
         options: {type: array, items: {$ref: '#/components/schemas/Option'}}
-    QuestionSet:
+        unit: {type: string, nullable: true}
+    AssessmentTopicQuota:
       type: object
-      required: [attemptId, questions, expiresAt]
+      required: [topic, label, weight, items]
+      properties:
+        topic: {type: string}
+        label: {type: string}
+        weight: {type: number, description: Normalized blueprint weight}
+        items: {type: integer, description: Items of this topic in a test}
+    AssessmentAttempt:
+      type: object
+      required: [attemptId, specialization, industry, targetGrade, startedAt, expiresAt, position, total, blueprint]
       properties:
         attemptId: {type: string, format: uuid}
-        questions: {type: array, minItems: 5, maxItems: 5, items: {$ref: '#/components/schemas/Question'}}
+        specialization: {type: string}
+        industry: {type: string}
+        targetGrade: {type: string, enum: [junior, middle, senior]}
+        vacancyId: {type: string, nullable: true}
+        vacancyTitle: {type: string, nullable: true}
+        startedAt: {type: string, format: date-time}
         expiresAt: {type: string, format: date-time}
-    Answer:
+        position: {type: integer, description: 0-based position of the current item = answered items}
+        total: {type: integer}
+        item: {allOf: [{$ref: '#/components/schemas/AssessmentItem'}], nullable: true}
+        blueprint: {type: array, items: {$ref: '#/components/schemas/AssessmentTopicQuota'}}
+    AssessmentAnswerRequest:
       type: object
-      required: [questionId, optionId]
+      required: [position, answer]
       properties:
-        questionId: {type: integer, format: int64}
-        optionId: {type: string}
-    Submission:
+        position: {type: integer, description: Must equal the current item position (protects against double submits)}
+        answer: {type: string, minLength: 1, maxLength: 64}
+    AssessmentGradeOption:
       type: object
-      required: [attemptId, answers]
+      required: [grade, allowed, reason, message]
       properties:
-        attemptId: {type: string, format: uuid}
-        answers: {type: array, minItems: 5, maxItems: 5, items: {$ref: '#/components/schemas/Answer'}}
+        grade: {type: string, enum: [junior, middle, senior]}
+        allowed: {type: boolean}
+        reason: {type: string, enum: [first-attempt, cooldown-over, lower-after-fail, upgrade-after-confident-pass, cooldown, below-confirmed]}
+        message: {type: string}
+        availableAt: {type: string, format: date-time, nullable: true}
     AssessmentResult:
       type: object
-      required: [score, grade, specialization, submittedAt]
+      required: [attemptId, specialization, industry, score, grade, answered, correct, total, expired, startedAt, submittedAt, method, summary, nextOptions]
       properties:
-        score: {type: integer, minimum: 0, maximum: 100}
-        grade: {type: string, enum: [junior, middle, senior]}
+        attemptId: {type: string, format: uuid}
         specialization: {type: string}
+        industry: {type: string}
+        targetGrade: {type: string, nullable: true, enum: [junior, middle, senior], description: Null for legacy five-question attempts}
+        passed: {type: boolean, nullable: true}
+        confident: {type: boolean, nullable: true, description: Lower bound also clears the next grade; unlocks an immediate higher-grade attempt}
+        theta: {type: number, nullable: true, description: EAP ability estimate}
+        thetaSe: {type: number, nullable: true}
+        score: {type: integer, minimum: 0, maximum: 100, description: "100·Φ(θ̂)"}
+        grade: {type: string, enum: [junior, middle, senior], description: Confirmed grade in the specialization after this attempt (never decreases)}
+        previousGrade: {type: string, nullable: true, enum: [junior, middle, senior]}
+        answered: {type: integer}
+        correct: {type: integer}
+        total: {type: integer}
+        expired: {type: boolean}
+        startedAt: {type: string, format: date-time}
         submittedAt: {type: string, format: date-time}
+        survey: {allOf: [{$ref: '#/components/schemas/AssessmentSurvey'}], nullable: true}
+        vacancyId: {type: string, nullable: true}
+        vacancyTitle: {type: string, nullable: true}
+        method: {type: string, enum: [cat-v1, legacy-v1]}
+        summary: {type: string, description: Russian outcome summary}
+        nextOptions: {type: array, items: {$ref: '#/components/schemas/AssessmentGradeOption'}, description: Filled for a just-finished attempt}
     AssessmentHistory:
       type: object
       required: [results]
       properties:
         results: {type: array, items: {$ref: '#/components/schemas/AssessmentResult'}}
+    AssessmentAnswerOutcome:
+      type: object
+      required: [done]
+      description: Correctness of individual answers is never returned.
+      properties:
+        done: {type: boolean}
+        attempt: {allOf: [{$ref: '#/components/schemas/AssessmentAttempt'}], nullable: true}
+        result: {allOf: [{$ref: '#/components/schemas/AssessmentResult'}], nullable: true}
+    AssessmentCurrent:
+      type: object
+      properties:
+        attempt: {allOf: [{$ref: '#/components/schemas/AssessmentAttempt'}], nullable: true}
+        closed: {allOf: [{$ref: '#/components/schemas/AssessmentResult'}], nullable: true, description: Attempt closed by this request because its time ran out}
+    AssessmentEligibility:
+      type: object
+      required: [specialization, options, cooldownDays]
+      properties:
+        specialization: {type: string}
+        confirmedGrade: {type: string, nullable: true, enum: [junior, middle, senior]}
+        score: {type: integer, nullable: true}
+        lastAttemptAt: {type: string, format: date-time, nullable: true}
+        options: {type: array, items: {$ref: '#/components/schemas/AssessmentGradeOption'}}
+        openAttemptId: {type: string, format: uuid, nullable: true}
+        cooldownDays: {type: integer}
+    AssessmentRetakeConflict:
+      type: object
+      required: [error, reason]
+      properties:
+        error: {type: string}
+        reason: {type: string, enum: [open-attempt, cooldown, below-confirmed]}
+        retakeAvailableAt: {type: string, format: date-time, nullable: true}
+        openAttemptId: {type: string, format: uuid, nullable: true}
+    AssessmentBlueprintRequest:
+      type: object
+      properties:
+        specialization: {type: string, nullable: true, enum: [backend, frontend, data, product, design], description: Detected from the vacancy when omitted}
+        vacancyId: {type: string, nullable: true}
+        vacancyText: {type: string, nullable: true, maxLength: 6000}
+        targetGrade: {type: string, nullable: true, enum: [junior, middle, senior]}
+    AssessmentSkill:
+      type: object
+      required: [id, label, topics, hits, matched]
+      properties:
+        id: {type: string}
+        label: {type: string}
+        topics: {type: array, items: {type: string}}
+        hits: {type: integer}
+        matched: {type: array, items: {type: string}, description: Stemmed vacancy words that matched}
+    AssessmentBlueprint:
+      type: object
+      required: [specialization, targetGrade, skills, uncoveredSkills, topics, sampleItems, poolSize, testLength]
+      properties:
+        specialization: {type: string}
+        detectedSpecialization: {type: string, nullable: true}
+        vacancyId: {type: string, nullable: true}
+        vacancyTitle: {type: string, nullable: true}
+        targetGrade: {type: string}
+        skills: {type: array, items: {$ref: '#/components/schemas/AssessmentSkill'}}
+        uncoveredSkills: {type: array, items: {$ref: '#/components/schemas/AssessmentSkill'}}
+        topics: {type: array, items: {$ref: '#/components/schemas/AssessmentTopicQuota'}}
+        sampleItems: {type: array, items: {$ref: '#/components/schemas/AssessmentItem'}, description: Freshly generated example instances without answers}
+        poolSize: {type: integer}
+        testLength: {type: integer}
     Company:
       type: object
       description: Employer company profile. Contact fields form the default contact method of invitations.
@@ -755,36 +924,80 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '500': {$ref: '#/components/responses/InternalError'}
-  /api/assessments/history:
+  /api/assessments/catalog:
     get:
-      summary: Own submitted assessment results, newest first (candidate role)
+      summary: Survey reference data, grades with cut-points, topics and demo vacancies (any authenticated user)
       responses:
-        '200': {description: Results, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentHistory'}}}}
+        '200': {description: Catalog, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentCatalog'}}}}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
         '500': {$ref: '#/components/responses/InternalError'}
-  /api/assessments/questions:
-    get:
-      summary: Begin or resume random five-question assessment (candidate role)
-      description: Three specialty and two general questions for known specialties; otherwise five general. Attempt expires in 30 minutes. Completed assessments impose a 90-day cooldown.
+  /api/assessments/blueprint:
+    post:
+      summary: Show how a vacancy becomes a test (any authenticated user)
+      description: Extracts skills from a demo vacancy or free text (ru/en dictionary with light stemming), turns them into topic weights and item quotas, and returns freshly generated sample items without answers.
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentBlueprintRequest'}}}}
       responses:
-        '200': {description: Questions without answer key, content: {application/json: {schema: {$ref: '#/components/schemas/QuestionSet'}}}}
+        '200': {description: Blueprint preview, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentBlueprint'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/assessments/eligibility:
+    get:
+      summary: Which grades the candidate may be tested for now (candidate role)
+      description: 90-day cooldown per specialization; immediate lower-grade attempt after a failure and higher-grade attempt after a confident pass; grades below the confirmed one are not offered.
+      parameters:
+        - {in: query, name: specialization, schema: {type: string, enum: [backend, frontend, data, product, design]}, description: Defaults to the profile specialization}
+      responses:
+        '200': {description: Eligibility, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentEligibility'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '409': {$ref: '#/components/responses/Conflict'}
         '500': {$ref: '#/components/responses/InternalError'}
-  /api/assessments:
-    post:
-      summary: Submit complete answer set (candidate role); grade in same specialization cannot decrease
-      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/Submission'}}}}
+  /api/assessments/history:
+    get:
+      summary: Own completed attempts with survey, target grade, θ, SE, score and confirmed grade, newest first (candidate role)
       responses:
-        '201': {description: Assessed result, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentResult'}}}}
+        '200': {description: History, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentHistory'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/assessments/attempts:
+    post:
+      summary: Start an adaptive test for the declared grade (candidate role, processing consent required)
+      description: Validates the survey, writes specialization/industry/desiredGrade to the profile, builds the blueprint (optionally from a vacancy) and serves the first item. 12 items, 30 minutes; an expired attempt is closed as failed.
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentStartRequest'}}}}
+      responses:
+        '201': {description: Started attempt with its first item, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentAttempt'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409':
+          description: An attempt is already open, the grade is in cooldown, or it is below the confirmed grade
+          content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentRetakeConflict'}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/assessments/attempts/current:
+    get:
+      summary: Open attempt with its current item, if any (candidate role)
+      responses:
+        '200': {description: Current attempt or null, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentCurrent'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/assessments/attempts/{id}/answers:
+    post:
+      summary: Answer the current item; returns the next item or the final result (candidate role)
+      parameters:
+        - {in: path, name: id, required: true, schema: {type: string, format: uuid}}
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentAnswerRequest'}}}}
+      responses:
+        '200': {description: Next item or result (result with expired=true when time ran out), content: {application/json: {schema: {$ref: '#/components/schemas/AssessmentAnswerOutcome'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: 'Attempt already completed, or position is not the current item', content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
         '500': {$ref: '#/components/responses/InternalError'}
   /api/employers/company:
     get:

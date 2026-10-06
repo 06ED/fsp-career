@@ -6,14 +6,11 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import ru.fsp.career.assessment.assessmentRoutes
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
-import org.jetbrains.exposed.sql.SqlExpressionBuilder.less
-import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
-import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 private fun now(): OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)
@@ -84,114 +81,7 @@ fun Route.careerRoutes(db: Database, audience: String) {
                 profile(id)
             })
         }
-        get("/assessments/history") {
-            val sub = call.role(audience, "candidate")
-            call.respond(db.tx {
-                val id = account(sub, "candidate")
-                val results = AssessmentAttempts.selectAll().where {
-                    (AssessmentAttempts.candidateId eq id) and AssessmentAttempts.submittedAt.isNotNull()
-                }.orderBy(AssessmentAttempts.submittedAt to SortOrder.DESC).map { row ->
-                    Result(row[AssessmentAttempts.score]!!, row[AssessmentAttempts.grade]!!,
-                        row[AssessmentAttempts.specialization], row[AssessmentAttempts.submittedAt]!!.toInstant().toString())
-                }
-                AssessmentHistory(results)
-            })
-        }
-        get("/assessments/questions") {
-            val sub = call.role(audience, "candidate")
-            call.respond(db.tx {
-                val id = account(sub, "candidate")
-                val candidate = profile(id)
-                if (!candidate.processingConsent) forbidden("Grant processing consent before assessment")
-                val specialization = candidate.specialization.takeIf { it.isNotBlank() } ?: bad("Set specialization before assessment")
-                val last = AssessmentAttempts.selectAll().where {
-                    (AssessmentAttempts.candidateId eq id) and AssessmentAttempts.submittedAt.isNotNull()
-                }.orderBy(AssessmentAttempts.submittedAt to SortOrder.DESC).limit(1)
-                    .firstOrNull()?.get(AssessmentAttempts.submittedAt)?.toInstant()
-                if (last != null && last.plus(90, ChronoUnit.DAYS).isAfter(Instant.now()))
-                    conflict("Retake available at ${last.plus(90, ChronoUnit.DAYS)}")
-                val expiry = now().minusMinutes(30)
-                AssessmentAttempts.deleteWhere {
-                    (AssessmentAttempts.candidateId eq id) and AssessmentAttempts.submittedAt.isNull() and
-                        (AssessmentAttempts.startedAt less expiry)
-                }
-                val open = AssessmentAttempts.selectAll().where {
-                    (AssessmentAttempts.candidateId eq id) and AssessmentAttempts.submittedAt.isNull()
-                }.singleOrNull()
-                val (attemptId, assigned, startedAt) = if (open != null) {
-                    Triple(open[AssessmentAttempts.id], open[AssessmentAttempts.questionIds],
-                        open[AssessmentAttempts.startedAt].toInstant())
-                } else {
-                    val specialized = if (specialization.equals("general", ignoreCase = true)) emptyList() else
-                        Questions.selectAll().where {
-                            (Questions.active eq true) and (Questions.specialization eq specialization.lowercase())
-                        }.map { it[Questions.id] }.shuffled().take(3)
-                    val chosen = specialized.takeIf { it.size == 3 }.orEmpty()
-                    val general = Questions.selectAll().where {
-                        (Questions.active eq true) and (Questions.specialization eq "general")
-                    }.map { it[Questions.id] }.shuffled().take(5 - chosen.size)
-                    val selected = (chosen + general).shuffled()
-                    if (selected.size < 5) conflict("Question bank requires at least five questions")
-                    val newId = UUID.randomUUID()
-                    val started = now()
-                    AssessmentAttempts.insert {
-                        it[AssessmentAttempts.id] = newId
-                        it[candidateId] = id
-                        it[AssessmentAttempts.specialization] = specialization
-                        it[questionIds] = selected
-                        it[AssessmentAttempts.startedAt] = started
-                    }
-                    Triple(newId, selected, started.toInstant())
-                }
-                val questions = Questions.selectAll().where { Questions.id inList assigned }.map { row ->
-                    Question(row[Questions.id], row[Questions.prompt], row[Questions.options])
-                }
-                QuestionSet(attemptId.toString(), questions, startedAt.plus(30, ChronoUnit.MINUTES).toString())
-            })
-        }
-        post("/assessments") {
-            val sub = call.role(audience, "candidate")
-            val input = call.receive<Submission>()
-            call.respond(HttpStatusCode.Created, db.tx {
-                val id = account(sub, "candidate")
-                val attemptId = uuid(input.attemptId)
-                val attempt = AssessmentAttempts.selectAll().where {
-                    (AssessmentAttempts.id eq attemptId) and (AssessmentAttempts.candidateId eq id)
-                }.forUpdate().singleOrNull() ?: missing("Assessment not found")
-                if (attempt[AssessmentAttempts.submittedAt] != null) conflict("Assessment already submitted")
-                if (attempt[AssessmentAttempts.startedAt].toInstant().plus(30, ChronoUnit.MINUTES).isBefore(Instant.now()))
-                    conflict("Assessment expired")
-                val ids = attempt[AssessmentAttempts.questionIds]
-                if (input.answers.size != ids.size || input.answers.map { it.questionId }.toSet() != ids.toSet())
-                    bad("Answer every assigned question exactly once")
-                val answers = Questions.selectAll().where { Questions.id inList ids }
-                    .associateBy { it[Questions.id] }
-                input.answers.forEach { answer ->
-                    if (answers[answer.questionId]?.get(Questions.options)?.none { it.id == answer.optionId } != false)
-                        bad("Invalid answer option")
-                    AssessmentAnswers.insert {
-                        it[AssessmentAnswers.attemptId] = attemptId
-                        it[questionId] = answer.questionId
-                        it[optionId] = answer.optionId
-                    }
-                }
-                val score = input.answers.count { answers[it.questionId]?.get(Questions.correctOption) == it.optionId } * 100 / ids.size
-                val achieved = when { score >= 80 -> "senior"; score >= 60 -> "middle"; else -> "junior" }
-                val previous = AssessmentAttempts.selectAll().where {
-                    (AssessmentAttempts.candidateId eq id) and
-                        (AssessmentAttempts.specialization eq attempt[AssessmentAttempts.specialization]) and
-                        AssessmentAttempts.submittedAt.isNotNull()
-                }.mapNotNull { it[AssessmentAttempts.grade] }.maxByOrNull(::gradeRank)
-                val finalGrade = listOfNotNull(previous, achieved).maxBy(::gradeRank)
-                val submitted = now()
-                AssessmentAttempts.update({ AssessmentAttempts.id eq attemptId }) {
-                    it[submittedAt] = submitted
-                    it[AssessmentAttempts.score] = score
-                    it[grade] = finalGrade
-                }
-                Result(score, finalGrade, attempt[AssessmentAttempts.specialization], submitted.toInstant().toString())
-            })
-        }
+        assessmentRoutes(db, audience)
         get("/employers/company") {
             val sub = call.role(audience, "employer")
             call.respond(db.tx {

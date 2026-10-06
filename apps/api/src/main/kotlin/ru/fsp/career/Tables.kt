@@ -68,6 +68,21 @@ internal object AssessmentAttempts : Table("assessment_attempts") {
     val submittedAt = timestampWithTimeZone("submitted_at").nullable()
     val score = integer("score").nullable()
     val grade = text("grade").nullable()
+    // V7 adaptive assessment columns (see assessment/AssessmentService.kt).
+    val targetGrade = text("target_grade").nullable()
+    val industry = text("industry").default("")
+    val survey = jsonb<ru.fsp.career.assessment.AssessmentSurvey>("survey", Json.Default).default(ru.fsp.career.assessment.AssessmentSurvey())
+    val vacancyId = text("vacancy_id").nullable()
+    val vacancyTitle = text("vacancy_title").nullable()
+    val blueprint = jsonb<ru.fsp.career.assessment.BlueprintSnapshot>("blueprint", Json.Default).default(ru.fsp.career.assessment.BlueprintSnapshot())
+    val plannedItems = integer("planned_items").default(0)
+    val expiresAt = timestampWithTimeZone("expires_at").nullable()
+    val theta = double("theta").nullable()
+    val thetaSe = double("theta_se").nullable()
+    val passed = bool("passed").nullable()
+    val confident = bool("confident").nullable()
+    val expired = bool("expired").default(false)
+    val engineVersion = text("engine_version").default("legacy-v1")
     override val primaryKey = PrimaryKey(id)
 }
 

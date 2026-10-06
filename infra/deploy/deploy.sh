@@ -34,6 +34,9 @@ EOF
   )
 fi
 
+# Public demo logins for the jury (documented password); set DEMO_PASSWORD= (empty) to disable them.
+grep -q '^DEMO_PASSWORD=' "$ENV_FILE" || echo "DEMO_PASSWORD=fsp-demo-2026" >>"$ENV_FILE"
+
 env_value() { sed -n "s/^$1=//p" "$ENV_FILE"; }
 PUBLIC_HOST="$(env_value PUBLIC_HOST)"
 
@@ -74,6 +77,30 @@ compose exec -T -e PUBLIC_URL="https://$PUBLIC_HOST" \
       -s smtpServer.ssl=false -s smtpServer.starttls=false
   fi
 '
+
+# Demo data: Keycloak logins (employer, an assessed candidate, a fresh candidate whose e-mail is in the synthetic
+# FSP registry) plus an idempotent synthetic candidate bank written by DemoSeed through the API's own code.
+DEMO_PASSWORD="$(env_value DEMO_PASSWORD)"
+if [[ -n "$DEMO_PASSWORD" ]]; then
+  # shellcheck disable=SC2016 # expanded by the shell inside the container
+  demo_ids="$(compose exec -T -e DEMO_PASSWORD="$DEMO_PASSWORD" keycloak bash -euo pipefail -c '
+    kcadm() { /opt/keycloak/bin/kcadm.sh "$@" --config /tmp/kcadm.config; }
+    kcadm config credentials --server http://localhost:8080/auth --realm master \
+      --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD" >/dev/null 2>&1
+    user_id() { kcadm get users -r fsp-career -q email="$1" -q exact=true --fields id --format csv --noquotes; }
+    ensure_user() {
+      [ -n "$(user_id "$1")" ] || kcadm create users -r fsp-career -s username="$1" -s email="$1" \
+        -s firstName="$2" -s lastName="$3" -s enabled=true -s emailVerified=true >/dev/null
+      kcadm set-password -r fsp-career --username "$1" --new-password "$DEMO_PASSWORD"
+      user_id "$1"
+    }
+    echo "$(ensure_user employer@demo.fsp.local Демо Работодатель) $(ensure_user maria.volkova@demo.fsp.local Мария Волкова)"
+    ensure_user ivan.petrov@demo.fsp.local Иван Петров >/dev/null
+  ')"
+  read -r demo_employer demo_assessed <<<"$demo_ids"
+  compose exec -T -e DEMO_EMPLOYER_SUBJECT="$demo_employer" -e DEMO_ASSESSED_SUBJECT="$demo_assessed" api \
+    java -Xmx256m -cp '/app/lib/*' ru.fsp.career.DemoSeedKt
+fi
 
 # The server disk is small: drop replaced images and build cache untouched for a week.
 docker image prune -f >/dev/null

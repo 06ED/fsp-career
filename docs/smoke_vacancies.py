@@ -2,7 +2,7 @@
 
 Run from the repository root like smoke_e2e.py (KEYCLOAK_ADMIN_PASSWORD = local Compose admin
 password). Creates temporary Keycloak users and a direct-grant test client, publishes the demo
-fixtures from docs/fixtures through the API (seed_vacancies.seed) and checks:
+fixtures (apps/api/src/main/resources/demo) through the API (seed_vacancies.seed) and checks:
 salary-range validation, candidate search filters and fit text, application preconditions,
 contact disclosure only after the candidate applied, status transitions (409 on invalid ones),
 foreign-record 404s, withdrawal, close/reopen, the weekly task offer (stable, one per week),

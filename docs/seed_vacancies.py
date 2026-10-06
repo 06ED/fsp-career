@@ -24,7 +24,8 @@ from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
-FIXTURES = Path(__file__).resolve().parent / "fixtures"
+# Shared with the API demo seeder (DemoSeed.kt), so they live in the API resources.
+FIXTURES = Path(__file__).resolve().parents[1] / "apps" / "api" / "src" / "main" / "resources" / "demo"
 
 
 def _call(api: str, token: str, method: str, path: str, body=None):

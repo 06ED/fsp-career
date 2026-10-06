@@ -202,6 +202,258 @@ components:
       required: [invitations]
       properties:
         invitations: {type: array, items: {$ref: '#/components/schemas/Invitation'}}
+    # ---- Vacancies, applications, short tasks (VacancyRoutes.kt / TaskRoutes.kt) ----
+    VacancySpecialization:
+      type: string
+      enum: [backend, frontend, data, product, design]
+      description: Same dictionary as candidate profiles and the assessment bank.
+    VacancyRequest:
+      type: object
+      required: [title, description, specialization, grade, salaryMinRub, salaryMaxRub, workFormat]
+      description: Salary range "от–до" in RUB is mandatory (spec 2.2 rule 1); city is required unless workFormat is remote.
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        description: {type: string, minLength: 1, maxLength: 6000}
+        specialization: {$ref: '#/components/schemas/VacancySpecialization'}
+        grade: {type: string, enum: [junior, middle, senior], description: Required confirmed grade}
+        techStack: {type: array, maxItems: 20, items: {type: string, minLength: 1, maxLength: 60}, description: De-duplicated case-insensitively}
+        salaryMinRub: {type: integer, minimum: 1}
+        salaryMaxRub: {type: integer, minimum: 1, maximum: 10000000, description: Must be at least salaryMinRub}
+        workFormat: {type: string, enum: [office, remote, hybrid]}
+        city: {type: string, maxLength: 100}
+    VacancyApplicationCounts:
+      type: object
+      required: [total, sent, viewed, accepted, rejected]
+      properties:
+        total: {type: integer}
+        sent: {type: integer}
+        viewed: {type: integer}
+        accepted: {type: integer}
+        rejected: {type: integer}
+    EmployerVacancy:
+      type: object
+      required: [id, title, description, specialization, grade, techStack, salaryMinRub, salaryMaxRub, workFormat, city, status, createdAt, updatedAt, applications]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        description: {type: string}
+        specialization: {$ref: '#/components/schemas/VacancySpecialization'}
+        grade: {type: string, enum: [junior, middle, senior]}
+        techStack: {type: array, items: {type: string}}
+        salaryMinRub: {type: integer}
+        salaryMaxRub: {type: integer}
+        workFormat: {type: string, enum: [office, remote, hybrid]}
+        city: {type: string}
+        status: {type: string, enum: [open, closed]}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        applications: {$ref: '#/components/schemas/VacancyApplicationCounts'}
+    EmployerVacancies:
+      type: object
+      required: [vacancies]
+      properties:
+        vacancies: {type: array, items: {$ref: '#/components/schemas/EmployerVacancy'}}
+    VacancyCard:
+      type: object
+      description: Open vacancy as a candidate sees it, with conditions and company before any conversation.
+      required: [id, title, description, specialization, grade, techStack, salaryMinRub, salaryMaxRub, workFormat, city, companyName, companyDescription, companyWebsite, createdAt, categoryMatch, stackOverlap, fit]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        description: {type: string}
+        specialization: {$ref: '#/components/schemas/VacancySpecialization'}
+        grade: {type: string, enum: [junior, middle, senior]}
+        techStack: {type: array, items: {type: string}}
+        salaryMinRub: {type: integer}
+        salaryMaxRub: {type: integer}
+        workFormat: {type: string, enum: [office, remote, hybrid]}
+        city: {type: string}
+        companyName: {type: string}
+        companyDescription: {type: string}
+        companyWebsite: {type: string}
+        createdAt: {type: string, format: date-time}
+        categoryMatch: {type: boolean, description: Same specialization and assessed grade >= required grade}
+        stackOverlap: {type: array, items: {type: string}, description: Vacancy skills present in the candidate's self-reported stack}
+        fit: {type: string, description: Russian explanation of the category fit and stack overlap}
+        myApplicationId: {type: string, format: uuid, nullable: true}
+        myApplicationStatus: {type: string, nullable: true, enum: [sent, viewed, accepted, rejected]}
+    VacancyCards:
+      type: object
+      required: [vacancies]
+      properties:
+        vacancies: {type: array, items: {$ref: '#/components/schemas/VacancyCard'}}
+    VacancyApplyRequest:
+      type: object
+      properties:
+        coverNote: {type: string, maxLength: 2000}
+    CandidateVacancyApplication:
+      type: object
+      required: [id, vacancyId, vacancyTitle, vacancyStatus, companyName, specialization, grade, salaryMinRub, salaryMaxRub, workFormat, city, coverNote, status, createdAt, updatedAt]
+      properties:
+        id: {type: string, format: uuid}
+        vacancyId: {type: string, format: uuid}
+        vacancyTitle: {type: string}
+        vacancyStatus: {type: string, enum: [open, closed]}
+        companyName: {type: string}
+        specialization: {$ref: '#/components/schemas/VacancySpecialization'}
+        grade: {type: string, enum: [junior, middle, senior]}
+        salaryMinRub: {type: integer}
+        salaryMaxRub: {type: integer}
+        workFormat: {type: string, enum: [office, remote, hybrid]}
+        city: {type: string}
+        coverNote: {type: string}
+        status: {type: string, enum: [sent, viewed, accepted, rejected]}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+    CandidateVacancyApplications:
+      type: object
+      required: [applications]
+      properties:
+        applications: {type: array, items: {$ref: '#/components/schemas/CandidateVacancyApplication'}}
+    VacancyApplicant:
+      type: object
+      description: >-
+        Applicant as the vacancy owner sees it. Contacts are included because the candidate applied
+        to this employer (spec 2.2 rule 2); withdrawal deletes the application and the disclosure.
+      required: [id, vacancyId, candidateId, fullName, specialization, techStack, experience, coverNote, status, createdAt, updatedAt, contactEmail, contactPhone, categoryMatch, stackOverlap, fit, taskSubmissions]
+      properties:
+        id: {type: string, format: uuid}
+        vacancyId: {type: string, format: uuid}
+        candidateId: {type: string, format: uuid}
+        fullName: {type: string}
+        specialization: {type: string}
+        assessedGrade: {type: string, nullable: true, enum: [junior, middle, senior], description: Best confirmed grade in the current specialization}
+        score: {type: integer, nullable: true, minimum: 0, maximum: 100}
+        techStack: {type: array, items: {type: string}}
+        experience: {type: string}
+        coverNote: {type: string}
+        status: {type: string, enum: [sent, viewed, accepted, rejected]}
+        createdAt: {type: string, format: date-time}
+        updatedAt: {type: string, format: date-time}
+        contactEmail: {type: string, description: Verified e-mail}
+        contactPhone: {type: string}
+        categoryMatch: {type: boolean}
+        stackOverlap: {type: array, items: {type: string}}
+        fit: {type: string, description: 'Russian explanation: category, stack overlap and short-task activity'}
+        taskSubmissions: {type: integer}
+        taskAverageRating: {type: number, nullable: true, minimum: 1, maximum: 5}
+        lastTaskActivityAt: {type: string, format: date-time, nullable: true}
+    VacancyApplicants:
+      type: object
+      required: [vacancy, applications]
+      properties:
+        vacancy: {$ref: '#/components/schemas/EmployerVacancy'}
+        applications:
+          type: array
+          description: Sorted by category match, assessed grade, score, then earliest application.
+          items: {$ref: '#/components/schemas/VacancyApplicant'}
+    VacancyApplicationStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: {type: string, enum: [viewed, accepted, rejected], description: 'Allowed: sent→viewed, sent|viewed→accepted, sent|viewed→rejected'}
+    ShortTaskRequest:
+      type: object
+      required: [title, body, specialization]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 200}
+        body: {type: string, minLength: 1, maxLength: 4000}
+        specialization: {$ref: '#/components/schemas/VacancySpecialization'}
+        grade: {type: string, nullable: true, enum: [junior, middle, senior], description: Null offers the task to every grade}
+    EmployerShortTask:
+      type: object
+      required: [id, title, body, specialization, active, createdAt, submissions, unrated]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        body: {type: string}
+        specialization: {$ref: '#/components/schemas/VacancySpecialization'}
+        grade: {type: string, nullable: true, enum: [junior, middle, senior]}
+        active: {type: boolean}
+        createdAt: {type: string, format: date-time}
+        submissions: {type: integer}
+        unrated: {type: integer}
+    EmployerShortTasks:
+      type: object
+      required: [tasks]
+      properties:
+        tasks: {type: array, items: {$ref: '#/components/schemas/EmployerShortTask'}}
+    OfferedShortTask:
+      type: object
+      required: [id, title, body, specialization, companyName]
+      properties:
+        id: {type: string, format: uuid}
+        title: {type: string}
+        body: {type: string}
+        specialization: {$ref: '#/components/schemas/VacancySpecialization'}
+        grade: {type: string, nullable: true, enum: [junior, middle, senior]}
+        companyName: {type: string}
+    CurrentShortTask:
+      type: object
+      required: [periodStart, nextRotationAt, state]
+      properties:
+        periodStart: {type: string, format: date, description: Monday of the current UTC week}
+        nextRotationAt: {type: string, format: date-time, description: Next Monday 00:00 UTC}
+        state: {type: string, enum: [offered, answered, none]}
+        task: {allOf: [{$ref: '#/components/schemas/OfferedShortTask'}], nullable: true}
+        submission: {allOf: [{$ref: '#/components/schemas/CandidateTaskSubmission'}], nullable: true}
+        lastActivityAt: {type: string, format: date-time, nullable: true}
+    TaskSubmissionRequest:
+      type: object
+      required: [taskId, kind, answer]
+      properties:
+        taskId: {type: string, format: uuid, description: Must equal the current weekly task}
+        kind: {type: string, enum: [solution, approach], description: Full solution or proposed approach}
+        answer: {type: string, minLength: 1, maxLength: 8000}
+    CandidateTaskSubmission:
+      type: object
+      required: [id, taskId, taskTitle, companyName, kind, answer, submittedAt, ratingComment]
+      properties:
+        id: {type: string, format: uuid}
+        taskId: {type: string, format: uuid}
+        taskTitle: {type: string}
+        companyName: {type: string}
+        kind: {type: string, enum: [solution, approach]}
+        answer: {type: string}
+        submittedAt: {type: string, format: date-time}
+        rating: {type: integer, nullable: true, minimum: 1, maximum: 5}
+        ratingComment: {type: string}
+        ratedAt: {type: string, format: date-time, nullable: true}
+    CandidateTaskSubmissions:
+      type: object
+      required: [submissions]
+      properties:
+        submissions: {type: array, items: {$ref: '#/components/schemas/CandidateTaskSubmission'}}
+    EmployerTaskSubmission:
+      type: object
+      description: Answer as the task author sees it; contacts are never included.
+      required: [id, taskId, candidateId, candidateName, specialization, kind, answer, submittedAt, ratingComment]
+      properties:
+        id: {type: string, format: uuid}
+        taskId: {type: string, format: uuid}
+        candidateId: {type: string, format: uuid}
+        candidateName: {type: string}
+        specialization: {type: string}
+        assessedGrade: {type: string, nullable: true, enum: [junior, middle, senior]}
+        score: {type: integer, nullable: true}
+        kind: {type: string, enum: [solution, approach]}
+        answer: {type: string}
+        submittedAt: {type: string, format: date-time}
+        rating: {type: integer, nullable: true, minimum: 1, maximum: 5}
+        ratingComment: {type: string}
+        ratedAt: {type: string, format: date-time, nullable: true}
+    EmployerTaskSubmissions:
+      type: object
+      required: [task, submissions]
+      properties:
+        task: {$ref: '#/components/schemas/EmployerShortTask'}
+        submissions: {type: array, items: {$ref: '#/components/schemas/EmployerTaskSubmission'}}
+    TaskRatingRequest:
+      type: object
+      required: [rating]
+      properties:
+        rating: {type: integer, minimum: 1, maximum: 5}
+        comment: {type: string, maxLength: 1000}
   responses:
     BadRequest:
       description: Malformed JSON, invalid fields, missing consent, or invalid PDF.
@@ -256,7 +508,7 @@ paths:
   /api/candidates/me/consent:
     delete:
       summary: Revoke processing and erase own profile, assessment answers, drafts, achievements and invitations
-      description: The blank account remains and can opt in again through PUT /api/candidates/me.
+      description: The blank account remains and can opt in again through PUT /api/candidates/me. Vacancy applications, short-task answers and weekly task offers are erased too.
       responses:
         '200': {description: Cleared profile, content: {application/json: {schema: {$ref: '#/components/schemas/Candidate'}}}}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -441,4 +693,242 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  # ---- Vacancies and applications (VacancyRoutes.kt) ----
+  /api/employers/vacancies:
+    get:
+      summary: List own vacancies with application counters, newest first (employer role)
+      responses:
+        '200': {description: Own vacancies, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerVacancies'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      summary: Publish a vacancy with a mandatory RUB salary range (employer role)
+      description: The vacancy is open immediately. Requires a nonblank company name (400 otherwise).
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/VacancyRequest'}}}}
+      responses:
+        '201': {description: Published vacancy, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerVacancy'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/vacancies/{id}:
+    put:
+      summary: Edit own vacancy (employer role); status is unchanged
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/VacancyRequest'}}}}
+      responses:
+        '200': {description: Updated vacancy, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerVacancy'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Vacancy does not exist or belongs to another employer, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/vacancies/{id}/close:
+    post:
+      summary: Close own open vacancy (employer role); it disappears from the candidate list, applications stay
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200': {description: Closed vacancy, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerVacancy'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Vacancy does not exist or belongs to another employer, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: Vacancy is already closed, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/vacancies/{id}/reopen:
+    post:
+      summary: Reopen own closed vacancy (employer role)
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200': {description: Open vacancy, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerVacancy'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Vacancy does not exist or belongs to another employer, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: Vacancy is already open, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/vacancies/{id}/applications:
+    get:
+      summary: Incoming applications to own vacancy with category, score, fit and contacts (employer role)
+      description: >-
+        Contacts (verified e-mail, phone) are disclosed because each candidate applied to this vacancy.
+        Sorted by confirmed-category match, assessed grade, score, then earliest application.
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200': {description: Vacancy and applicants, content: {application/json: {schema: {$ref: '#/components/schemas/VacancyApplicants'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Vacancy does not exist or belongs to another employer, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/applications/{id}/status:
+    put:
+      summary: Change status of an application to own vacancy (employer role)
+      description: 'Valid transitions: sent→viewed, sent|viewed→accepted, sent|viewed→rejected. accepted and rejected are final.'
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/VacancyApplicationStatusRequest'}}}}
+      responses:
+        '200': {description: Updated applicant, content: {application/json: {schema: {$ref: '#/components/schemas/VacancyApplicant'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Application does not exist or targets another employer's vacancy, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: Invalid application status transition, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/vacancies:
+    get:
+      summary: Browse open vacancies with company and salary range (candidate role)
+      description: >-
+        Recommended order: confirmed-category match, same specialization, more overlapping skills, then newest.
+        At most 500 newest open vacancies are considered before in-memory skill/text filters.
+      parameters:
+        - {in: query, name: specialization, schema: {$ref: '#/components/schemas/VacancySpecialization'}}
+        - {in: query, name: grade, schema: {type: string, enum: [junior, middle, senior]}, description: Exact required grade}
+        - {in: query, name: techStack, schema: {type: string}, description: 'Comma-separated, case-insensitive; all must be in the vacancy stack (max 10)'}
+        - {in: query, name: salaryFrom, schema: {type: integer, minimum: 0}, description: Vacancy salaryMaxRub must be at least this value}
+        - {in: query, name: workFormat, schema: {type: string, enum: [office, remote, hybrid]}}
+        - {in: query, name: q, schema: {type: string, maxLength: 100}, description: 'Case-insensitive text in title, description, company, city or stack'}
+      responses:
+        '200': {description: Open vacancies, content: {application/json: {schema: {$ref: '#/components/schemas/VacancyCards'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/vacancies/{id}/applications:
+    post:
+      summary: Apply to an open vacancy (candidate role); discloses own contacts to that employer
+      description: >-
+        Requires processing consent (403), nonblank full name and specialization and at least one contact (400),
+        and a completed assessment in the current specialization (409) so the employer sees a confirmed category.
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/VacancyApplyRequest'}}}}
+      responses:
+        '201': {description: Sent application, content: {application/json: {schema: {$ref: '#/components/schemas/CandidateVacancyApplication'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Vacancy not found, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: 'Vacancy closed, already applied, or assessment not completed', content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/applications:
+    get:
+      summary: Own applications with current status and vacancy conditions, newest first (candidate role)
+      responses:
+        '200': {description: Own applications, content: {application/json: {schema: {$ref: '#/components/schemas/CandidateVacancyApplications'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/applications/{id}:
+    delete:
+      summary: Withdraw own sent/viewed application (candidate role); the employer loses access to it and to the contacts
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '204': {description: Withdrawn}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Application does not exist or belongs to another candidate, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: Accepted or rejected applications cannot be withdrawn, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  # ---- Regular short tasks (TaskRoutes.kt) ----
+  /api/employers/tasks:
+    get:
+      summary: List own short tasks with answer counters (employer role)
+      responses:
+        '200': {description: Own tasks, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerShortTasks'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      summary: Publish a short task for a specialization, optionally for one grade (employer role)
+      description: Requires a nonblank company name. Active tasks enter the weekly rotation of matching candidates.
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/ShortTaskRequest'}}}}
+      responses:
+        '201': {description: Active task, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerShortTask'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/tasks/{id}/deactivate:
+    post:
+      summary: Remove own task from rotation (employer role); answers stay, open weekly offers are re-picked
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200': {description: Inactive task, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerShortTask'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Task does not exist or belongs to another employer, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: Task is already inactive, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/tasks/{id}/activate:
+    post:
+      summary: Return own task to rotation (employer role)
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200': {description: Active task, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerShortTask'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Task does not exist or belongs to another employer, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '409': {description: Task is already active, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/tasks/{id}/submissions:
+    get:
+      summary: Answers to own task with candidate name and confirmed category, never contacts (employer role)
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      responses:
+        '200': {description: 'Task and answers, newest first', content: {application/json: {schema: {$ref: '#/components/schemas/EmployerTaskSubmissions'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Task does not exist or belongs to another employer, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/employers/task-submissions/{id}/rating:
+    put:
+      summary: Rate an answer to own task 1–5 with an optional comment; re-rating overwrites (employer role)
+      parameters: [{name: id, in: path, required: true, schema: {type: string, format: uuid}}]
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/TaskRatingRequest'}}}}
+      responses:
+        '200': {description: Rated answer, content: {application/json: {schema: {$ref: '#/components/schemas/EmployerTaskSubmission'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {description: Answer does not exist or belongs to another employer's task, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/tasks/current:
+    get:
+      summary: This week's short task (candidate role; processing consent and specialization required)
+      description: >-
+        One task per candidate per week (Monday 00:00 UTC). On the first request of the week the system assigns
+        it from active tasks of the candidate's specialization whose grade is empty or equals the candidate's
+        grade (assessed, otherwise desired), excluding tasks already answered. The pick is deterministic
+        (SHA-256 of candidate id and week over the sorted pool) and persisted for the week; it is re-picked
+        only if the task is deactivated or the specialization changes. state=answered after answering.
+      responses:
+        '200': {description: Weekly slot, content: {application/json: {schema: {$ref: '#/components/schemas/CurrentShortTask'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/task-submissions:
+    get:
+      summary: Own short-task answers with employer ratings, newest first (candidate role)
+      responses:
+        '200': {description: Own answers, content: {application/json: {schema: {$ref: '#/components/schemas/CandidateTaskSubmissions'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      summary: Answer this week's task with a solution or a proposed approach (candidate role)
+      description: The answer is visible to the task's employer with name and confirmed category, without contacts.
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/TaskSubmissionRequest'}}}}
+      responses:
+        '201': {description: Stored answer, content: {application/json: {schema: {$ref: '#/components/schemas/CandidateTaskSubmission'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {description: 'Task is not the current weekly task, or this week''s task is already answered', content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
         '500': {$ref: '#/components/responses/InternalError'}

@@ -21,6 +21,8 @@ private fun now(): OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)
 fun Route.careerRoutes(db: Database, audience: String) {
     route("/api") {
         resumeRoutes(db, audience)
+        vacancyRoutes(db, audience)
+        taskRoutes(db, audience)
         get("/candidates/me") {
             val sub = call.role(audience, "candidate")
             call.respond(db.tx { profile(account(sub, "candidate")) })
@@ -61,6 +63,7 @@ fun Route.careerRoutes(db: Database, audience: String) {
             val sub = call.role(audience, "candidate")
             call.respond(db.tx {
                 val id = account(sub, "candidate")
+                eraseVacancyAndTaskData(id)
                 InvitationsTable.deleteWhere { InvitationsTable.candidateId eq id }
                 Achievements.deleteWhere { Achievements.candidateId eq id }
                 AssessmentAttempts.deleteWhere { AssessmentAttempts.candidateId eq id }

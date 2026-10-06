@@ -2,6 +2,7 @@
 # Only Traefik is published to the internet (80/443, Let's Encrypt) and routes one origin by labels:
 #   /auth/*                   -> Keycloak
 #   /api/*, /openapi.yaml     -> API
+#   /mail/*                   -> Mailpit demo inbox
 #   everything else           -> web
 # The ports published in compose.yaml stay bound to the server's loopback interface.
 services:
@@ -12,6 +13,16 @@ services:
     restart: unless-stopped
 
   mailpit:
+    environment:
+      MP_WEBROOT: /mail/
+    labels:
+      # Public demo inbox for Keycloak verification e-mails while no real SMTP is configured
+      # (deploy.sh then also disables password reset, which would otherwise allow account takeover).
+      - traefik.enable=true
+      - traefik.http.routers.fsp-mail.rule=Host(`${PUBLIC_HOST}`) && PathPrefix(`/mail`)
+      - traefik.http.routers.fsp-mail.entrypoints=websecure
+      - traefik.http.routers.fsp-mail.tls.certresolver=le
+      - traefik.http.services.fsp-mail.loadbalancer.server.port=8025
     restart: unless-stopped
 
   keycloak:
@@ -56,6 +67,7 @@ services:
       args:
         VITE_API_URL: https://${PUBLIC_HOST}
         VITE_KEYCLOAK_URL: https://${PUBLIC_HOST}/auth
+        VITE_DEMO_MAIL_URL: ${DEMO_MAIL_URL-https://${PUBLIC_HOST}/mail/}
     environment:
       ORIGIN: https://${PUBLIC_HOST}
     labels:

@@ -98,3 +98,5 @@ export type RunAction = (
   job: () => Promise<void>,
   confirmation: string,
 ) => Promise<void>;
+// Account role chosen once after the first login (null until then).
+export type Me = { role: Role | null; email: string; emailVerified: boolean };

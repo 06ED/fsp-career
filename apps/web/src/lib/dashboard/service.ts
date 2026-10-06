@@ -5,14 +5,18 @@ import type {
   Invitation,
   InvitationStatusAction,
   Match,
+  Me,
   Need,
   Offer,
   Profile,
   Result,
   ResumeDraft,
+  Role,
 } from "./types";
 
 export const dashboardApi = {
+  me: () => api<Me>("/api/me"),
+  chooseRole: (role: Role) => save<Me>("/api/me/role", { role }, "POST"),
   profile: () => api<Profile>("/api/candidates/me"),
   saveProfile: (profile: Profile) =>
     save<Profile>("/api/candidates/me", profile),

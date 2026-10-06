@@ -16,12 +16,18 @@ internal fun gradeRank(value: String): Int = when (value) {
     else -> 1
 }
 
+internal fun Transaction.boundRole(subject: String): Pair<UUID, String>? =
+    Accounts.selectAll().where { Accounts.subject eq subject }.forUpdate().singleOrNull()
+        ?.let { it[Accounts.id] to it[Accounts.role] }
+
+/** Resolves the caller's account and enforces that it is bound to [role]; the role is chosen once via POST /api/me/role. */
 internal fun Transaction.account(subject: String, role: String): UUID {
-    val existing = Accounts.selectAll().where { Accounts.subject eq subject }.forUpdate().singleOrNull()
-    if (existing != null) {
-        if (existing[Accounts.role] != role) forbidden("Account bound to another role")
-        return existing[Accounts.id]
-    }
+    val (id, bound) = boundRole(subject) ?: forbidden("Choose a role first: POST /api/me/role")
+    if (bound != role) forbidden("Account bound to another role")
+    return id
+}
+
+internal fun Transaction.createAccount(subject: String, role: String): UUID {
     val id = UUID.randomUUID()
     Accounts.insert {
         it[Accounts.id] = id

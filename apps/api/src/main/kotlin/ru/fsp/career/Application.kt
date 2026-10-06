@@ -96,13 +96,10 @@ fun Application.careerModule(
         jwt("keycloak") {
             realm = "career"
             verifier(keys, issuer) { withAudience(audience); acceptLeeway(10) }
+            // Keycloak only authenticates; the candidate/employer role is the account's one-time choice
+            // stored in `accounts.role` (see AccountRoutes.kt), so self-registered employers need no admin.
             validate { credential ->
-                val token = credential.payload
-                val realmRoles = token.getClaim("realm_access").asMap()?.get("roles") as? List<*>
-                val clientRoles =
-                    (token.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)?.get("roles") as? List<*>
-                if (token.subject.isNullOrBlank() || (realmRoles.orEmpty() + clientRoles.orEmpty()).none { it == "candidate" || it == "employer" }) null
-                else JWTPrincipal(token)
+                if (credential.payload.subject.isNullOrBlank()) null else JWTPrincipal(credential.payload)
             }
             challenge { _, _ ->
                 call.respond(
@@ -124,18 +121,21 @@ fun Application.careerModule(
     }
 }
 
+/**
+ * Returns the authenticated subject. The [requiredRole] is enforced by `Transaction.account(subject, role)`,
+ * which compares it with the role bound to the account in the database.
+ */
+@Suppress("UNUSED_PARAMETER")
 fun ApplicationCall.role(audience: String, requiredRole: String): String {
     val principal = principal<JWTPrincipal>()
         ?: throw ApiError(HttpStatusCode.Unauthorized, "Authentication required")
-    val realm = principal.payload.getClaim("realm_access")
-        .asMap()
-        ?.get("roles") as? List<*>
-    val client = (principal.payload.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)
-        ?.get("roles") as? List<*>
-    val roles = realm.orEmpty() + client.orEmpty()
-
-    if (roles.none { it == requiredRole } || (requiredRole == "candidate" && roles.contains("employer")))
-        forbidden("$requiredRole role required")
-
     return principal.payload.subject
+}
+
+/** Realm/client roles still matter for accounts created before in-app role choice (admin-assigned employers). */
+fun ApplicationCall.tokenRoles(audience: String): Set<String> {
+    val payload = principal<JWTPrincipal>()?.payload ?: return emptySet()
+    val realm = payload.getClaim("realm_access").asMap()?.get("roles") as? List<*>
+    val client = (payload.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)?.get("roles") as? List<*>
+    return (realm.orEmpty() + client.orEmpty()).filterIsInstance<String>().toSet()
 }

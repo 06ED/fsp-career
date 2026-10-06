@@ -20,6 +20,7 @@ private fun now(): OffsetDateTime = OffsetDateTime.now(ZoneOffset.UTC)
 
 fun Route.careerRoutes(db: Database, audience: String) {
     route("/api") {
+        accountRoutes(db, audience)
         resumeRoutes(db, audience)
         get("/candidates/me") {
             val sub = call.role(audience, "candidate")
@@ -335,16 +336,11 @@ fun Route.careerRoutes(db: Database, audience: String) {
             })
         }
         get("/invitations") {
-            val principal = call.principal<JWTPrincipal>() ?: forbidden("Authentication required")
-            val realm = principal.payload.getClaim("realm_access").asMap()?.get("roles") as? List<*>
-            val client = (principal.payload.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)?.get("roles") as? List<*>
-            val role = when {
-                (realm.orEmpty() + client.orEmpty()).contains("employer") -> "employer"
-                (realm.orEmpty() + client.orEmpty()).contains("candidate") -> "candidate"
-                else -> forbidden("Role required")
-            }
-            val sub = call.role(audience, role)
-            call.respond(db.tx { Invitations(invitationsFor(role, account(sub, role))) })
+            val sub = call.role(audience, "any")
+            call.respond(db.tx {
+                val (id, role) = boundRole(sub) ?: forbidden("Choose a role first: POST /api/me/role")
+                Invitations(invitationsFor(role, id))
+            })
         }
         post("/invitations/{id}/view") { changeInvitation(db, audience, "viewed") }
         post("/invitations/{id}/accept") { changeInvitation(db, audience, "accepted") }

@@ -34,7 +34,8 @@ EOF
   )
 fi
 
-PUBLIC_HOST="$(sed -n 's/^PUBLIC_HOST=//p' "$ENV_FILE")"
+env_value() { sed -n "s/^$1=//p" "$ENV_FILE"; }
+PUBLIC_HOST="$(env_value PUBLIC_HOST)"
 
 # Images are built before anything is replaced, so a failed build leaves the running version untouched.
 # One at a time: parallel Gradle + Vite builds next to the running stack exhaust the server's ~4 GB RAM.
@@ -45,14 +46,33 @@ compose up -d --remove-orphans --wait --wait-timeout 600
 
 # The realm JSON is imported only into an empty Keycloak database and lists localhost URLs,
 # so point the browser client at the public origin on every deploy.
+# E-mail: with SMTP_HOST in the env file verification mail goes to that real server; otherwise it stays in
+# the public Mailpit demo inbox (/mail/), and password reset is disabled there since anyone could read the link.
 # shellcheck disable=SC2016 # expanded by the shell inside the container
-compose exec -T -e PUBLIC_URL="https://$PUBLIC_HOST" keycloak bash -euo pipefail -c '
+compose exec -T -e PUBLIC_URL="https://$PUBLIC_HOST" \
+  -e SMTP_HOST="$(env_value SMTP_HOST)" -e SMTP_PORT="$(env_value SMTP_PORT)" \
+  -e SMTP_USER="$(env_value SMTP_USER)" -e SMTP_PASSWORD="$(env_value SMTP_PASSWORD)" \
+  -e SMTP_FROM="$(env_value SMTP_FROM)" -e SMTP_STARTTLS="$(env_value SMTP_STARTTLS)" \
+  keycloak bash -euo pipefail -c '
   kcadm() { /opt/keycloak/bin/kcadm.sh "$@" --config /tmp/kcadm.config; }
   kcadm config credentials --server http://localhost:8080/auth --realm master \
     --user "$KC_BOOTSTRAP_ADMIN_USERNAME" --password "$KC_BOOTSTRAP_ADMIN_PASSWORD"
   id=$(kcadm get clients -r fsp-career -q clientId=fsp-web --fields id --format csv --noquotes)
   kcadm update "clients/$id" -r fsp-career \
     -s "redirectUris=[\"$PUBLIC_URL/*\"]" -s "webOrigins=[\"$PUBLIC_URL\"]"
+  if [ -n "$SMTP_HOST" ]; then
+    starttls=${SMTP_STARTTLS:-false}
+    ssl=true; [ "$starttls" = true ] && ssl=false
+    kcadm update realms/fsp-career -s resetPasswordAllowed=true \
+      -s "smtpServer.host=$SMTP_HOST" -s "smtpServer.port=${SMTP_PORT:-465}" \
+      -s "smtpServer.from=${SMTP_FROM:-$SMTP_USER}" -s "smtpServer.fromDisplayName=ФСП Карьера" \
+      -s smtpServer.auth=true -s "smtpServer.user=$SMTP_USER" -s "smtpServer.password=$SMTP_PASSWORD" \
+      -s "smtpServer.ssl=$ssl" -s "smtpServer.starttls=$starttls"
+  else
+    kcadm update realms/fsp-career -s resetPasswordAllowed=false \
+      -s smtpServer.host=mailpit -s smtpServer.port=1025 -s smtpServer.auth=false \
+      -s smtpServer.ssl=false -s smtpServer.starttls=false
+  fi
 '
 
 docker image prune -f >/dev/null

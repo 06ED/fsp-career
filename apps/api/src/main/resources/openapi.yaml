@@ -4,9 +4,9 @@ info:
   version: 2.0.0
   description: >-
     JSON API. Every /api route requires a valid Keycloak access token with issuer
-    KEYCLOAK_ISSUER, audience KEYCLOAK_AUDIENCE, and candidate or employer realm/client role.
-    Accounts belong to one application role. Employer role takes precedence when both
-    appear in a token. Errors have the same JSON shape at every API endpoint.
+    KEYCLOAK_ISSUER and audience KEYCLOAK_AUDIENCE. After the first login the user chooses
+    an application role once (POST /api/me/role); role-specific routes return 403 until then
+    or for the other role. Errors have the same JSON shape at every API endpoint.
 servers:
   - url: /
 security:
@@ -26,6 +26,17 @@ components:
       required: [error]
       properties:
         error: {type: string}
+    Me:
+      type: object
+      properties:
+        role: {type: string, enum: [candidate, employer], nullable: true, description: null until chosen}
+        email: {type: string}
+        emailVerified: {type: boolean}
+    RoleChoice:
+      type: object
+      required: [role]
+      properties:
+        role: {type: string, enum: [candidate, employer]}
     Health:
       type: object
       required: [status]
@@ -235,6 +246,23 @@ paths:
       security: []
       responses:
         '200': {description: YAML specification, content: {application/yaml: {schema: {type: string}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/me:
+    get:
+      summary: Current user and the application role bound to the account (null before the first choice)
+      responses:
+        '200': {description: Current user, content: {application/json: {schema: {$ref: '#/components/schemas/Me'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/me/role:
+    post:
+      summary: Choose the account role once (candidate or employer); repeating the same choice is idempotent
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/RoleChoice'}}}}
+      responses:
+        '200': {description: Bound role, content: {application/json: {schema: {$ref: '#/components/schemas/Me'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '500': {$ref: '#/components/responses/InternalError'}
   /api/candidates/me:
     get:

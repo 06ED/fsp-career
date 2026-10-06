@@ -27,6 +27,7 @@
   import EmployerNeeds from "$lib/dashboard/EmployerNeeds.svelte";
   import EmployerMatches from "$lib/dashboard/EmployerMatches.svelte";
   import Invitations from "$lib/dashboard/Invitations.svelte";
+  import RoleChoice from "$lib/dashboard/RoleChoice.svelte";
 
   let ready = $state(false);
   let authenticated = $state(false);
@@ -37,6 +38,9 @@
   let busy = $state(false);
   let identity = $state("");
   let desiredRole = $state<Role>("candidate");
+  let needsRole = $state(false);
+  // Set at build time on the demo server, where verification e-mails land in a public Mailpit inbox.
+  const demoMailUrl = import.meta.env.VITE_DEMO_MAIL_URL;
   let profile = $state<Profile>({
     fullName: "",
     email: "",
@@ -83,13 +87,18 @@
       .then(async (isAuthenticated) => {
         authenticated = isAuthenticated;
         if (isAuthenticated) {
-          const roles = auth.realmAccess?.roles ?? [];
-          role = roles.includes("employer") ? "employer" : "candidate";
           identity =
             auth.tokenParsed?.email?.toString() ??
             auth.tokenParsed?.preferred_username?.toString() ??
             "";
-          await refresh();
+          // The role is bound to the account once, in the app; a fresh account chooses it first.
+          const me = await dashboardApi.me();
+          if (me.role) {
+            role = me.role;
+            await refresh();
+          } else {
+            needsRole = true;
+          }
         }
         ready = true;
       })
@@ -127,6 +136,16 @@
     } catch (e) {
       error = message(e);
     }
+  }
+
+  async function chooseRole(choice: Role) {
+    await action(async () => {
+      const me = await dashboardApi.chooseRole(choice);
+      role = me.role ?? choice;
+      needsRole = false;
+      section = "overview";
+      await refresh();
+    }, "");
   }
 
   function message(e: unknown) {
@@ -324,9 +343,14 @@
       <div {...sx(s.panel)} style="max-width: 540px; margin-top: 35px;">
         <h2 {...sx(s.panelTitle)}>Ваш путь начинается здесь</h2>
         <p {...sx(s.muted)}>
-          Вход через локальный сервис авторизации Keycloak. Новый аккаунт
-          получает роль кандидата; доступ работодателя выдаётся администратором.
+          Вход через Keycloak (совместим с будущим ФСП ID). После первого входа
+          выберите роль: специалист или работодатель.
         </p>
+        {#if demoMailUrl}<p {...sx(s.muted)}>
+            Письмо с подтверждением адреса придёт в
+            <a href={demoMailUrl} target="_blank" rel="noopener">демо-почту</a>
+            — откройте его там после регистрации.
+          </p>{/if}
         <div {...sx(s.inline)}>
           <button
             {...sx(s.button)}
@@ -340,6 +364,20 @@
           >
         </div>
       </div>
+    </main>
+  </div>
+{:else if needsRole}
+  <div {...sx(s.shell)}>
+    <aside {...sx(s.sidebar)}>
+      <a href="/" {...sx(s.brand)}
+        ><img src="/fsp-mark.svg" alt="" {...sx(s.emblem)} /> ФСП / КАРЬЕРА</a
+      >
+    </aside>
+    <main {...sx(s.main)}>
+      <div {...sx(s.kicker)}>ПЕРВЫЙ ВХОД / {identity}</div>
+      <h1 {...sx(s.title)}>Выберите роль</h1>
+      {#if error}<p role="alert" {...sx(s.error)}>{error}</p>{/if}
+      <RoleChoice suggested={desiredRole} {busy} {chooseRole} />
     </main>
   </div>
 {:else}

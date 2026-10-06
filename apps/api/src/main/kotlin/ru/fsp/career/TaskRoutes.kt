@@ -66,7 +66,7 @@ fun Route.taskRoutes(db: Database, audience: String) {
         val input = validateShortTask(call.receive<ShortTaskRequest>())
         call.respond(HttpStatusCode.Created, db.tx {
             val employer = account(sub, "employer")
-            requireCompanyName(employer)
+            requireVacancyCompanyName(employer)
             val id = UUID.randomUUID()
             ShortTasks.insert {
                 it[ShortTasks.id] = id
@@ -308,7 +308,7 @@ private fun Transaction.employerSubmissions(rows: List<ResultRow>): List<Employe
     val profiles = CandidateProfiles.selectAll()
         .where { CandidateProfiles.accountId inList rows.map { it[ShortTaskSubmissions.candidateId] }.distinct() }
         .associateBy { it[CandidateProfiles.accountId] }
-    val categories = confirmedCategories(profiles.values)
+    val categories = applicantCategories(profiles.values)
     return rows.map { row ->
         val candidateId = row[ShortTaskSubmissions.candidateId]
         val profile = profiles.getValue(candidateId)

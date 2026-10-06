@@ -29,7 +29,7 @@ fun Route.vacancyRoutes(db: Database, audience: String) {
         val input = validateVacancy(call.receive<VacancyRequest>())
         call.respond(HttpStatusCode.Created, db.tx {
             val employer = account(sub, "employer")
-            requireCompanyName(employer)
+            requireVacancyCompanyName(employer)
             val id = UUID.randomUUID()
             val created = utcNow()
             Vacancies.insert {
@@ -180,7 +180,7 @@ private fun Vacancies.write(statement: org.jetbrains.exposed.sql.statements.Upda
     statement[city] = input.city
 }
 
-internal fun Transaction.requireCompanyName(employer: UUID) {
+internal fun Transaction.requireVacancyCompanyName(employer: UUID) {
     val name = EmployerCompanies.selectAll().where { EmployerCompanies.accountId eq employer }.single()[EmployerCompanies.name]
     if (name.isBlank()) bad("Set company name first")
 }
@@ -319,7 +319,7 @@ private fun Transaction.candidateApplications(candidate: UUID, onlyId: UUID? = n
  * Best confirmed assessment per candidate in their *current* profile specialization — the same
  * rule as profile(): highest grade, then highest score. Batched to avoid N+1 queries.
  */
-internal fun Transaction.confirmedCategories(profiles: Collection<ResultRow>): Map<UUID, Pair<String, Int>> {
+internal fun Transaction.applicantCategories(profiles: Collection<ResultRow>): Map<UUID, Pair<String, Int>> {
     if (profiles.isEmpty()) return emptyMap()
     val specializations = profiles.associate { it[CandidateProfiles.accountId] to it[CandidateProfiles.specialization] }
     return AssessmentAttempts.selectAll().where {
@@ -346,7 +346,7 @@ private fun Transaction.applicants(rows: List<ResultRow>): List<Applicant> {
     val candidateIds = rows.map { it[VacancyApplications.candidateId] }.distinct()
     val profiles = CandidateProfiles.selectAll().where { CandidateProfiles.accountId inList candidateIds }
         .associateBy { it[CandidateProfiles.accountId] }
-    val categories = confirmedCategories(profiles.values)
+    val categories = applicantCategories(profiles.values)
     val signals = taskSignals(candidateIds)
     return rows.map { row ->
         val vacancy = vacancies.getValue(row[VacancyApplications.vacancyId])

@@ -20,6 +20,31 @@ components:
       in: path
       required: true
       schema: {type: string, format: uuid}
+    MatchingSpecialization:
+      {in: query, name: specialization, schema: {type: string, maxLength: 100}, description: 'Need mode: overrides the need specialization. Bank mode: filter by specialization.'}
+    MatchingGrade:
+      {in: query, name: grade, schema: {type: string, enum: [junior, middle, senior]}, description: 'Need mode: required grade (overrides the need; exact fit ranks first, higher grades get ×0.85/×0.70, lower excluded unless allowLowerGrade). Bank mode: exact assessed grade.'}
+    MatchingCategory:
+      {in: query, name: category, schema: {type: string, pattern: '^[^:]+:(junior|middle|senior)$', example: 'backend:middle'}, description: 'Category key = specialization:grade; sets both specialization and grade.'}
+    MatchingTechStack:
+      {in: query, name: techStack, schema: {type: string, example: 'Kotlin,PostgreSQL'}, description: 'Comma-separated, at most 10 skills of ≤100 chars; ALL must be in the candidate''s visible listed stack (case- and alias-insensitive: Postgres = PostgreSQL).'}
+    MatchingVerifiedAchievements:
+      {in: query, name: verifiedAchievements, schema: {type: boolean}, description: True keeps only candidates with at least one visible verified (FSP) achievement. Alias `fsp`.}
+    MatchingFsp:
+      {in: query, name: fsp, schema: {type: boolean}, description: Alias of verifiedAchievements.}
+    MatchingIndustry:
+      {in: query, name: industry, schema: {type: string, maxLength: 100}, description: Hard filter on the candidate industry (stemmed term match).}
+    MatchingQuery:
+      {in: query, name: q, schema: {type: string, maxLength: 300}, description: 'Need mode: free text appended to the need description for TF-IDF relevance (refinement). Bank mode: keeps candidates whose experience or listed stack matches the text; order stays by profile strength.'}
+    MatchingAllowLowerGrade:
+      {in: query, name: allowLowerGrade, schema: {type: boolean}, description: 'Need mode only: include candidates one grade below the required one (×0.60, flagged).'}
+    MatchingLimit:
+      {in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 500, default: 100}, description: Maximum number of returned candidates; `total` reports how many matched.}
+    CandidateId:
+      name: id
+      in: path
+      required: true
+      schema: {type: string, format: uuid}
   schemas:
     Error:
       type: object
@@ -135,17 +160,24 @@ components:
         results: {type: array, items: {$ref: '#/components/schemas/AssessmentResult'}}
     Company:
       type: object
+      description: Employer company profile. Contact fields form the default contact method of invitations.
       properties:
-        name: {type: string, maxLength: 200}
+        name: {type: string, maxLength: 200, description: Required on PUT}
         description: {type: string, maxLength: 2000}
-        website: {type: string, maxLength: 500}
+        website: {type: string, maxLength: 500, description: 'Empty or http(s):// URL'}
+        industry: {type: string, maxLength: 100, description: Line of business (направление деятельности)}
+        contactEmail: {type: string, maxLength: 320, description: Empty or a valid e-mail}
+        contactPhone: {type: string, description: 'Empty or phone: +, digits, spaces, (), - (6..25 chars)'}
+        contactTelegram: {type: string, description: '@handle (5..32 chars); t.me links are normalised to @handle'}
+        contactNote: {type: string, maxLength: 300, description: Free-text contact method line}
     Need:
       type: object
       properties:
         specialization: {type: string, maxLength: 100}
         industry: {type: string, maxLength: 100}
-        minGrade: {type: string, enum: [junior, middle, senior]}
-        description: {type: string, maxLength: 2000}
+        minGrade: {type: string, enum: [junior, middle, senior], description: Required grade (name kept for compatibility)}
+        description: {type: string, maxLength: 2000, description: What the team does and the tasks; used for TF-IDF relevance}
+        techStack: {type: array, maxItems: 15, items: {type: string, maxLength: 50}, description: Required stack; deduplicated case-insensitively}
     Achievement:
       type: object
       required: [title, issuer, points]
@@ -154,25 +186,158 @@ components:
         title: {type: string}
         issuer: {type: string}
         points: {type: integer, minimum: 1, maximum: 20}
-    Match:
+    VerifiedAchievement:
       type: object
-      required: [candidateId, fullName, specialization, grade, score, achievementScore, totalScore, explanation, achievements, techStack]
+      required: [title, issuer, points, source]
+      description: Server-side verified achievement (FSP registry import or back-office record). Never accepted from users.
+      properties:
+        title: {type: string}
+        issuer: {type: string}
+        points: {type: integer, minimum: 1, maximum: 20, description: 'FSP policy: base by level (international 10, federal 7, regional 4) × outcome (winner 1.6, prize 1.3, finalist 1.0, participant 0.5), rounded, 1..20'}
+        source: {type: string, description: '`fsp` for registry imports, `manual` for older verified records'}
+        eventName: {type: string, nullable: true}
+        discipline: {type: string, nullable: true}
+        eventDate: {type: string, format: date, nullable: true}
+        level: {type: string, nullable: true, enum: [regional, federal, international, null]}
+        levelLabel: {type: string, nullable: true}
+        place: {type: integer, nullable: true}
+        result: {type: string, nullable: true, enum: [winner, prize, finalist, participant, null]}
+        resultLabel: {type: string, nullable: true}
+    MatchingFactor:
+      type: object
+      required: [code, label, weight, value, points, text]
+      description: One explainable ranking factor. `points = weight × value`; `grade` is a multiplier (value) with weight 0.
+      properties:
+        code: {type: string, enum: [test, text, stack, fsp, industry, freshness, grade]}
+        label: {type: string}
+        weight: {type: number, description: Maximum points after rescaling inapplicable factors away (sums to 100 per candidate)}
+        value: {type: number, minimum: 0, maximum: 1}
+        points: {type: number}
+        text: {type: string, description: Russian explanation, e.g. «Стек 3 из 4 — Kotlin, PostgreSQL, Kafka; нет Docker»}
+    MatchingCandidate:
+      type: object
+      required: [candidateId, fullName, specialization, grade, category, score, achievementScore, totalScore, relevance, strength, explanation, factors, flags, achievements, techStack, industry, fspLinked]
+      description: Ranked candidate. Never contains e-mail or phone.
+      properties:
+        candidateId: {type: string, format: uuid}
+        fullName: {type: string, description: Name or «Кандидат №XXXXXX» when the candidate hides it}
+        specialization: {type: string}
+        grade: {type: string, enum: [junior, middle, senior], description: Assessed grade (never self-declared)}
+        category: {type: string, description: Category label (specialization · grade)}
+        score: {type: integer, minimum: 0, maximum: 100, description: Confirmed test score}
+        achievementScore: {type: integer, description: Sum of visible verified achievement points capped at 20}
+        totalScore: {type: integer, description: Rounded relevance (need mode) or strength (bank mode)}
+        relevance: {type: number, description: 'Need mode: gradeFit × Σ factor points (0..100)'}
+        strength: {type: number, description: 'Confirmed-profile strength = 65·test + 25·FSP + 10·freshness (0..100)'}
+        explanation: {type: string, description: Short Russian summary of the factors}
+        factors: {type: array, items: {$ref: '#/components/schemas/MatchingFactor'}}
+        flags: {type: array, items: {type: string}, description: 'Russian notes: «Нет истории ФСП», «Грейд выше требуемого…», stuffing hint, stale profile'}
+        achievements: {type: array, items: {$ref: '#/components/schemas/VerifiedAchievement'}}
+        techStack: {type: array, items: {type: string}, description: Visible self-reported stack}
+        industry: {type: string}
+        fspLinked: {type: boolean}
+        lastActiveAt: {type: string, format: date-time, nullable: true}
+        assessedAt: {type: string, format: date-time, nullable: true}
+        invitationStatus: {type: string, nullable: true, enum: [sent, viewed, accepted, rejected, null], description: Latest invitation from this employer}
+    MatchingCategory:
+      type: object
+      required: [key, specialization, grade, label, candidates, withFsp, avgTestScore, avgStrength, fit, recommended, reason]
+      properties:
+        key: {type: string, example: 'backend:middle'}
+        specialization: {type: string}
+        grade: {type: string, enum: [junior, middle, senior]}
+        label: {type: string}
+        candidates: {type: integer}
+        withFsp: {type: integer}
+        avgTestScore: {type: integer}
+        avgStrength: {type: integer}
+        fit: {type: string, enum: [exact, higher, lower, adjacent, browse]}
+        recommended: {type: boolean}
+        reason: {type: string}
+        avgTextRelevance: {type: number, nullable: true, description: Mean of the top-3 TF-IDF cosines of the category to the need}
+    MatchingResponse:
+      type: object
+      required: [mode, total, categories, matches, formula]
+      properties:
+        mode: {type: string, enum: [need, bank]}
+        need:
+          type: object
+          nullable: true
+          description: Effective need (after query overrides); null in bank mode
+          properties:
+            specialization: {type: string}
+            grade: {type: string}
+            industry: {type: string}
+            techStack: {type: array, items: {type: string}}
+            description: {type: string}
+            query: {type: string}
+        total: {type: integer, description: Number of candidates that passed the gate and filters}
+        categories: {type: array, items: {$ref: '#/components/schemas/MatchingCategory'}, description: 'Need mode: recommended categories for the need (exact, higher, lower, adjacent by text). Bank mode: all categories.'}
+        matches: {type: array, items: {$ref: '#/components/schemas/MatchingCandidate'}}
+        formula: {type: array, items: {type: string}, description: Russian description of the ranking formula for the UI}
+    MatchingCandidateCard:
+      type: object
+      required: [candidateId, fullName, specialization, industry, hiddenSections, contactsDisclosed, invitations]
+      description: Employer-facing card. Hidden sections are null; contacts only after the candidate accepted an invitation from this employer.
       properties:
         candidateId: {type: string, format: uuid}
         fullName: {type: string}
         specialization: {type: string}
-        grade: {type: string, enum: [junior, middle, senior]}
-        score: {type: integer}
-        achievementScore: {type: integer, description: Capped at 20}
-        totalScore: {type: integer, description: Assessment + verified achievement bonus + industry match bonus}
-        explanation: {type: string}
-        achievements: {type: array, items: {$ref: '#/components/schemas/Achievement'}}
-        techStack: {type: array, items: {type: string}, description: Self-reported skills; never contribute ranking points}
-    Matches:
+        grade: {type: string, nullable: true}
+        score: {type: integer, nullable: true}
+        assessedAt: {type: string, format: date-time, nullable: true}
+        category: {type: string, nullable: true}
+        industry: {type: string}
+        techStack: {type: array, nullable: true, items: {type: string}}
+        experience: {type: string, nullable: true}
+        targetRoles: {type: array, nullable: true, items: {type: string}}
+        cvHistory: {type: array, nullable: true, items: {$ref: '#/components/schemas/CvEntry'}}
+        softSkills: {type: array, nullable: true, items: {type: string}}
+        achievements: {type: array, nullable: true, items: {$ref: '#/components/schemas/VerifiedAchievement'}}
+        fspLinked: {type: boolean, nullable: true}
+        hiddenSections: {type: array, items: {type: string}}
+        lastActiveAt: {type: string, format: date-time, nullable: true}
+        contactsDisclosed: {type: boolean}
+        contactEmail: {type: string, nullable: true}
+        contactPhone: {type: string, nullable: true}
+        invitations:
+          type: array
+          items:
+            type: object
+            required: [id, status, createdAt, salaryMinRub, salaryMaxRub]
+            properties:
+              id: {type: string, format: uuid}
+              status: {type: string, enum: [sent, viewed, accepted, rejected]}
+              createdAt: {type: string, format: date-time}
+              salaryMinRub: {type: integer}
+              salaryMaxRub: {type: integer}
+        match: {allOf: [{$ref: '#/components/schemas/MatchingCandidate'}], nullable: true, description: Explanation against the employer's saved need}
+    CandidatePrivacy:
       type: object
-      required: [matches]
+      description: What employers see. Hidden sections are not shown and not used for ranking. Defaults are all true (publication itself is a separate opt-in).
       properties:
-        matches: {type: array, items: {$ref: '#/components/schemas/Match'}}
+        fullName: {type: boolean, default: true}
+        techStack: {type: boolean, default: true}
+        experience: {type: boolean, default: true, description: Experience text and target roles}
+        cvHistory: {type: boolean, default: true}
+        softSkills: {type: boolean, default: true}
+        fspAchievements: {type: boolean, default: true}
+    FspLinkRequest:
+      type: object
+      required: [fspId]
+      properties:
+        fspId: {type: string, example: FSP-100001, description: 'FSP-123456; also accepts fsp 123456 or 123456'}
+    FspStatus:
+      type: object
+      required: [linked, registry, achievements, totalPoints, message]
+      properties:
+        linked: {type: boolean}
+        fspId: {type: string, nullable: true}
+        linkedAt: {type: string, format: date-time, nullable: true}
+        registry: {type: string, description: Registry connector name (currently the synthetic demo registry)}
+        achievements: {type: array, items: {$ref: '#/components/schemas/VerifiedAchievement'}}
+        totalPoints: {type: integer}
+        message: {type: string, description: Russian status text, including the no-FSP-history case}
     InviteRequest:
       type: object
       required: [candidateId, description, salaryMinRub, salaryMaxRub]
@@ -181,6 +346,7 @@ components:
         description: {type: string, minLength: 1, maxLength: 4000}
         salaryMinRub: {type: integer, minimum: 1}
         salaryMaxRub: {type: integer, minimum: 1, description: Must be at least salaryMinRub}
+        contactMethod: {type: string, maxLength: 300, description: How the candidate should contact the company; defaults to the company contact line. 400 if both are empty.}
     Invitation:
       type: object
       required: [id, candidateId, employerId, description, salaryMinRub, salaryMaxRub, status, createdAt, companyName, candidateName]
@@ -194,9 +360,10 @@ components:
         status: {type: string, enum: [sent, viewed, accepted, rejected]}
         createdAt: {type: string, format: date-time}
         companyName: {type: string}
-        candidateName: {type: string}
-        contactEmail: {type: string, nullable: true, description: Null until candidate accepts}
-        contactPhone: {type: string, nullable: true, description: Null until candidate accepts}
+        candidateName: {type: string, description: «Кандидат №XXXXXX» while the candidate hides the name and contacts are closed}
+        contactEmail: {type: string, nullable: true, description: Null until the candidate accepted an invitation from this employer}
+        contactPhone: {type: string, nullable: true, description: Null until the candidate accepted an invitation from this employer}
+        contactMethod: {type: string, description: Company contact method shown to the candidate (stored with the invitation)}
     Invitations:
       type: object
       required: [invitations]
@@ -256,7 +423,7 @@ paths:
   /api/candidates/me/consent:
     delete:
       summary: Revoke processing and erase own profile, assessment answers, drafts, achievements and invitations
-      description: The blank account remains and can opt in again through PUT /api/candidates/me.
+      description: The blank account remains and can opt in again through PUT /api/candidates/me. The FSP ID link is removed and privacy settings reset.
       responses:
         '200': {description: Cleared profile, content: {application/json: {schema: {$ref: '#/components/schemas/Candidate'}}}}
         '401': {$ref: '#/components/responses/Unauthorized'}
@@ -375,16 +542,110 @@ paths:
         '500': {$ref: '#/components/responses/InternalError'}
   /api/matches:
     get:
-      summary: Search published, assessed candidates (employer role)
-      description: Ranked by assessment score + capped verified achievement points (20) + industry match (5). Self-reported skills only filter.
+      summary: Need-based selection ranked by relevance, with explanations and recommended categories (employer role)
+      description: >-
+        Category gate: published candidates with an assessed category in the need specialization; required grade
+        exact ×1.00, one higher ×0.85, two higher ×0.70, lower excluded unless allowLowerGrade (×0.60).
+        Relevance = gradeFit × (test 30 + TF-IDF text 25 + stack 20 + FSP 15 + industry 5 + freshness 5), inapplicable
+        factors rescaled away. Ties: relevance, strength, candidate id. Every result carries factors and a Russian explanation.
       parameters:
-        - {in: query, name: specialization, schema: {type: string}, description: Defaults to employer need specialization}
-        - {in: query, name: grade, schema: {type: string, enum: [junior, middle, senior]}, description: Minimum grade; defaults to employer need}
-        - {in: query, name: techStack, schema: {type: string}, description: Comma-separated case-insensitive skills; all must match}
-        - {in: query, name: verifiedAchievements, schema: {type: boolean}, description: True requires at least one verified achievement}
+        - {$ref: '#/components/parameters/MatchingSpecialization'}
+        - {$ref: '#/components/parameters/MatchingGrade'}
+        - {$ref: '#/components/parameters/MatchingCategory'}
+        - {$ref: '#/components/parameters/MatchingTechStack'}
+        - {$ref: '#/components/parameters/MatchingVerifiedAchievements'}
+        - {$ref: '#/components/parameters/MatchingFsp'}
+        - {$ref: '#/components/parameters/MatchingIndustry'}
+        - {$ref: '#/components/parameters/MatchingQuery'}
+        - {$ref: '#/components/parameters/MatchingAllowLowerGrade'}
+        - {$ref: '#/components/parameters/MatchingLimit'}
       responses:
-        '200': {description: Ranked matches, content: {application/json: {schema: {$ref: '#/components/schemas/Matches'}}}}
+        '200': {description: Ranked selection, content: {application/json: {schema: {$ref: '#/components/schemas/MatchingResponse'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/bank/candidates:
+    get:
+      summary: Search the whole candidate bank by category, ordered by confirmed-profile strength (employer role)
+      description: >-
+        Only published candidates with an assessed category. Strength = 65·test + 25·FSP + 10·freshness.
+        Self-described data (stack, text) only filters. Returns all categories with counts.
+      parameters:
+        - {$ref: '#/components/parameters/MatchingSpecialization'}
+        - {$ref: '#/components/parameters/MatchingGrade'}
+        - {$ref: '#/components/parameters/MatchingCategory'}
+        - {$ref: '#/components/parameters/MatchingTechStack'}
+        - {$ref: '#/components/parameters/MatchingVerifiedAchievements'}
+        - {$ref: '#/components/parameters/MatchingFsp'}
+        - {$ref: '#/components/parameters/MatchingIndustry'}
+        - {$ref: '#/components/parameters/MatchingQuery'}
+        - {$ref: '#/components/parameters/MatchingLimit'}
+      responses:
+        '200': {description: Candidates ordered by strength, content: {application/json: {schema: {$ref: '#/components/schemas/MatchingResponse'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/bank/candidates/{id}:
+    get:
+      summary: Employer-facing candidate card respecting the candidate's privacy settings (employer role)
+      description: >-
+        Available for published candidates, or for candidates who already disclosed contacts to this employer.
+        Contacts are returned only after the candidate accepted an invitation from this employer.
+      parameters: [{$ref: '#/components/parameters/CandidateId'}]
+      responses:
+        '200': {description: Candidate card, content: {application/json: {schema: {$ref: '#/components/schemas/MatchingCandidateCard'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/privacy:
+    get:
+      summary: Read own privacy settings (candidate role)
+      responses:
+        '200': {description: Privacy settings, content: {application/json: {schema: {$ref: '#/components/schemas/CandidatePrivacy'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    put:
+      summary: Replace own privacy settings (candidate role, processing consent required)
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CandidatePrivacy'}}}}
+      responses:
+        '200': {description: Saved settings, content: {application/json: {schema: {$ref: '#/components/schemas/CandidatePrivacy'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+  /api/candidates/me/fsp:
+    get:
+      summary: Own FSP ID link status and imported results (candidate role)
+      responses:
+        '200': {description: Link status (also for candidates without FSP history), content: {application/json: {schema: {$ref: '#/components/schemas/FspStatus'}}}}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '500': {$ref: '#/components/responses/InternalError'}
+    post:
+      summary: Link (or re-sync) an FSP participant ID and import its results as verified achievements (candidate role)
+      description: >-
+        Ownership proof: the registry e-mail of the participant must equal the caller's verified Keycloak e-mail
+        (a typed ID alone is public information). Unknown IDs and IDs of other people both return 404, so the
+        endpoint does not reveal which IDs exist. Re-posting replaces previously imported results.
+        Current connector: synthetic demo registry (participants *@demo.fsp.local).
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/FspLinkRequest'}}}}
+      responses:
+        '200': {description: Linked, content: {application/json: {schema: {$ref: '#/components/schemas/FspStatus'}}}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {description: 'No verified e-mail in the token, processing consent missing, or wrong role', content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {description: FSP ID already linked to another account, content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}}
+        '500': {$ref: '#/components/responses/InternalError'}
+    delete:
+      summary: Unlink the FSP ID and delete imported FSP achievements (candidate role)
+      responses:
+        '200': {description: Unlinked status, content: {application/json: {schema: {$ref: '#/components/schemas/FspStatus'}}}}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '500': {$ref: '#/components/responses/InternalError'}
@@ -397,7 +658,7 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '500': {$ref: '#/components/responses/InternalError'}
     post:
-      summary: Send invitation to published candidate with mandatory RUB salary range (employer role)
+      summary: Send invitation to published candidate with mandatory RUB salary range and a contact method (employer role)
       requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/InviteRequest'}}}}
       responses:
         '201': {description: Sent invitation, content: {application/json: {schema: {$ref: '#/components/schemas/Invitation'}}}}

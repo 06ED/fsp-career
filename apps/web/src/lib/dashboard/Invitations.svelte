@@ -2,6 +2,7 @@
   import { sx } from "$lib/svelte-stylex";
   import { ui as s } from "$lib/dashboard.stylex";
   import ActionIcon from "$lib/ActionIcon.svelte";
+  import { invitationStatusLabels } from "./matching";
   import type { Invitation, InvitationStatusAction, Role } from "./types";
   let {
     invitations,
@@ -17,6 +18,11 @@
       status: InvitationStatusAction,
     ) => Promise<void>;
   } = $props();
+  const contactsOf = (invitation: Invitation) =>
+    [
+      invitation.contactEmail || invitation.email,
+      invitation.contactPhone || invitation.phone,
+    ].filter(Boolean);
 </script>
 
 {#each invitations as invitation}<article {...sx(s.panel)}>
@@ -31,7 +37,9 @@
           {invitation.description}
         </h2>
       </div>
-      <span {...sx(s.status)}>{invitation.status}</span>
+      <span {...sx(s.status)}
+        >{invitationStatusLabels[invitation.status] ?? invitation.status}</span
+      >
     </div>
     <p>
       <strong
@@ -40,6 +48,15 @@
         ).toLocaleString("ru-RU")} ₽</strong
       > / месяц
     </p>
+    {#if invitation.contactMethod}<p {...sx(s.muted)}>
+        {role === "candidate"
+          ? `Как связаться с компанией «${invitation.companyName || "—"}»:`
+          : "Способ связи, указанный кандидату:"}
+        <strong>{invitation.contactMethod}</strong>
+      </p>{/if}
+    {#if invitation.createdAt}<p {...sx(s.muted)} style="margin-top: 0;">
+        Отправлено {new Date(invitation.createdAt).toLocaleDateString("ru-RU")}
+      </p>{/if}
     {#if role === "candidate" && (invitation.status === "sent" || invitation.status === "viewed")}<div
         {...sx(s.inline)}
       >
@@ -59,12 +76,16 @@
             onclick={() => updateInvitation(invitation, "view")}
             >Отметить просмотренным <ActionIcon name="view" /></button
           >{/if}
-      </div>{/if}{#if role === "employer" && invitation.status === "accepted"}<div
-        {...sx(s.note)}
-      >
-        Контакты кандидата: {invitation.contactEmail || invitation.email || "—"} ·
-        {invitation.contactPhone || invitation.phone || "—"}
-      </div>{/if}
+      </div>
+      <p {...sx(s.muted)}>
+        Приняв приглашение, вы откроете компании свои email и телефон.
+      </p>{/if}{#if role === "employer"}{#if contactsOf(invitation).length}<div
+          {...sx(s.note)}
+        >
+          Контакты кандидата: {contactsOf(invitation).join(" · ")}
+        </div>{:else}<p {...sx(s.muted)}>
+          Контакты кандидата откроются, когда он примет приглашение.
+        </p>{/if}{/if}
   </article>{:else}<div {...sx(s.panel)}>
     <p {...sx(s.muted)}>
       Пока нет приглашений. {role === "candidate"

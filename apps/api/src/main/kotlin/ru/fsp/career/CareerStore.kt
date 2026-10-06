@@ -122,13 +122,18 @@ private fun Transaction.invitationRows(rows: List<ResultRow>): List<Invitation> 
     val companies = EmployerCompanies.selectAll()
         .where { EmployerCompanies.accountId inList employerIds }
         .associateBy { it[EmployerCompanies.accountId] }
+    // Contact disclosure is decided in one place (ContactDisclosure.kt), per employer.
+    val disclosed = rows.groupBy { it[InvitationsTable.employerId] }.mapValues { (employer, group) ->
+        disclosedCandidates(employer, group.map { it[InvitationsTable.candidateId] }.distinct())
+    }
 
     return rows.map { row ->
         val candidateId = row[InvitationsTable.candidateId]
         val employerId = row[InvitationsTable.employerId]
         val candidate = candidates.getValue(candidateId)
         val company = companies.getValue(employerId)
-        val accepted = row[InvitationsTable.status] == "accepted"
+        val contacts = candidateId in disclosed[employerId].orEmpty()
+        val nameVisible = contacts || candidate[CandidateProfiles.privacy].fullName
         Invitation(
             id = row[InvitationsTable.id].toString(),
             candidateId = candidateId.toString(),
@@ -138,10 +143,12 @@ private fun Transaction.invitationRows(rows: List<ResultRow>): List<Invitation> 
             salaryMaxRub = row[InvitationsTable.salaryMaxRub],
             status = row[InvitationsTable.status],
             createdAt = row[InvitationsTable.createdAt].toInstant().toString(),
-            contactEmail = candidate[CandidateProfiles.email].takeIf { accepted },
-            contactPhone = candidate[CandidateProfiles.phone].takeIf { accepted },
+            contactEmail = candidate[CandidateProfiles.email].takeIf { contacts },
+            contactPhone = candidate[CandidateProfiles.phone].takeIf { contacts },
             companyName = company[EmployerCompanies.name],
-            candidateName = candidate[CandidateProfiles.fullName],
+            candidateName = if (nameVisible) candidate[CandidateProfiles.fullName] else anonymousName(candidateId),
+            // Invitations created before V4 have no stored method: fall back to current company contacts.
+            contactMethod = row[InvitationsTable.contactMethod].ifBlank { companyContactLine(companyFrom(company)) },
         )
     }
 }

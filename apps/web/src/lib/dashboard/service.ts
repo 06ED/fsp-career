@@ -1,10 +1,14 @@
 import { api, apiBlob, save } from "$lib/client";
 import type {
   Assessment,
+  CandidateCard,
+  CandidatePrivacy,
   Company,
+  FspStatus,
   Invitation,
   InvitationStatusAction,
-  Match,
+  MatchQuery,
+  MatchResponse,
   Need,
   Offer,
   Profile,
@@ -62,8 +66,8 @@ export const dashboardApi = {
     save<Company>("/api/employers/company", company),
   need: () => api<Need>("/api/employers/needs"),
   saveNeed: (need: Need) => save<Need>("/api/employers/needs", need),
-  matches: async () =>
-    (await api<{ matches: Match[] }>("/api/matches")).matches,
+  matches: (query: MatchQuery = {}) =>
+    api<MatchResponse>("/api/matches" + matchQueryString(query)),
   invitations: async () => {
     const response = await api<Invitation[] | { invitations: Invitation[] }>(
       "/api/invitations",
@@ -74,4 +78,37 @@ export const dashboardApi = {
     save<unknown>("/api/invitations", { candidateId, ...offer }, "POST"),
   updateInvitation: (id: string, status: InvitationStatusAction) =>
     api<unknown>(`/api/invitations/${id}/${status}`, { method: "POST" }),
+  // --- Matching, candidate bank, privacy and FSP ID link ---
+  bank: (query: MatchQuery = {}) =>
+    api<MatchResponse>("/api/bank/candidates" + matchQueryString(query)),
+  candidateCard: (candidateId: string) =>
+    api<CandidateCard>(
+      `/api/bank/candidates/${encodeURIComponent(candidateId)}`,
+    ),
+  privacy: () => api<CandidatePrivacy>("/api/candidates/me/privacy"),
+  savePrivacy: (privacy: CandidatePrivacy) =>
+    save<CandidatePrivacy>("/api/candidates/me/privacy", privacy),
+  fsp: () => api<FspStatus>("/api/candidates/me/fsp"),
+  linkFsp: (fspId: string) =>
+    save<FspStatus>("/api/candidates/me/fsp", { fspId }, "POST"),
+  unlinkFsp: () =>
+    api<FspStatus>("/api/candidates/me/fsp", { method: "DELETE" }),
 };
+
+function matchQueryString(query: MatchQuery): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (
+      value === undefined ||
+      value === null ||
+      value === "" ||
+      value === false
+    )
+      continue;
+    if (Array.isArray(value)) {
+      if (value.length) params.set(key, value.join(","));
+    } else params.set(key, String(value));
+  }
+  const text = params.toString();
+  return text ? `?${text}` : "";
+}

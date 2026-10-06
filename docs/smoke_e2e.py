@@ -186,8 +186,9 @@ def main():
     assert "email" not in matches[0] and "phone" not in matches[0]
     invitation = api("/api/invitations", employer, "POST", {
         "candidateId": matches[0]["candidateId"], "description": "Тестовый оффер",
-        "salaryMinRub": 120000, "salaryMaxRub": 180000,
+        "salaryMinRub": 120000, "salaryMaxRub": 180000, "contactMethod": "Telegram: @synthetic_hr",
     }, 201)
+    assert invitation["contactMethod"] == "Telegram: @synthetic_hr" and invitation["companyName"]
     assert invitation["contactEmail"] is None and invitation["contactPhone"] is None
     candidate_inbox = api("/api/invitations", candidate)["invitations"]
     assert candidate_inbox[0]["contactEmail"] is None

@@ -103,6 +103,11 @@ internal class DemoSeed(private val db: Database) {
             linkFsp(bank.mapNotNull { (id, fspId) -> fspId?.let { id to it } })
             println("Demo bank: ${bank.size} candidates, ${bank.count { it.second != null }} linked to the synthetic FSP registry")
         }
+        // Seeded links happened "now"; date them with the profile so freshness in the demo looks realistic.
+        db.tx {
+            exec("UPDATE candidate_profiles SET fsp_linked_at = updated_at WHERE fsp_linked_at > updated_at " +
+                "AND account_id IN (SELECT id FROM accounts WHERE subject LIKE 'demo-seed:%')")
+        }
         db.tx { seedCompanies() }
         if (employerSubject != null) db.tx { seedDemoEmployer(employerSubject) }
         if (assessedSubject != null) {

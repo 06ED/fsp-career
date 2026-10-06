@@ -21,6 +21,8 @@ services:
       KC_HTTP_RELATIVE_PATH: /auth
       KC_HTTP_ENABLED: "true"
       KC_PROXY_HEADERS: xforwarded
+      # Without a cap the JVM sizes its heap from host RAM (~70%), starving builds and the other services.
+      JAVA_OPTS_KC_HEAP: -Xms256m -Xmx512m
     healthcheck:
       # Production mode re-augments the server on start, which is slower than start-dev.
       start_period: 180s
@@ -36,6 +38,7 @@ services:
     environment:
       KEYCLOAK_ISSUER: https://${PUBLIC_HOST}/auth/realms/fsp-career
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/fsp-career/protocol/openid-connect/certs
+      JAVA_OPTS: -Xmx256m
     labels:
       - traefik.enable=true
       - traefik.http.routers.fsp-api.rule=Host(`${PUBLIC_HOST}`) && (PathPrefix(`/api`) || Path(`/openapi.yaml`))

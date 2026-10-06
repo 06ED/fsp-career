@@ -37,7 +37,10 @@ fi
 PUBLIC_HOST="$(sed -n 's/^PUBLIC_HOST=//p' "$ENV_FILE")"
 
 # Images are built before anything is replaced, so a failed build leaves the running version untouched.
-compose build
+# One at a time: parallel Gradle + Vite builds next to the running stack exhaust the server's ~4 GB RAM.
+for service in keycloak api web; do
+  compose build "$service"
+done
 compose up -d --remove-orphans --wait --wait-timeout 600
 
 # The realm JSON is imported only into an empty Keycloak database and lists localhost URLs,

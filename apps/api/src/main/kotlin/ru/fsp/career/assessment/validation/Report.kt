@@ -6,6 +6,7 @@ import ru.fsp.career.assessment.Grade
 import ru.fsp.career.assessment.Grading
 import ru.fsp.career.assessment.ItemBank
 import ru.fsp.career.assessment.RetakePolicy
+import ru.fsp.career.assessment.plural
 import ru.fsp.career.assessment.Topics
 
 /** Renders the study results as the Russian Markdown report docs/validation/assessment-results.md. */
@@ -18,7 +19,7 @@ class Report(private val r: Map<String, Any?>) {
     private fun Map<String, Any?>.d(key: String) = this[key].d()
 
     private fun pct(v: Any?) = if (v == null) "—" else "%.1f %%".format(java.util.Locale.ROOT, v.d() * 100).replace('.', ',')
-    private fun num(v: Any?, digits: Int = 2) = if (v == null) "—" else "%.${digits}f".format(java.util.Locale.ROOT, v.d()).replace('.', ',')
+    private fun num(v: Any?, digits: Int = 2) = if (v == null) "—" else "%.${digits}f".format(java.util.Locale.ROOT, v.d()).replace('.', ',').replace('-', '−')
     private fun signed(v: Any?, digits: Int = 1) = (if (v.d() >= 0) "+" else "−") + num(kotlin.math.abs(v.d()), digits)
     private fun spec(id: String) = AssessmentCatalog.label(AssessmentCatalog.specializations, id)
 
@@ -79,7 +80,7 @@ class Report(private val r: Map<String, Any?>) {
         appendLine("- Размер пула по специализациям: " + specs.joinToString(", ") { "${spec(it)} — ${meta["poolSizes"].m()[it]}" } + ".")
         appendLine("- Адаптивный тест: ${Cat.TEST_LENGTH} заданий, ${Cat.EXPIRY_MINUTES} минут. Старт в якоре заявленного грейда (junior ${num(Grade.JUNIOR.anchor)}, middle ${num(Grade.MIDDLE.anchor)}, senior ${num(Grade.SENIOR.anchor)}); следующее семейство — максимум информации Фишера при текущей оценке в пределах квот тематического blueprint, среди почти равных (≥ ${(Cat.SIMILAR_INFORMATION * 100).toInt()} % от лучшей информации) — наименее показанное (контроль экспозиции).")
         appendLine("- Оценка уровня: EAP с популяционным априорным N(0, 1) — заявленный грейд влияет только на маршрут теста, но не на итоговую оценку. Балл 0–100 = 100·Φ(θ̂).")
-        appendLine("- Пороги грейдов на шкале θ: Middle ≥ ${num(Grade.MIDDLE.cut, 1)}, Senior ≥ ${num(Grade.SENIOR.cut, 1)} (≈ ${Grading.score(Grade.MIDDLE.cut)} и ${Grading.score(Grade.SENIOR.cut)} баллов); входной уровень Junior — ${num(Grade.JUNIOR.cut, 1)}. Заявленный грейд подтверждён, если θ̂ − k·SE ≥ порога, k = ${num(Grading.K)} (≈ «апостериорная вероятность ≥ Φ(k)»). «Уверенно» — та же нижняя граница выше порога следующего грейда.")
+        appendLine("- Пороги грейдов на шкале θ: Middle ≥ ${num(Grade.MIDDLE.cut, 1)}, Senior ≥ ${num(Grade.SENIOR.cut, 1)} (≈ ${Grading.score(Grade.MIDDLE.cut)} и ${Grading.score(Grade.SENIOR.cut)} баллов); входной уровень Junior — ${num(Grade.JUNIOR.cut, 1)}. Заявленный грейд подтверждён, если θ̂ − k·SE ≥ порога, k = ${num(Grading.K)} (≈ «апостериорная вероятность уровня не ниже порога ≥ Φ(k)», при k = 0 — не меньше 50 %). «Уверенно» — θ̂ − k↑·SE ≥ порога следующего грейда, k↑ = ${num(Grading.K_UPGRADE)}: это открывает немедленный тест на грейд выше.")
         appendLine("- Грейд не понижается: подтверждённый грейд = max(прежний, заявленный при успехе); первая неудача даёт Junior по умолчанию. Пересдачи — раз в ${RetakePolicy.COOLDOWN_DAYS} дней; сразу можно только (а) после неудачи — тест на уровень ниже, (б) после уверенного успеха — тест на уровень выше (если он не был провален в окне). Брошенная попытка закрывается как неудачная.")
         appendLine()
         appendLine("**Модель симуляции.**")
@@ -186,7 +187,7 @@ class Report(private val r: Map<String, Any?>) {
     private fun StringBuilder.leaks() {
         appendLine("## 7. Устойчивость к распространению заданий")
         appendLine()
-        appendLine("**(а) Пересечение тестов двух кандидатов.** Доля заданий, совпадающих дословно (тот же текст и код), у двух случайных кандидатов одной специализации:")
+        appendLine("**(а) Пересечение тестов двух кандидатов.** Доля совпадающих заданий у двух случайных кандидатов одной специализации. Совпадение считаем в пользу атакующего: для генераторов — тот же текст, код и правильный ответ, для наборов вариантов — тот же сценарий в любой формулировке.")
         appendLine()
         appendLine("| Специализация | Идентичные экземпляры | Пары хотя бы с одним совпадением | Общие семейства (навыки) | Прежний банк: идентичные вопросы |")
         appendLine("|---|---|---|---|---|")
@@ -198,7 +199,7 @@ class Report(private val r: Map<String, Any?>) {
         val col = leak["collisions"].m()
         val worst = col["families"].l().map { it.m() }.sortedByDescending { it.d("collisionProbability") }.take(5)
         appendLine("Совпадают навыки (так и задумано — тесты сопоставимы), но не сами задания. Вероятность, что два независимых экземпляра семейства совпадут (по ${col["drawsPerFamily"]} генерациям): в среднем ${num(col.d("meanParametric") * 100, 3)} % для генераторов и ${num(col.d("meanVariants") * 100, 1)} % для наборов вариантов. Наиболее «узкие» семейства: " +
-            worst.joinToString(", ") { "`${it["id"]}` (${it["distinctQuestions"]} разных вопросов, ${pct(it["collisionProbability"])})" } + " — именно их первыми расширяем и ротируем.")
+            worst.joinToString(", ") { "`${it["id"]}` (${it["distinctQuestions"]} ${plural((it["distinctQuestions"] as Number).toInt(), "вариант", "варианта", "вариантов")}, ${pct(it["collisionProbability"])})" } + " — именно их первыми расширяем и ротируем.")
         appendLine()
         appendLine("**(б) Атака заучиванием.** Утечка — дамп из K вопросов с ответами, которые реально видели честные кандидаты (выборка по показам, т. е. популярные вопросы утекают первыми). Атакующий отвечает верно на всё, что есть в дампе, остальное — по своему уровню; сравниваем с его «честным двойником» с тем же уровнем и тем же генератором случайности. Отдельно — худший случай: утекли все варианты всех концептуальных семейств.")
         appendLine()

@@ -347,15 +347,12 @@ private fun summary(row: ResultRow, previous: Grade?): String {
     val target = Grade.of(row[AssessmentAttempts.targetGrade]) ?: return "Тест старого формата: 5 вопросов, оценка по доле верных ответов."
     val confirmed = Grade.of(row[AssessmentAttempts.grade]) ?: Grade.JUNIOR
     val expiredNote = if (row[AssessmentAttempts.expired]) " Время попытки истекло — засчитаны данные ответы." else ""
+    // Outcome only; what the candidate may do next comes from RetakePolicy (nextOptions / eligibility).
     return if (row[AssessmentAttempts.passed] == true) {
         val upgrade = target.next()?.takeIf { row[AssessmentAttempts.confident] == true }
-        "Уровень ${target.label} подтверждён." + (upgrade?.let { " Уверенный результат: можно сразу пройти тест на ${it.label}." } ?: "") + expiredNote
+        "Уровень ${target.label} подтверждён." + (upgrade?.let { " Результат уверенный — выше порога ${it.label}." } ?: "") + expiredNote
     } else {
-        val kept = when {
-            previous != null -> " Подтверждённый ранее грейд ${confirmed.label} сохранён."
-            target == Grade.JUNIOR -> " Категория по умолчанию — Junior."
-            else -> " Категория по умолчанию — Junior; можно сразу пройти тест на ${target.previous()!!.label}."
-        }
+        val kept = if (previous != null) " Подтверждённый ранее грейд ${confirmed.label} сохранён." else " Категория по умолчанию — Junior."
         "Уровень ${target.label} пока не подтверждён.$kept$expiredNote"
     }
 }

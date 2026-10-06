@@ -27,7 +27,7 @@ class DatabaseIntegrationTest {
                         }
                     }
                 }
-                val id = db.tx { account("exposed-test-${UUID.randomUUID()}", "candidate") }
+                val id = db.tx { createAccount("exposed-test-${UUID.randomUUID()}", "candidate") }
                 try {
                     db.tx {
                         assertEquals(false, profile(id).processingConsent)

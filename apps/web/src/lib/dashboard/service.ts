@@ -13,6 +13,21 @@ import type {
   ResumeDraft,
   Role,
 } from "./types";
+import type {
+  Applicant,
+  ApplicationStatus,
+  CandidateApplication,
+  CandidateTaskSubmission,
+  CurrentShortTask,
+  EmployerShortTask,
+  EmployerTaskSubmission,
+  EmployerVacancy,
+  ShortTaskInput,
+  SubmissionKind,
+  VacancyCard,
+  VacancyFilters,
+  VacancyInput,
+} from "./types";
 
 export const dashboardApi = {
   me: () => api<Me>("/api/me"),
@@ -78,4 +93,197 @@ export const dashboardApi = {
     save<unknown>("/api/invitations", { candidateId, ...offer }, "POST"),
   updateInvitation: (id: string, status: InvitationStatusAction) =>
     api<unknown>(`/api/invitations/${id}/${status}`, { method: "POST" }),
+};
+
+// ---- Vacancies, applications and regular short tasks ----
+// API errors are English like the rest of the API; the known ones are shown in Russian.
+const vacancyErrors: [string, string][] = [
+  [
+    "Grant processing consent before applying",
+    "Дайте согласие на обработку данных в профиле, чтобы откликаться.",
+  ],
+  [
+    "Fill in full name and specialization",
+    "Заполните имя и специализацию в профиле.",
+  ],
+  [
+    "Add a phone number or verify email",
+    "Укажите телефон или подтвердите email, чтобы компания могла с вами связаться.",
+  ],
+  [
+    "Complete the skills assessment",
+    "Сначала пройдите оценку навыков: компания видит подтверждённую категорию.",
+  ],
+  ["Vacancy is closed", "Вакансия закрыта."],
+  ["You have already applied", "Вы уже откликнулись на эту вакансию."],
+  [
+    "Only sent or viewed applications",
+    "Отозвать можно только отклик, по которому ещё нет решения.",
+  ],
+  [
+    "Invalid application transition",
+    "Статус этого отклика уже нельзя изменить.",
+  ],
+  [
+    "Set company name first",
+    "Сначала укажите название компании в разделе «Компания».",
+  ],
+  ["City is required", "Укажите город для офисного или гибридного формата."],
+  [
+    "Salary range in RUB",
+    "Зарплатная вилка обязательна: «от» больше нуля и не больше «до».",
+  ],
+  [
+    "Salary must not exceed",
+    "Проверьте зарплату: не более 10 000 000 ₽ в месяц.",
+  ],
+  ["Vacancy is already", "Статус вакансии уже изменён — обновите список."],
+  ["Task is already", "Статус задания уже изменён — обновите список."],
+  [
+    "Grant processing consent before short tasks",
+    "Дайте согласие на обработку данных в профиле, чтобы получать задания.",
+  ],
+  [
+    "Set specialization before short tasks",
+    "Укажите специализацию в профиле, чтобы получать задания.",
+  ],
+  [
+    "This week's task is already answered",
+    "Задание этой недели уже выполнено.",
+  ],
+  [
+    "This task is not your current weekly task",
+    "Задание недели сменилось — обновите раздел.",
+  ],
+  ["rating must be between", "Оценка — от 1 до 5."],
+  ["Vacancy not found", "Вакансия не найдена."],
+  ["Application not found", "Отклик не найден."],
+  ["Task not found", "Задание не найдено."],
+  ["Submission not found", "Ответ не найден."],
+];
+async function ru<T>(request: Promise<T>): Promise<T> {
+  try {
+    return await request;
+  } catch (e) {
+    const text = e instanceof Error ? e.message : String(e);
+    const known = vacancyErrors.find(([prefix]) => text.startsWith(prefix));
+    throw new Error(known ? known[1] : text);
+  }
+}
+function vacancyQuery(filters: VacancyFilters): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters))
+    if (String(value ?? "").trim()) params.set(key, String(value).trim());
+  const query = params.toString();
+  return query ? `?${query}` : "";
+}
+
+export const vacancyApi = {
+  vacancies: async (filters: VacancyFilters) =>
+    (
+      await ru(
+        api<{ vacancies: VacancyCard[] }>(
+          `/api/vacancies${vacancyQuery(filters)}`,
+        ),
+      )
+    ).vacancies,
+  apply: (vacancyId: string, coverNote: string) =>
+    ru(
+      save<CandidateApplication>(
+        `/api/vacancies/${vacancyId}/applications`,
+        { coverNote },
+        "POST",
+      ),
+    ),
+  myApplications: async () =>
+    (
+      await ru(
+        api<{ applications: CandidateApplication[] }>(
+          "/api/candidates/me/applications",
+        ),
+      )
+    ).applications,
+  withdraw: (applicationId: string) =>
+    ru(
+      api<void>(`/api/candidates/me/applications/${applicationId}`, {
+        method: "DELETE",
+      }),
+    ),
+  employerVacancies: async () =>
+    (
+      await ru(
+        api<{ vacancies: EmployerVacancy[] }>("/api/employers/vacancies"),
+      )
+    ).vacancies,
+  createVacancy: (vacancy: VacancyInput) =>
+    ru(save<EmployerVacancy>("/api/employers/vacancies", vacancy, "POST")),
+  updateVacancy: (id: string, vacancy: VacancyInput) =>
+    ru(save<EmployerVacancy>(`/api/employers/vacancies/${id}`, vacancy)),
+  setVacancyOpen: (id: string, open: boolean) =>
+    ru(
+      api<EmployerVacancy>(
+        `/api/employers/vacancies/${id}/${open ? "reopen" : "close"}`,
+        { method: "POST" },
+      ),
+    ),
+  applicants: (vacancyId: string) =>
+    ru(
+      api<{ vacancy: EmployerVacancy; applications: Applicant[] }>(
+        `/api/employers/vacancies/${vacancyId}/applications`,
+      ),
+    ),
+  setApplicationStatus: (
+    applicationId: string,
+    status: Exclude<ApplicationStatus, "sent">,
+  ) =>
+    ru(
+      save<Applicant>(`/api/employers/applications/${applicationId}/status`, {
+        status,
+      }),
+    ),
+};
+
+export const taskApi = {
+  current: () => ru(api<CurrentShortTask>("/api/candidates/me/tasks/current")),
+  submit: (taskId: string, kind: SubmissionKind, answer: string) =>
+    ru(
+      save<CandidateTaskSubmission>(
+        "/api/candidates/me/task-submissions",
+        { taskId, kind, answer },
+        "POST",
+      ),
+    ),
+  mySubmissions: async () =>
+    (
+      await ru(
+        api<{ submissions: CandidateTaskSubmission[] }>(
+          "/api/candidates/me/task-submissions",
+        ),
+      )
+    ).submissions,
+  employerTasks: async () =>
+    (await ru(api<{ tasks: EmployerShortTask[] }>("/api/employers/tasks")))
+      .tasks,
+  createTask: (task: ShortTaskInput) =>
+    ru(save<EmployerShortTask>("/api/employers/tasks", task, "POST")),
+  setTaskActive: (id: string, active: boolean) =>
+    ru(
+      api<EmployerShortTask>(
+        `/api/employers/tasks/${id}/${active ? "activate" : "deactivate"}`,
+        { method: "POST" },
+      ),
+    ),
+  submissions: (taskId: string) =>
+    ru(
+      api<{ task: EmployerShortTask; submissions: EmployerTaskSubmission[] }>(
+        `/api/employers/tasks/${taskId}/submissions`,
+      ),
+    ),
+  rate: (submissionId: string, rating: number, comment: string) =>
+    ru(
+      save<EmployerTaskSubmission>(
+        `/api/employers/task-submissions/${submissionId}/rating`,
+        { rating, comment },
+      ),
+    ),
 };

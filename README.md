@@ -37,6 +37,12 @@ cd apps/api && gradle run
 
 In another terminal run `cd apps/web && bun install --frozen-lockfile && bun run dev`, then open <http://localhost:5173>. There is no checked-in Gradle wrapper. Ports and Keycloak origins in the supplied realm target the documented defaults; changing them requires matching frontend build configuration, CORS, redirect URIs and JWT issuer values.
 
+## Server deployment
+
+Every push to `main` runs `.github/workflows/deploy.yml` on the self-hosted runner installed on the server, which calls `infra/deploy/deploy.sh`. The script builds the images, then starts `compose.yaml` + `compose.prod.yaml` as the `fsp-career` project. [Caddy](infra/caddy/Caddyfile) is the only public entry point: it obtains HTTPS for `PUBLIC_HOST` (`brokenbrain.online`) and serves the web app at `/`, the API at `/api` and Keycloak (production mode) at `/auth`. Because the realm import only applies to an empty database, the script also sets the `fsp-web` client's redirect URIs and web origins to the public origin on each deploy.
+
+Secrets are generated on the first deploy into `~/.config/fsp-career/.env` on the server (never in the repository); the Keycloak admin console is `https://brokenbrain.online/auth/admin/` with `KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD` from that file. Mailpit stays loopback-only there: open it with `ssh -L 8025:127.0.0.1:8025 moverq@51.250.19.214` and <http://localhost:8025>. Run `bash infra/deploy/deploy.sh` from a checkout on the server to deploy by hand.
+
 ## Accounts and email verification
 
 The realm allows self-registration, requires email verification, has reset-password and brute-force protection enabled, and includes **no preset demo users or real candidate data**. Development verification messages go to the local [Mailpit inbox](http://localhost:8025): use a synthetic email, register, then open its link in Mailpit. This proves only the local mail workflow, **not real mailbox ownership**. Replace Mailpit with a trusted SMTP provider before accepting real users. To test employer permissions, create a separate user in the Keycloak admin console and assign its `employer` realm role; never allow public registration to grant this role. Employer takes precedence over the default `candidate` role when both appear in a token.

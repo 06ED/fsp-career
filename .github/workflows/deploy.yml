@@ -1,0 +1,21 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Deploys never overlap; a newer push waits for the running rollout instead of interrupting it.
+concurrency:
+  group: production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # The runner lives on the production server itself, so the job builds and restarts the stack locally.
+    runs-on: self-hosted
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build and restart the stack
+        run: bash infra/deploy/deploy.sh

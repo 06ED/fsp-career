@@ -1,0 +1,64 @@
+# Server overrides, applied on top of compose.yaml by infra/deploy/deploy.sh.
+# Only Caddy is published to the internet (80/443 with automatic HTTPS) and serves one origin:
+#   /        -> web
+#   /api/*   -> API (prefix stripped)
+#   /auth/*  -> Keycloak
+# The ports published in compose.yaml stay bound to the server's loopback interface.
+services:
+  postgres:
+    restart: unless-stopped
+
+  keycloak-db:
+    restart: unless-stopped
+
+  mailpit:
+    restart: unless-stopped
+
+  keycloak:
+    command: ["start", "--import-realm"]
+    environment:
+      KC_HOSTNAME: https://${PUBLIC_HOST:?set PUBLIC_HOST in the deploy env file}/auth
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+    healthcheck:
+      # Production mode re-augments the server on start, which is slower than start-dev.
+      start_period: 180s
+    restart: unless-stopped
+
+  api:
+    environment:
+      KEYCLOAK_ISSUER: https://${PUBLIC_HOST}/auth/realms/fsp-career
+      KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/fsp-career/protocol/openid-connect/certs
+    restart: unless-stopped
+
+  web:
+    build:
+      args:
+        VITE_API_URL: https://${PUBLIC_HOST}/api
+        VITE_KEYCLOAK_URL: https://${PUBLIC_HOST}/auth
+    environment:
+      ORIGIN: https://${PUBLIC_HOST}
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./infra/caddy:/etc/caddy:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - api
+      - keycloak
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

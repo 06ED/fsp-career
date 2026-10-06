@@ -1,4 +1,7 @@
 FROM oven/bun:1.4.2 AS build
+# Inlined into the browser bundle at build time; compose.prod.yaml passes the public URLs.
+ARG VITE_API_URL=http://localhost:8080
+ARG VITE_KEYCLOAK_URL=http://localhost:8081
 WORKDIR /app
 COPY package.json bun.lock svelte.config.js tsconfig.json vite.config.ts .prettierrc.json ./
 RUN bun install --frozen-lockfile

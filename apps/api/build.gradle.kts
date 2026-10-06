@@ -33,3 +33,13 @@ dependencies {
 kotlin { jvmToolchain(21) }
 application { mainClass.set("ru.fsp.career.ApplicationKt") }
 tasks.test { useJUnitPlatform() }
+
+// Synthetic offline validation of the matching engine (see docs/validation/matching-results.md).
+tasks.register<JavaExec>("validateMatching") {
+    group = "verification"
+    description = "Generates the synthetic vacancy–candidate set, evaluates ranking vs baselines and writes docs/validation/matching-*"
+    dependsOn("testClasses")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("ru.fsp.career.matching.validation.ValidateMatchingKt")
+    args(layout.projectDirectory.dir("../../docs/validation").asFile.absolutePath)
+}

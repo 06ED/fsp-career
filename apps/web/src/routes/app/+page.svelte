@@ -10,7 +10,6 @@
     Company,
     Invitation,
     InvitationStatusAction,
-    Match,
     Need,
     Offer,
     Profile,
@@ -26,6 +25,7 @@
   import EmployerCompany from "$lib/dashboard/EmployerCompany.svelte";
   import EmployerNeeds from "$lib/dashboard/EmployerNeeds.svelte";
   import EmployerMatches from "$lib/dashboard/EmployerMatches.svelte";
+  import CandidateSettings from "$lib/dashboard/CandidateSettings.svelte";
   import Invitations from "$lib/dashboard/Invitations.svelte";
   import RoleChoice from "$lib/dashboard/RoleChoice.svelte";
   import CandidateVacancies from "$lib/dashboard/CandidateVacancies.svelte";
@@ -62,14 +62,23 @@
     targetRoles: [],
     cvHistory: [],
   });
-  let company = $state<Company>({ name: "", description: "", website: "" });
+  let company = $state<Company>({
+    name: "",
+    description: "",
+    website: "",
+    industry: "",
+    contactEmail: "",
+    contactPhone: "",
+    contactTelegram: "",
+    contactNote: "",
+  });
   let need = $state<Need>({
     specialization: "",
     industry: "",
     minGrade: "junior",
     description: "",
+    techStack: [],
   });
-  let matches = $state<Match[]>([]);
   let invitations = $state<Invitation[]>([]);
   let assessment = $state<Assessment | null>(null);
   let answers = $state<Record<string, string>>({});
@@ -174,7 +183,6 @@
     section = id;
     error = "";
     success = "";
-    if (id === "matches") await findMatches();
     if (id === "assessment") await loadHistory();
     if (id === "invitations")
       await action(async () => {
@@ -296,16 +304,17 @@
       need = await dashboardApi.saveNeed(need);
     }, "Потребность сохранена. Теперь можно открыть подборку.");
   }
-  async function findMatches() {
+  async function sendInvitation(
+    candidateId: string,
+    offer: Offer,
+  ): Promise<boolean> {
+    let sent = false;
     await action(async () => {
-      matches = await dashboardApi.matches();
-    }, "");
-  }
-  async function sendInvitation(candidate: Match, offer: Offer) {
-    await action(async () => {
-      await dashboardApi.sendInvitation(candidate.candidateId, offer);
+      await dashboardApi.sendInvitation(candidateId, offer);
+      sent = true;
       await refresh();
     }, "Приглашение отправлено кандидату. Контакты появятся после принятия.");
+    return sent;
   }
   async function updateInvitation(
     invitation: Invitation,
@@ -444,6 +453,12 @@
           {downloadResume}
           {revokeConsent}
         />
+        <CandidateSettings
+          processingConsent={profile.processingConsent}
+          email={profile.email}
+          {busy}
+          run={action}
+        />
       {:else if section === "assessment" && role === "candidate"}
         <CandidateAssessment
           {profile}
@@ -460,7 +475,14 @@
       {:else if section === "needs" && role === "employer"}
         <EmployerNeeds bind:need {busy} {saveNeed} />
       {:else if section === "matches" && role === "employer"}
-        <EmployerMatches {matches} {busy} {findMatches} {sendInvitation} />
+        <EmployerMatches
+          {need}
+          {company}
+          {busy}
+          run={action}
+          {sendInvitation}
+          openNeeds={() => openSection("needs")}
+        />
       {:else if section === "invitations"}
         <Invitations {invitations} {role} {busy} {updateInvitation} />
       {:else if section === "vacancies" && role === "candidate"}

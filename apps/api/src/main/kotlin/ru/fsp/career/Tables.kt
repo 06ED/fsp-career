@@ -2,6 +2,7 @@ package ru.fsp.career
 
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.sql.javatime.date
 import org.jetbrains.exposed.sql.javatime.timestampWithTimeZone
 import org.jetbrains.exposed.sql.json.jsonb
 
@@ -29,6 +30,9 @@ internal object CandidateProfiles : Table("candidate_profiles") {
     val targetRoles = jsonb<List<String>>("target_roles", Json.Default)
     val cvHistory = jsonb<List<CvEntry>>("cv_history", Json.Default)
     val updatedAt = timestampWithTimeZone("updated_at")
+    val privacy = jsonb<CandidatePrivacy>("privacy", privacyJson).default(CandidatePrivacy())
+    val fspId = text("fsp_id").nullable()
+    val fspLinkedAt = timestampWithTimeZone("fsp_linked_at").nullable()
     override val primaryKey = PrimaryKey(accountId)
 }
 
@@ -37,6 +41,11 @@ internal object EmployerCompanies : Table("employer_companies") {
     val name = text("name")
     val description = text("description")
     val website = text("website")
+    val industry = text("industry").default("")
+    val contactEmail = text("contact_email").default("")
+    val contactPhone = text("contact_phone").default("")
+    val contactTelegram = text("contact_telegram").default("")
+    val contactNote = text("contact_note").default("")
     override val primaryKey = PrimaryKey(accountId)
 }
 
@@ -46,6 +55,7 @@ internal object EmployerNeeds : Table("employer_needs") {
     val industry = text("industry")
     val minGrade = text("min_grade")
     val description = text("description")
+    val techStack = jsonb<List<String>>("tech_stack", Json.Default).default(emptyList())
     override val primaryKey = PrimaryKey(accountId)
 }
 
@@ -85,6 +95,14 @@ internal object Achievements : Table("achievements") {
     val issuer = text("issuer")
     val points = integer("points")
     val verifiedAt = timestampWithTimeZone("verified_at")
+    val sourceName = text("source").default("manual")
+    val externalId = text("external_id").nullable()
+    val eventName = text("event_name").default("")
+    val discipline = text("discipline").default("")
+    val eventDate = date("event_date").nullable()
+    val level = text("level").default("")
+    val place = integer("place").nullable()
+    val resultRole = text("result_role").default("")
     override val primaryKey = PrimaryKey(id)
 }
 
@@ -96,6 +114,7 @@ internal object InvitationsTable : Table("invitations") {
     val salaryMinRub = integer("salary_min_rub")
     val salaryMaxRub = integer("salary_max_rub")
     val status = text("status")
+    val contactMethod = text("contact_method").default("")
     val createdAt = timestampWithTimeZone("created_at")
     val updatedAt = timestampWithTimeZone("updated_at")
     override val primaryKey = PrimaryKey(id)

@@ -24,6 +24,7 @@ fun Route.careerRoutes(db: Database, audience: String) {
         resumeRoutes(db, audience)
         vacancyRoutes(db, audience)
         taskRoutes(db, audience)
+        matchingRoutes(db, audience)
         get("/candidates/me") {
             val sub = call.role(audience, "candidate")
             call.respond(db.tx { profile(account(sub, "candidate")) })
@@ -84,6 +85,9 @@ fun Route.careerRoutes(db: Database, audience: String) {
                     it[targetRoles] = emptyList()
                     it[cvHistory] = emptyList()
                     it[updatedAt] = now()
+                    it[fspId] = null
+                    it[fspLinkedAt] = null
+                    it[privacy] = CandidatePrivacy()
                 }
                 profile(id)
             })
@@ -200,32 +204,32 @@ fun Route.careerRoutes(db: Database, audience: String) {
             val sub = call.role(audience, "employer")
             call.respond(db.tx {
                 val id = account(sub, "employer")
-                val row = EmployerCompanies.selectAll().where { EmployerCompanies.accountId eq id }.single()
-                Company(row[EmployerCompanies.name], row[EmployerCompanies.description], row[EmployerCompanies.website])
+                companyFrom(EmployerCompanies.selectAll().where { EmployerCompanies.accountId eq id }.single())
             })
         }
         put("/employers/company") {
             val sub = call.role(audience, "employer")
-            val company = call.receive<Company>()
-            val name = requireText(company.name, "Company name", 200)
-            if (company.description.length > 2000 || company.website.length > 500) bad("Company field too long")
+            val company = validateCompany(call.receive<Company>())
             call.respond(db.tx {
                 val id = account(sub, "employer")
                 EmployerCompanies.update({ EmployerCompanies.accountId eq id }) {
-                    it[EmployerCompanies.name] = name
-                    it[description] = company.description.trim()
-                    it[website] = company.website.trim()
+                    it[name] = company.name
+                    it[description] = company.description
+                    it[website] = company.website
+                    it[industry] = company.industry
+                    it[contactEmail] = company.contactEmail
+                    it[contactPhone] = company.contactPhone
+                    it[contactTelegram] = company.contactTelegram
+                    it[contactNote] = company.contactNote
                 }
-                Company(name, company.description.trim(), company.website.trim())
+                company
             })
         }
         get("/employers/needs") {
             val sub = call.role(audience, "employer")
             call.respond(db.tx {
                 val id = account(sub, "employer")
-                val row = EmployerNeeds.selectAll().where { EmployerNeeds.accountId eq id }.single()
-                Need(row[EmployerNeeds.specialization], row[EmployerNeeds.industry],
-                    row[EmployerNeeds.minGrade], row[EmployerNeeds.description])
+                needFrom(EmployerNeeds.selectAll().where { EmployerNeeds.accountId eq id }.single())
             })
         }
         put("/employers/needs") {
@@ -234,6 +238,7 @@ fun Route.careerRoutes(db: Database, audience: String) {
             grade(need.minGrade)
             val spec = requireText(need.specialization, "Specialization", 100)
             if (need.industry.length > 100 || need.description.length > 2000) bad("Need field too long")
+            val stack = validateNeedStack(need.techStack)
             call.respond(db.tx {
                 val id = account(sub, "employer")
                 EmployerNeeds.update({ EmployerNeeds.accountId eq id }) {
@@ -241,66 +246,9 @@ fun Route.careerRoutes(db: Database, audience: String) {
                     it[industry] = need.industry.trim()
                     it[minGrade] = need.minGrade
                     it[description] = need.description.trim()
+                    it[techStack] = stack
                 }
-                need.copy(specialization = spec)
-            })
-        }
-        get("/matches") {
-            val sub = call.role(audience, "employer")
-            val specFilter = call.request.queryParameters["specialization"]?.trim()?.takeIf { it.isNotBlank() }
-            if (specFilter != null && specFilter.length > 100) bad("Specialization too long")
-            val gradeFilter = call.request.queryParameters["grade"]?.let { grade(it) }
-            val skillFilter = call.request.queryParameters["techStack"]?.split(',')?.map { it.trim() }?.filter { it.isNotBlank() }.orEmpty()
-            if (skillFilter.size > 10 || skillFilter.any { it.length > 100 }) bad("Invalid techStack filter")
-            val verifiedOnly = call.request.queryParameters["verifiedAchievements"]?.let {
-                it.toBooleanStrictOrNull() ?: bad("verifiedAchievements must be true or false")
-            } ?: false
-            call.respond(db.tx {
-                val id = account(sub, "employer")
-                val row = EmployerNeeds.selectAll().where { EmployerNeeds.accountId eq id }.single()
-                val need = Need(row[EmployerNeeds.specialization], row[EmployerNeeds.industry],
-                    row[EmployerNeeds.minGrade], row[EmployerNeeds.description])
-                if (need.specialization.isBlank() && specFilter == null)
-                    bad("Set employer needs first or provide specialization")
-                val spec = specFilter ?: need.specialization
-                val published = CandidateProfiles.selectAll().where {
-                    (CandidateProfiles.processingConsent eq true) and
-                        (CandidateProfiles.consentPublication eq true) and
-                        (CandidateProfiles.fullName neq "")
-                }.filter { it[CandidateProfiles.specialization].equals(spec, ignoreCase = true) }
-                if (published.isEmpty()) return@tx Matches(emptyList())
-                val ids = published.map { it[CandidateProfiles.accountId] }
-                val attempts = AssessmentAttempts.selectAll().where {
-                    (AssessmentAttempts.candidateId inList ids) and AssessmentAttempts.submittedAt.isNotNull()
-                }.groupBy { it[AssessmentAttempts.candidateId] }
-                val verified = Achievements.selectAll().where {
-                    (Achievements.candidateId inList ids) and Achievements.verifiedAt.isNotNull()
-                }.orderBy(Achievements.points to SortOrder.DESC).groupBy { it[Achievements.candidateId] }
-                val matches = published.mapNotNull { candidate ->
-                    val candidateId = candidate[CandidateProfiles.accountId]
-                    val best = attempts[candidateId].orEmpty()
-                        .filter { it[AssessmentAttempts.specialization] == candidate[CandidateProfiles.specialization] }
-                        .maxWithOrNull(compareBy<ResultRow> { gradeRank(it[AssessmentAttempts.grade]!!) }
-                            .thenBy { it[AssessmentAttempts.score]!! }) ?: return@mapNotNull null
-                    val assessedGrade = best[AssessmentAttempts.grade]!!
-                    if (gradeRank(assessedGrade) < gradeRank(gradeFilter ?: need.minGrade)) return@mapNotNull null
-                    val score = best[AssessmentAttempts.score]!!
-                    val achievements = verified[candidateId].orEmpty().map {
-                        Achievement(it[Achievements.title], it[Achievements.issuer], it[Achievements.points])
-                    }
-                    val bonus = achievements.sumOf { it.points }.coerceAtMost(20)
-                    val industryBonus = if (need.industry.isNotBlank() &&
-                        candidate[CandidateProfiles.industry].equals(need.industry, ignoreCase = true)) 5 else 0
-                    Match(candidateId.toString(), candidate[CandidateProfiles.fullName],
-                        candidate[CandidateProfiles.specialization], assessedGrade, score, bonus,
-                        score + bonus + industryBonus,
-                        "Assessment $score/100; verified achievements +$bonus; industry match +$industryBonus",
-                        achievements, candidate[CandidateProfiles.techStack])
-                }.filter { match ->
-                    (!verifiedOnly || match.achievements.isNotEmpty()) &&
-                        skillFilter.all { skill -> match.techStack.any { it.equals(skill, ignoreCase = true) } }
-                }.sortedWith(compareByDescending<Match> { it.totalScore }.thenBy { it.candidateId })
-                Matches(matches)
+                need.copy(specialization = spec, industry = need.industry.trim(), description = need.description.trim(), techStack = stack)
             })
         }
         post("/invitations") {
@@ -309,6 +257,7 @@ fun Route.careerRoutes(db: Database, audience: String) {
             val description = requireText(request.description, "Description", 4000)
             if (request.salaryMinRub <= 0 || request.salaryMaxRub < request.salaryMinRub)
                 bad("Salary range in RUB must be positive and min <= max")
+            if (request.contactMethod.length > 300) bad("contactMethod must contain at most 300 characters")
             call.respond(HttpStatusCode.Created, db.tx {
                 val employer = account(sub, "employer")
                 val candidate = uuid(request.candidateId)
@@ -319,9 +268,12 @@ fun Route.careerRoutes(db: Database, audience: String) {
                         (CandidateProfiles.fullName neq "")
                 }.any()
                 if (!available) missing("Published candidate not found")
-                val company = EmployerCompanies.selectAll()
-                    .where { EmployerCompanies.accountId eq employer }.single()[EmployerCompanies.name]
-                if (company.isBlank()) bad("Set company name first")
+                val company = companyFrom(EmployerCompanies.selectAll()
+                    .where { EmployerCompanies.accountId eq employer }.single())
+                if (company.name.isBlank()) bad("Set company name first")
+                // Spec 2.2 rule 2: the invitation always carries the company name and a way to contact it.
+                val contact = request.contactMethod.trim().ifBlank { companyContactLine(company) }
+                if (contact.isBlank()) bad("Set company contact data or provide contactMethod")
                 val invitationId = UUID.randomUUID()
                 val created = now()
                 InvitationsTable.insert {
@@ -331,6 +283,7 @@ fun Route.careerRoutes(db: Database, audience: String) {
                     it[InvitationsTable.description] = description
                     it[salaryMinRub] = request.salaryMinRub
                     it[salaryMaxRub] = request.salaryMaxRub
+                    it[contactMethod] = contact
                     it[status] = "sent"
                     it[createdAt] = created
                     it[updatedAt] = created

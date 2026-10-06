@@ -18,13 +18,9 @@ internal val TASK_SUBMISSION_KINDS = listOf("solution", "approach")
 /** Upper sanity bound for salaries so typos like an extra zero do not publish absurd offers. */
 internal const val VACANCY_MAX_SALARY_RUB = 10_000_000
 
-private val specializationLabels = mapOf(
-    "backend" to "Backend-разработка", "frontend" to "Frontend-разработка",
-    "data" to "Данные и аналитика", "product" to "Продукт", "design" to "Дизайн",
-)
 private val gradeLabels = mapOf("junior" to "Junior", "middle" to "Middle", "senior" to "Senior")
 
-private fun specializationLabel(value: String): String = specializationLabels[value] ?: value
+// specializationLabel() is shared with matching (MatchingStore.kt).
 private fun gradeLabel(value: String): String = gradeLabels[value] ?: value
 
 internal fun vacancySpecialization(value: String): String =

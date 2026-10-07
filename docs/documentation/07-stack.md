@@ -37,7 +37,7 @@
 | Svelte | 5.57.1 | UI (runes) |
 | Vite | 7.3.6 | сборка |
 | TypeScript | 5.9.3 | типизация |
-| StyleX (+ unplugin) | 0.19.1 | атомарные стили |
+| Нативный CSS | — | стили лендинга и кабинета, импортированные в корневом layout |
 | keycloak-js | 26.2.4 | вход по OIDC Authorization Code + PKCE |
 | GSAP | 3.15.0 | анимации лендинга |
 | @jis3r/icons (Moving Icons), @lucide/svelte | 2.9.0, 1.52.0 | иконки |

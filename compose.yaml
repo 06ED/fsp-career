@@ -77,6 +77,16 @@ services:
       KEYCLOAK_ISSUER: http://localhost:${KEYCLOAK_PORT:-8081}/realms/fsp-career
       KEYCLOAK_JWKS_URL: http://keycloak:8080/realms/fsp-career/protocol/openid-connect/certs
       KEYCLOAK_AUDIENCE: fsp-api
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      API_ORIGIN: ${API_ORIGIN:-http://localhost:8080}
+      FSP_CLIENT_ID: ${FSP_CLIENT_ID:-}
+      FSP_CLIENT_SECRET: ${FSP_CLIENT_SECRET:-}
+      FSP_ISSUER: ${FSP_ISSUER:-http://localhost:${KEYCLOAK_PORT:-8081}/realms/fsp-career}
+      FSP_AUTH_URL: ${FSP_AUTH_URL:-http://localhost:${KEYCLOAK_PORT:-8081}/realms/fsp-career/protocol/openid-connect/auth}
+      FSP_TOKEN_URL: ${FSP_TOKEN_URL:-http://keycloak:8080/realms/fsp-career/protocol/openid-connect/token}
+      FSP_JWKS_URL: ${FSP_JWKS_URL:-http://keycloak:8080/realms/fsp-career/protocol/openid-connect/certs}
+      VK_CLIENT_ID: ${VK_CLIENT_ID:-}
+      VK_CLIENT_SECRET: ${VK_CLIENT_SECRET:-}
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:

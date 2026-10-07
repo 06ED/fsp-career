@@ -1,0 +1,238 @@
+.l-page {
+  min-height: 100vh;
+  background-color: var(--background);
+  overflow: hidden;
+}
+.l-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-block: 22px;
+  padding-inline: 24px;
+  border-bottom: 1px solid var(--border-strong);
+  gap: 24px;
+}
+.l-logo {
+  width: 159px;
+  height: 42px;
+  object-fit: contain;
+}
+.l-header-right {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+.l-header-link {
+  font-size: 13px;
+  color: var(--text-dark-muted);
+  display: none;
+}
+.l-header-button {
+  white-space: nowrap;
+  border-radius: var(--radius-ui);
+}
+.l-hero {
+  min-height: 640px;
+  max-width: 1600px;
+  margin-inline: auto;
+  padding-inline: 24px;
+  padding-top: 70px;
+  position: relative;
+}
+.l-eyebrow {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  gap: 10px;
+  font-family: Play, sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.1px;
+  color: var(--accent);
+}
+.l-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent);
+}
+.l-hero-title {
+  font-size: 51px;
+  line-height: 0.99;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  margin-top: 30px;
+  margin-bottom: 27px;
+  max-width: 1010px;
+  position: relative;
+  z-index: 2;
+}
+.l-violet {
+  color: var(--accent);
+}
+.l-hero-description {
+  max-width: 510px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--text-soft);
+  margin-bottom: 35px;
+  position: relative;
+  z-index: 2;
+}
+.l-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  position: relative;
+  z-index: 2;
+}
+.l-primary,
+.l-secondary {
+  display: inline-flex;
+  gap: 35px;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: var(--radius-ui);
+  min-width: 209px;
+}
+/* Keep the candidate text white in every state; the employer action stays light. */
+.l-primary.d-ui-button,
+.l-primary.d-ui-button:hover {
+  color: var(--on-accent);
+}
+.l-floating {
+  position: absolute;
+  right: 30px;
+  bottom: 40px;
+  display: none;
+  width: 235px;
+  padding: 18px;
+  background-color: var(--surface);
+  border-radius: var(--radius-ui);
+  box-shadow: 0 18px 60px var(--floating-shadow);
+  font-family: Play, sans-serif;
+  font-size: 11px;
+  line-height: 1.7;
+  z-index: 2;
+}
+.l-floating-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--floating-copy);
+  margin-bottom: 17px;
+}
+.l-floating-number {
+  font-size: 34px;
+  color: var(--accent);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.l-section {
+  background-color: var(--sidebar);
+  color: var(--on-accent);
+  padding-block: 65px;
+  padding-inline: 24px;
+}
+.l-section-inner {
+  max-width: 1456px;
+  margin-inline: auto;
+}
+.l-section-heading {
+  font-size: 34px;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+  max-width: 660px;
+  margin-top: 20px;
+  margin-bottom: 54px;
+  font-weight: 500;
+}
+.l-steps {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+.l-step {
+  border-top: 1px solid var(--section-border);
+  padding-top: 20px;
+  padding-right: 25px;
+}
+.l-step-number {
+  color: var(--accent-lilac);
+  font-family: Play, sans-serif;
+  font-size: 12px;
+}
+.l-step-title {
+  font-size: 21px;
+  margin-top: 30px;
+  margin-bottom: 12px;
+}
+.l-step-text {
+  line-height: 1.6;
+  font-size: 14px;
+  color: var(--section-copy);
+  max-width: 320px;
+}
+.l-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding-block: 30px;
+  padding-inline: 24px;
+  font-family: Play, sans-serif;
+  font-size: 11px;
+  color: var(--footer-copy);
+}
+@media (min-width: 600px) {
+  .l-hero-title {
+    font-size: 76px;
+  }
+}
+@media (min-width: 760px) {
+  .l-header-link,
+  .l-floating {
+    display: block;
+  }
+  .l-hero-description {
+    font-size: 19px;
+  }
+  .l-steps {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (min-width: 900px) {
+  .l-section {
+    padding-block: 95px;
+  }
+  .l-section-heading {
+    font-size: 56px;
+  }
+}
+@media (min-width: 960px) {
+  .l-header,
+  .l-hero,
+  .l-section,
+  .l-footer {
+    padding-inline: 72px;
+  }
+  .l-hero {
+    padding-top: 112px;
+  }
+}
+@media (min-width: 1000px) {
+  .l-hero {
+    min-height: 720px;
+  }
+  .l-floating {
+    right: 80px;
+    bottom: 90px;
+  }
+}
+@media (min-width: 1100px) {
+  .l-hero-title {
+    font-size: 104px;
+  }
+}

@@ -110,7 +110,7 @@ bullets(s, [
 s, fg = slide_base(5, dark=True, section='04 / АРХИТЕКТУРА')
 textbox(s, .85, 1.2, 10.4, .8, 'Простая и прозрачная архитектура', 36, WHITE, True)
 for i, (title, body) in enumerate([
-    ('SVELTEKIT', 'TypeScript · StyleX · GSAP · Bun\nDocker · кабинет двух ролей'),
+    ('SVELTEKIT', 'TypeScript · CSS · GSAP · Bun\nDocker · кабинет двух ролей'),
     ('KTOR', 'Kotlin · JWT · OpenAPI\nОценка, ранжирование, доступ'),
     ('ДАННЫЕ', 'PostgreSQL · Flyway\nKeycloak · локальный Mailpit')
 ]):

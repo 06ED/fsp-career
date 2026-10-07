@@ -2,7 +2,6 @@ package ru.fsp.career
 
 import io.ktor.http.*
 import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -225,9 +224,7 @@ fun Route.matchingRoutes(db: Database, audience: String, registry: FspRegistry =
         val sub = call.role(audience, "candidate")
         val request = call.receive<FspLinkRequest>()
         val fspId = FspIds.normalize(request.fspId) ?: bad("FSP ID must look like FSP-123456")
-        val claims = call.principal<JWTPrincipal>()!!.payload
-        val verifiedEmail = claims.getClaim("email").asString()
-            ?.takeIf { claims.getClaim("email_verified").asBoolean() == true && it.isNotBlank() }
+        val verifiedEmail = call.verifiedEmail().takeIf { it.isNotBlank() }
             ?: forbidden("A verified e-mail is required to link an FSP ID")
         db.tx {
             if (!profile(account(sub, "candidate")).processingConsent) forbidden("Grant processing consent before linking FSP ID")

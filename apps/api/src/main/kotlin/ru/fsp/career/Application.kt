@@ -2,15 +2,19 @@ package ru.fsp.career
 
 import com.auth0.jwk.JwkProviderBuilder
 import io.ktor.http.*
+import io.ktor.client.HttpClient
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.sessions.*
+import io.ktor.server.request.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.cors.routing.*
+import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -45,20 +49,26 @@ fun main() {
 private fun required(name: String): String =
     System.getenv(name)?.takeIf { it.isNotBlank() } ?: error("$name is required")
 
-fun Application.careerModule(
+internal fun Application.careerModule(
     db: Database,
     issuer: String,
     audience: String,
-    jwksUrl: String = "$issuer/protocol/openid-connect/certs"
+    jwksUrl: String = "$issuer/protocol/openid-connect/certs",
+    authConfig: AuthConfig = AuthConfig.fromEnv(issuer),
+    authHttp: HttpClient = authHttpClient(),
+    fspKeys: com.auth0.jwk.JwkProvider? = null
 ) {
     val logger = environment.log
+    monitor.subscribe(ApplicationStopped) { authHttp.close() }
+    // The production API is private behind one Traefik hop, which sets X-Forwarded-For.
+    if (authConfig.secure) install(XForwardedHeaders) { useLastProxy() }
 
     install(ContentNegotiation) { json(Json { ignoreUnknownKeys = false; encodeDefaults = true }) }
     install(CORS) {
-        allowHost("localhost:5173", schemes = listOf("http"))
-        allowHost("localhost:3000", schemes = listOf("http"))
-        allowHost("127.0.0.1:5173", schemes = listOf("http"))
-        allowHost("127.0.0.1:3000", schemes = listOf("http"))
+        val frontend = URI(authConfig.frontendOrigin)
+        allowHost(frontend.authority, schemes = listOf(frontend.scheme))
+        allowCredentials = true
+        allowHeader("X-CSRF-Token")
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
         allowMethod(HttpMethod.Put)
@@ -66,8 +76,20 @@ fun Application.careerModule(
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Delete)
     }
+    browserAuth(authConfig)
+    install(createApplicationPlugin("BrowserCsrf") {
+        onCall { call ->
+            if (call.request.path().startsWith("/api/") && call.request.path() !in listOf(
+                    "/api/auth/login", "/api/auth/register", "/api/auth/logout") &&
+                call.request.httpMethod !in listOf(HttpMethod.Get, HttpMethod.Head, HttpMethod.Options)) {
+                val cookie = call.sessions.get<BrowserCookie>()?.value
+                if (cookie != null) call.requireCsrf(authConfig.frontendOrigin, db.session(cookie))
+            }
+        }
+    })
 
     install(StatusPages) {
+        exception<OAuthLoginFailed> { call, _ -> call.respondRedirect("${authConfig.frontendOrigin}/app?authError=failed") }
         exception<ApiError> { call, cause -> call.respond(cause.status, ErrorResponse(cause.message)) }
         exception<BadRequestException> { call, _ ->
             call.respond(
@@ -93,6 +115,11 @@ fun Application.careerModule(
         .build()
 
     install(Authentication) {
+        externalOAuth(authConfig, authHttp)
+        session<BrowserCookie>("browser") {
+            validate { cookie -> db.session(cookie.value)?.identity?.let { BrowserPrincipal(it) } }
+            challenge { call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Authentication required")) }
+        }
         jwt("keycloak") {
             realm = "career"
             verifier(keys, issuer) { withAudience(audience); acceptLeeway(10) }
@@ -110,6 +137,7 @@ fun Application.careerModule(
         }
     }
     routing {
+        browserAuthRoutes(db, authConfig, authHttp, fspKeys)
         get("/health") { call.respond(mapOf("status" to "ok")) }
         get("/openapi.yaml") {
             call.respondText(
@@ -117,7 +145,7 @@ fun Application.careerModule(
                 ContentType.parse("application/yaml")
             )
         }
-        authenticate("keycloak") { careerRoutes(db, audience) }
+        authenticate("keycloak", "browser", strategy = AuthenticationStrategy.FirstSuccessful) { careerRoutes(db, audience) }
     }
 }
 
@@ -127,10 +155,17 @@ fun Application.careerModule(
  */
 @Suppress("UNUSED_PARAMETER")
 fun ApplicationCall.role(audience: String, requiredRole: String): String {
-    val principal = principal<JWTPrincipal>()
+    return principal<BrowserPrincipal>()?.identity?.subject ?: principal<JWTPrincipal>()?.payload?.subject
         ?: throw ApiError(HttpStatusCode.Unauthorized, "Authentication required")
-    return principal.payload.subject
 }
+
+internal data class BrowserPrincipal(val identity: BrowserIdentity) : Principal
+
+fun ApplicationCall.authEmail(): String = principal<BrowserPrincipal>()?.identity?.email
+    ?: principal<JWTPrincipal>()?.payload?.getClaim("email")?.asString().orEmpty()
+
+fun ApplicationCall.verifiedEmail(): String = principal<BrowserPrincipal>()?.identity?.let { if (it.verified) it.email else "" }
+    ?: principal<JWTPrincipal>()?.payload?.let { if (it.getClaim("email_verified").asBoolean() == true) it.getClaim("email").asString().orEmpty() else "" }.orEmpty()
 
 /** Realm/client roles still matter for accounts created before in-app role choice (admin-assigned employers). */
 fun ApplicationCall.tokenRoles(audience: String): Set<String> {

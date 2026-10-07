@@ -8,10 +8,10 @@ Any FSP achievements, category labels, scores, or candidate records shown as exa
 
 ## Architecture
 
-- `apps/web`: SvelteKit/TypeScript/StyleX/GSAP frontend built with Bun; Docker serves it with adapter-node at `http://localhost:3000` (optional dev origin `http://localhost:5173`). Browser login uses a public Keycloak client and authorization code + PKCE; never place a client secret in browser code. Buttons, cards, tags and fields share 8px corners; light actions gain a visible violet/rose tint on hover. Locally bundled Nunito (body) and Play (headings and labels) fonts come from the supplied archive with SIL OFL licenses in `apps/web/static/fonts/`. Moving Icons animate on parent button/link hover and keyboard focus, unless reduced motion is requested. Website action icons use MIT-licensed [Moving Icons](https://movingicons.dev/icons) (`@jis3r/icons`), with official [Lucide Svelte](https://lucide.dev/guide/packages/lucide-svelte) fallback where that collection lacks an icon; this does not affect the Keycloak theme.
+- `apps/web`: SvelteKit/TypeScript/native CSS/GSAP frontend built with Bun; Docker serves it with adapter-node at `http://localhost:3000` (optional dev origin `http://localhost:5173`). Browser login uses our email/password forms or optional FSP ID / VK ID buttons, then an HttpOnly API session cookie. OAuth secrets and tokens stay on the server. Buttons, cards, tags and fields share 8px corners; light actions gain a visible violet/rose tint on hover. Locally bundled Nunito (body) and Play (headings and labels) fonts come from the supplied archive with SIL OFL licenses in `apps/web/static/fonts/`. Moving Icons animate on parent button/link hover and keyboard focus, unless reduced motion is requested. Website action icons use MIT-licensed [Moving Icons](https://movingicons.dev/icons) (`@jis3r/icons`), with official [Lucide Svelte](https://lucide.dev/guide/packages/lucide-svelte) fallback where that collection lacks an icon; this does not affect the Keycloak theme.
 - `apps/api`: Ktor API (typically `http://localhost:8080`) owns candidate/employer data, survey/test/category and invitation rules. JetBrains Exposed SQL DSL manages PostgreSQL access and transactions through HikariCP; Flyway owns schema migrations. **All authorization and contact gating must be enforced server-side**, not merely hidden in UI.
 - `compose.yaml`: builds and runs **web + API + PostgreSQL + Keycloak + private Keycloak PostgreSQL + Mailpit**. Web `localhost:3000`, API `localhost:8080`, Keycloak `localhost:8081`, Mailpit `localhost:8025`, PostgreSQL `localhost:5432` are bound to loopback. Persistent named volumes survive ordinary `docker compose down`.
-- `infra/keycloak/fsp-career-realm.json`: import of `fsp-career` realm, `candidate`/`employer` roles and public `fsp-web` client. New self-registrations receive `candidate` by default; only trusted administration should assign `employer`. Access tokens issued to the web client have the `fsp-api` audience. The bundled `infra/keycloak/themes/fsp-career` login theme gives registration and verification forms the same gently rounded controls and reduced-motion-aware interactions; existing local realms must select this theme in their realm settings after rebuilding the image.
+- `infra/keycloak/fsp-career-realm.json`: our Keycloak temporarily acts as FSP ID. The confidential `fsp-service` client serves server-side OIDC login; `fsp-web` and the `fsp-api` audience remain for existing bearer API integrations. The candidate/employer role is chosen once in the application and stored in PostgreSQL. The bundled `infra/keycloak/themes/fsp-career` login theme is used on the provider's login/registration pages.
 
 ## Start locally
 
@@ -34,6 +34,8 @@ export DATABASE_USER='fsp_app'
 export DATABASE_PASSWORD='<value of DATABASE_PASSWORD in .env>'
 export KEYCLOAK_ISSUER='http://localhost:8081/realms/fsp-career'
 export KEYCLOAK_AUDIENCE='fsp-api'
+export FRONTEND_ORIGIN='http://localhost:5173'
+export API_ORIGIN='http://localhost:8080'
 cd apps/api && gradle run
 ```
 
@@ -45,9 +47,83 @@ Every push to `main` runs `.github/workflows/deploy.yml` on the self-hosted runn
 
 Secrets are generated on the first deploy into `~/.config/fsp-career/.env` on the server (never in the repository); the Keycloak admin console is `https://brokenbrain.online/auth/admin/` with `KEYCLOAK_ADMIN_USER`/`KEYCLOAK_ADMIN_PASSWORD` from that file. Mailpit stays loopback-only there: open it with `ssh -L 8025:127.0.0.1:8025 moverq@51.250.19.214` and <http://localhost:8025>. Run `bash infra/deploy/deploy.sh` from a checkout on the server to deploy by hand.
 
-## Accounts and email verification
+## Авторизация и подключение ФСП ID
 
-The realm allows self-registration, requires email verification, has reset-password and brute-force protection enabled, and includes **no preset demo users or real candidate data**. Development verification messages go to the local [Mailpit inbox](http://localhost:8025): use a synthetic email, register, then open its link in Mailpit. This proves only the local mail workflow, **not real mailbox ownership**. Replace Mailpit with a trusted SMTP provider before accepting real users. To test employer permissions, create a separate user in the Keycloak admin console and assign its `employer` realm role; never allow public registration to grant this role. Employer takes precedence over the default `candidate` role when both appear in a token.
+Собственная форма входа доступна в `/login`, регистрация — в `/login?mode=register`. Это отдельная страница без сайдбара кабинета; `/app` перенаправляет туда неавторизованного пользователя. Кнопки ФСП ID и VK ID видны в обоих режимах: без credentials показывают «Не подключён» и недоступны, после настройки API становятся активными. Пароли хранятся как PBKDF2-SHA256 с индивидуальной солью; сессии — в PostgreSQL, cookie живёт семь дней. Реализация использует готовые плагины Ktor: `Authentication` (`session`, `oauth`, `jwt`), `Sessions`, `RateLimit`, `CORS`, `XForwardedHeaders`, `ContentNegotiation` и `StatusPages`. OAuth-плагин выполняет перенаправление и обмен кода для обоих провайдеров; его настройки добавляют PKCE и параметры VK ID. Одноразовый `state` привязан к cookie, а для OIDC дополнительно проверяется `nonce` и подпись ID token.
+
+После первого входа пользователь один раз выбирает роль. Вход по почте, ФСП ID и VK ID создаёт отдельные учётные записи: совпадение почты не объединяет их. Существующие аккаунты Keycloak сохраняются при совпадении проверенных `issuer` + `sub`. Локальная почта считается неподтверждённой: она отображается как логин, но не используется как подтверждённый контакт или доказательство владения участником ФСП. Подтверждение локальной почты и сброс локального пароля пока не реализованы.
+
+### 1. Настроить наш Keycloak как ФСП ID
+
+1. Запустите стек и откройте [Keycloak Admin Console](http://localhost:8081/admin/). Войдите с `KEYCLOAK_ADMIN_USER` / `KEYCLOAK_ADMIN_PASSWORD` из `.env`, выберите realm `fsp-career`.
+2. В **Clients → fsp-service** проверьте настройки. Клиент уже включён в импорт для новой БД. В существующем realm создайте его вручную через **Create client**:
+   - **Client type:** `OpenID Connect`, **Client ID:** `fsp-service`.
+   - **Client authentication:** `On` (confidential client).
+   - **Standard flow:** `On`; **Implicit flow**, **Direct access grants**, **Service accounts roles:** `Off`.
+   - **Valid redirect URIs:** строго `http://localhost:8080/api/auth/fsp/callback`, без `*`.
+   - **Web origins:** пусто — обмен кода выполняет сервер.
+   - В расширенных настройках **Proof Key for Code Exchange Code Challenge Method:** `S256`.
+   - В **Client scopes** подключите стандартные `basic`, `profile`, `email`; ID token должен содержать `sub`, `email`, `email_verified`. Алгоритм подписи ID token — `RS256`.
+3. На вкладке **Credentials** скопируйте **Client secret** в `.env`:
+
+   ```dotenv
+   FSP_CLIENT_ID=fsp-service
+   FSP_CLIENT_SECRET=<секрет клиента из Keycloak>
+   FRONTEND_ORIGIN=http://localhost:3000
+   API_ORIGIN=http://localhost:8080
+   ```
+
+4. Пересоздайте API: `docker compose up -d --build api web`. Compose подставит следующие адреса:
+
+   | Параметр | Локальное значение |
+   | --- | --- |
+   | `FSP_ISSUER` | `http://localhost:8081/realms/fsp-career` |
+   | `FSP_AUTH_URL` | `http://localhost:8081/realms/fsp-career/protocol/openid-connect/auth` |
+   | `FSP_TOKEN_URL` | `http://keycloak:8080/realms/fsp-career/protocol/openid-connect/token` |
+   | `FSP_JWKS_URL` | `http://keycloak:8080/realms/fsp-career/protocol/openid-connect/certs` |
+
+   Браузер использует публичный authorization endpoint, API — внутренние token/JWKS endpoints. Проверка `iss` всегда использует публичный issuer, независимо от адреса получения ключей. При запуске API на хосте внутренние URL не задавайте: по умолчанию все endpoints вычисляются из `FSP_ISSUER` (или `KEYCLOAK_ISSUER`). Экспортируйте секрет и `FRONTEND_ORIGIN=http://localhost:5173` в окружение процесса; `.env` автоматически читает только Compose.
+
+5. Откройте `/login`: кнопка **«ФСП ID»** станет активной. API перенаправит в Keycloak, примет callback и вернёт в кабинет. Keycloak требует подтверждения своей почты; локальные письма приходят в [Mailpit](http://localhost:8025). Регистрация по кнопке в нашем сервисе создаёт локальный аккаунт; регистрация на странице Keycloak создаёт аккаунт провайдера.
+
+### 2. Настроить серверное подключение
+
+Для `https://<PUBLIC_HOST>` задайте у клиента **Valid redirect URIs**: `https://<PUBLIC_HOST>/api/auth/fsp/callback`. В серверном `~/.config/fsp-career/.env` добавьте `FSP_CLIENT_ID` и `FSP_CLIENT_SECRET`; затем запустите `bash infra/deploy/deploy.sh`. Скрипт актуализирует callback импортированного `fsp-service`; для существующего realm сначала создайте клиент по инструкции выше.
+
+`compose.prod.yaml` задаёт `APP_ENV=production`, `FRONTEND_ORIGIN=https://<PUBLIC_HOST>`, `API_ORIGIN=https://<PUBLIC_HOST>`, issuer `https://<PUBLIC_HOST>/auth/realms/fsp-career` и публичный HTTPS authorization endpoint. Token/JWKS идут по приватной Compose-сети с `/auth` в пути. Production-cookie имеет `Secure`; прокси сохраняет `Origin`, нужный API для CORS/CSRF. API должен оставаться за Traefik: `XForwardedHeaders` использует последний адрес из установленного им `X-Forwarded-For` для ограничения попыток входа.
+
+### 3. Заменить Keycloak настоящим ФСП ID
+
+При получении доступа к ФСП ID зарегистрируйте **серверное OIDC-приложение** у провайдера с Authorization Code, PKCE `S256`, scopes `openid email`, confidential client и тем же callback `https://<PUBLIC_HOST>/api/auth/fsp/callback`. Из его `/.well-known/openid-configuration` возьмите реальные значения:
+
+```dotenv
+FSP_CLIENT_ID=<выданный client_id>
+FSP_CLIENT_SECRET=<выданный client_secret>
+FSP_ISSUER=<issuer из discovery>
+FSP_AUTH_URL=<authorization_endpoint из discovery>
+FSP_TOKEN_URL=<token_endpoint из discovery>
+FSP_JWKS_URL=<jwks_uri из discovery>
+```
+
+Для Compose переопределите **все четыре URL-параметра**: иначе внутренние endpoints останутся адресами нашего Keycloak. Провайдер должен возвращать подписанный `RS256` ID token с `iss`, `aud`, `sub`, `exp`, переданным `nonce`; подтверждение почты принимается только при `email_verified=true`. Внешние production endpoints указывайте через HTTPS. Пересоздайте API — менять код фронтенда или callback не требуется. Конкретные официальные URL и credentials ФСП ID должны быть получены у оператора; текущий Keycloak является его заменой для разработки. Новый issuer создаёт отдельную идентичность, а не переносит старые аккаунты по почте. Подключение входа не подключает реестр достижений — у него отдельный API/коннектор.
+
+### 4. Подключить VK ID
+
+В кабинете VK ID создайте веб-приложение для серверного Authorization Code + PKCE flow, зарегистрируйте домен сервиса и точный redirect URI `${API_ORIGIN}/api/auth/vk/callback` (локально `http://localhost:8080/api/auth/vk/callback`, на сервере `https://<PUBLIC_HOST>/api/auth/vk/callback`). Укажите в окружении API:
+
+```dotenv
+VK_CLIENT_ID=<ID приложения VK ID>
+VK_CLIENT_SECRET=<сервисный токен приложения>
+```
+
+После пересоздания API и обновления `/login` кнопка **«VK ID»** станет активной. Ktor OAuth использует `https://id.vk.ru/authorize` и `https://id.vk.ru/oauth2/auth`; настройки обмена передают `device_id`, `state`, `code_verifier` и `service_token`. Профиль запрашивается через `oauth2/user_info`, стабильный `user_id` сверяется с token response. Почта VK не считается подтверждённой почтой ФСП. Провайдер отключён, если не заданы оба его параметра; локальный вход работает независимо от них.
+
+### Проверить подключение
+
+- `GET /api/auth/session` возвращает `providers.fsp` / `providers.vk` и CSRF-токен. Если кнопка показывает «Не подключён», проверьте credentials **в окружении API**, а не только в `.env`.
+- При ошибке входа проверьте точное совпадение callback, публичного issuer и клиента (`aud` ID token); frontend получает `/app?authError=failed`.
+- POST/PUT/DELETE из браузера отправляют cookie (`credentials: 'include'`), `Origin` и `X-CSRF-Token`; после входа/выхода cookie и CSRF-токен меняются. Секреты провайдеров не должны попадать в переменные `VITE_*`.
+- `gradle test` в `apps/api`; с `TEST_DATABASE_URL`, `TEST_DATABASE_USER`, `TEST_DATABASE_PASSWORD` дополнительно запускаются PostgreSQL HTTP-проверки регистрации/входа/выхода, OAuth обоих провайдеров, защиты от повторного callback и ошибочного code exchange. OAuth-провайдеры в автоматических проверках имитируются; реальный вход проверяется с выданными credentials. В `apps/web`: `bun test && bun run check && bun run build`.
 
 ## Security and privacy boundaries
 
@@ -70,8 +146,8 @@ These scripts create temporary synthetic accounts and remove their Keycloak iden
 Further validation plan:
 
 1. Run `docker compose --env-file .env.example config --quiet` and validate the realm JSON syntax; then `docker compose up -d` and check `docker compose ps` plus Keycloak discovery/issuer.
-2. Register a synthetic candidate; follow the verification link in Mailpit; confirm email must be verified before login and that the token includes `candidate` and `fsp-api` audience. Assign `employer` manually to a separate synthetic account; confirm candidates cannot gain employer access.
+2. Register a synthetic local account, choose its role once, save its profile and sign out/sign in again. Confirm its email remains unverified and choosing a different role returns a conflict. Enable FSP ID as described above, register a separate provider account and confirm its Keycloak email via Mailpit; test provider login and existing-account access. Test VK with issued app credentials.
 3. Run API tests and compare its OpenAPI document with actual endpoints. Check unauthorized/wrong-audience/expired tokens and object-ownership failures, survey and test/category behavior, ranked employer results, invitation transitions, and the rule that contact details remain absent until accepted. Treat missing endpoints as outstanding work, not passing behavior.
-4. Run frontend checks/build; manually exercise both roles and verification/invitation paths against the running API. Clear test data after use; `docker compose down -v` irreversibly removes both local databases.
+4. Run `cd apps/web && bun test && bun run check && bun run build`; manually exercise both roles and verification/invitation paths against the running API. Clear test data after use; `docker compose down -v` irreversibly removes both local databases.
 
 See the reproducible [validation protocol](docs/validation.md) and [synthetic demonstration script](docs/demo.md). Remaining official-release dependencies are detailed in [external inputs](docs/external-dependencies.md): FSP ID binding, issuer-controlled achievement integration, calibrated assessment items and a measured expert validation study. Branded PDF résumé export exists; do not treat a self-reported CV or synthetic achievement as an official FSP credential. PDF résumé import uses text extraction into a review-only draft; scanned-image OCR is not implemented. Vacancies and candidate self-applications are optional enhancements. The observed local synthetic flow is not a production deployment, real-mail ownership test, comprehensive security audit, calibrated assessment or measured ranking-quality study.

@@ -32,7 +32,7 @@ docker compose ps             # дождитесь статуса healthy (Keycl
 ## Сборка без Docker (разработка)
 
 - API: JDK 21 и Gradle 9: `cd apps/api && gradle test installDist`. Запуск: `gradle run` с переменными `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`, `KEYCLOAK_ISSUER`, `KEYCLOAK_AUDIENCE`.
-- Web: Bun 1.4: `cd apps/web && bun install --frozen-lockfile && bun run dev` → <http://localhost:5173>. Проверки: `bun run check`, сборка: `bun run build`.
+- Web: Bun 1.4: `cd apps/web && bun install --frozen-lockfile && bun run dev` → <http://localhost:5173>. Проверки: `bun test` (регрессия авторизации в `apps/web/test/auth.test.ts`), `bun run check`, сборка: `bun run build`.
 - Валидация механик (синтетический прогон): `cd apps/api && gradle validateAssessment validateMatching` пишет отчёты в `docs/validation/`.
 
 ## Промышленное развёртывание (как устроено на brokenbrain.online)

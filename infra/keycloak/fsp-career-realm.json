@@ -33,6 +33,22 @@
   },
   "clients": [
     {
+      "clientId": "fsp-service",
+      "name": "FSP Career server-side FSP ID login",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["http://localhost:8080/api/auth/fsp/callback"],
+      "webOrigins": [],
+      "defaultClientScopes": ["basic", "profile", "email"],
+      "attributes": { "pkce.code.challenge.method": "S256" }
+    },
+    {
       "clientId": "fsp-web",
       "name": "FSP Career local web application",
       "enabled": true,

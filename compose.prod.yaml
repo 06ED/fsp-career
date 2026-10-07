@@ -49,16 +49,19 @@ services:
     environment:
       KEYCLOAK_ISSUER: https://${PUBLIC_HOST}/auth/realms/fsp-career
       KEYCLOAK_JWKS_URL: http://keycloak:8080/auth/realms/fsp-career/protocol/openid-connect/certs
+      APP_ENV: production
+      FRONTEND_ORIGIN: https://${PUBLIC_HOST}
+      API_ORIGIN: https://${PUBLIC_HOST}
+      FSP_ISSUER: ${FSP_ISSUER:-https://${PUBLIC_HOST}/auth/realms/fsp-career}
+      FSP_AUTH_URL: ${FSP_AUTH_URL:-https://${PUBLIC_HOST}/auth/realms/fsp-career/protocol/openid-connect/auth}
+      FSP_TOKEN_URL: ${FSP_TOKEN_URL:-http://keycloak:8080/auth/realms/fsp-career/protocol/openid-connect/token}
+      FSP_JWKS_URL: ${FSP_JWKS_URL:-http://keycloak:8080/auth/realms/fsp-career/protocol/openid-connect/certs}
       JAVA_OPTS: -Xmx256m
     labels:
       - traefik.enable=true
       - traefik.http.routers.fsp-api.rule=Host(`${PUBLIC_HOST}`) && (PathPrefix(`/api`) || Path(`/openapi.yaml`))
       - traefik.http.routers.fsp-api.entrypoints=websecure
       - traefik.http.routers.fsp-api.tls.certresolver=le
-      - traefik.http.routers.fsp-api.middlewares=fsp-same-origin
-      # The browser calls the API on this same origin; the API's CORS allowlist only knows
-      # localhost and would reject the public Origin header, so drop it (empty value removes).
-      - traefik.http.middlewares.fsp-same-origin.headers.customrequestheaders.Origin=
       - traefik.http.services.fsp-api.loadbalancer.server.port=8080
     restart: unless-stopped
 
@@ -66,8 +69,6 @@ services:
     build:
       args:
         VITE_API_URL: https://${PUBLIC_HOST}
-        VITE_KEYCLOAK_URL: https://${PUBLIC_HOST}/auth
-        VITE_DEMO_MAIL_URL: ${DEMO_MAIL_URL-https://${PUBLIC_HOST}/mail/}
     environment:
       ORIGIN: https://${PUBLIC_HOST}
     labels:

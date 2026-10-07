@@ -3,17 +3,22 @@ info:
   title: FSP Career API
   version: 2.0.0
   description: >-
-    JSON API. Every /api route requires a valid Keycloak access token with issuer
-    KEYCLOAK_ISSUER and audience KEYCLOAK_AUDIENCE. After the first login the user chooses
+    JSON API. Resource routes require a browser session cookie or a valid Keycloak access token
+    with issuer KEYCLOAK_ISSUER and audience KEYCLOAK_AUDIENCE. Cookie-authenticated mutations
+    require Origin matching FRONTEND_ORIGIN and X-CSRF-Token from /api/auth/session.
+    Auth routes are public but login/register/logout also require the session's CSRF token.
+    After the first login the user chooses
     an application role once (POST /api/me/role); role-specific routes return 403 until then
     or for the other role. Errors have the same JSON shape at every API endpoint.
 servers:
   - url: /
 security:
   - bearerAuth: []
+  - browserSession: []
 components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+    browserSession: {type: apiKey, in: cookie, name: career_session}
   parameters:
     InvitationId:
       name: id
@@ -46,6 +51,25 @@ components:
       required: true
       schema: {type: string, format: uuid}
   schemas:
+    Credentials:
+      type: object
+      required: [email, password]
+      properties:
+        email: {type: string, format: email, maxLength: 320}
+        password: {type: string, maxLength: 128, writeOnly: true, description: Registration requires at least 12 characters}
+    BrowserSession:
+      type: object
+      required: [authenticated, email, csrfToken, providers]
+      properties:
+        authenticated: {type: boolean}
+        email: {type: string, nullable: true}
+        csrfToken: {type: string}
+        providers:
+          type: object
+          required: [fsp, vk]
+          properties:
+            fsp: {type: boolean}
+            vk: {type: boolean}
     Error:
       type: object
       required: [error]
@@ -79,7 +103,7 @@ components:
       type: object
       properties:
         fullName: {type: string, maxLength: 200}
-        email: {type: string, description: Verified Keycloak email only; supplied values must match verified claim}
+        email: {type: string, description: Verified provider email only; local and VK identities do not supply a verified email}
         phone: {type: string, maxLength: 50}
         processingConsent: {type: boolean, description: "Required true for profile update, assessment and resume upload"}
         consentPublication: {type: boolean, description: Independent opt-in for employer discoverability}
@@ -821,6 +845,87 @@ components:
       description: Unexpected server failure.
       content: {application/json: {schema: {$ref: '#/components/schemas/Error'}}}
 paths:
+  /api/auth/session:
+    get:
+      summary: Read the browser session or create an anonymous session cookie
+      security: []
+      responses:
+        '200':
+          description: Current session and CSRF token; Cache-Control no-store
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BrowserSession'}
+  /api/auth/register:
+    post:
+      summary: Register a local account and rotate the browser session
+      security: []
+      description: Requires the cookie from GET /api/auth/session, exact Origin and X-CSRF-Token. Local email remains unverified.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Credentials'}
+      responses:
+        '201':
+          description: Authenticated session
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BrowserSession'}
+        '400': {description: Invalid credentials or duplicate email}
+        '403': {description: Invalid Origin or CSRF token}
+        '429': {description: Too many registration or login attempts}
+  /api/auth/login:
+    post:
+      summary: Sign in with local email and password and rotate the browser session
+      security: []
+      description: Requires the cookie from GET /api/auth/session, exact Origin and X-CSRF-Token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/Credentials'}
+      responses:
+        '200':
+          description: Authenticated session
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BrowserSession'}
+        '401': {description: Invalid email or password}
+        '403': {description: Invalid Origin or CSRF token}
+        '429': {description: Too many registration or login attempts}
+  /api/auth/logout:
+    post:
+      summary: Revoke the current session and issue an anonymous session
+      security: []
+      description: Requires a valid session cookie, exact Origin and X-CSRF-Token. Does not sign out the external provider's SSO session.
+      responses:
+        '200':
+          description: Anonymous session with a fresh CSRF token
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/BrowserSession'}
+        '403': {description: Invalid Origin or CSRF token}
+  /api/auth/{provider}/start:
+    get:
+      summary: Start a server-side authorization code flow with PKCE
+      security: []
+      parameters:
+        - {in: path, name: provider, required: true, schema: {type: string, enum: [fsp, vk]}}
+      responses:
+        '302': {description: Redirect to the provider or to /app?authError=failed if already signed in}
+        '404': {description: Provider credentials are not configured}
+  /api/auth/{provider}/callback:
+    get:
+      summary: Consume browser-bound state and sign in through an external provider
+      security: []
+      parameters:
+        - {in: path, name: provider, required: true, schema: {type: string, enum: [fsp, vk]}}
+        - {in: query, name: state, schema: {type: string}}
+        - {in: query, name: code, schema: {type: string}}
+        - {in: query, name: device_id, schema: {type: string}, description: Required for VK ID}
+        - {in: query, name: error, schema: {type: string}}
+      responses:
+        '302': {description: Redirect to configured frontend /app on success or /app?authError=failed on failure}
   /health:
     get:
       summary: Public process liveness check

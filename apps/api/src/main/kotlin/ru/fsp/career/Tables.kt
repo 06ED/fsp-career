@@ -14,6 +14,41 @@ internal object Accounts : Table("accounts") {
     override val primaryKey = PrimaryKey(id)
 }
 
+internal object AuthIdentities : Table("auth_identities") {
+    val id = uuid("id")
+    val provider = text("provider")
+    val issuer = text("issuer")
+    val externalSubject = text("external_subject")
+    val accountId = reference("account_id", Accounts.id).nullable()
+    val email = text("email")
+    val emailVerified = bool("email_verified")
+    override val primaryKey = PrimaryKey(id)
+}
+
+internal object LocalCredentials : Table("local_credentials") {
+    val identityId = reference("identity_id", AuthIdentities.id)
+    val passwordHash = text("password_hash")
+    override val primaryKey = PrimaryKey(identityId)
+}
+
+internal object BrowserSessions : Table("browser_sessions") {
+    val idHash = text("id_hash")
+    val identityId = reference("identity_id", AuthIdentities.id).nullable()
+    val csrfToken = text("csrf_token")
+    val expiresAt = timestampWithTimeZone("expires_at")
+    override val primaryKey = PrimaryKey(idHash)
+}
+
+internal object OauthTransactions : Table("oauth_transactions") {
+    val stateHash = text("state_hash")
+    val sessionHash = text("session_hash")
+    val provider = text("provider")
+    val verifier = text("verifier")
+    val nonce = text("nonce")
+    val expiresAt = timestampWithTimeZone("expires_at")
+    override val primaryKey = PrimaryKey(stateHash)
+}
+
 internal object CandidateProfiles : Table("candidate_profiles") {
     val accountId = reference("account_id", Accounts.id)
     val fullName = text("full_name")

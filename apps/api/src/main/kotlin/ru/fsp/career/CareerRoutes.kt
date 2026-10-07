@@ -2,7 +2,6 @@ package ru.fsp.career
 
 import io.ktor.http.*
 import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -32,9 +31,8 @@ fun Route.careerRoutes(db: Database, audience: String) {
             if (!p.processingConsent) bad("Grant processingConsent before storing a profile; DELETE /api/candidates/me/consent to revoke")
             grade(p.desiredGrade)
             validateCareerFields(p.experience, p.techStack, p.softSkills, p.targetRoles, p.cvHistory)
-            val claims = call.principal<JWTPrincipal>()!!.payload
-            val trustedEmail = if (claims.getClaim("email_verified").asBoolean() == true) claims.getClaim("email").asString().orEmpty() else ""
-            if (p.email.isNotBlank() && p.email.trim() != trustedEmail) bad("Email must match verified Keycloak email")
+            val trustedEmail = call.verifiedEmail()
+            if (p.email.isNotBlank() && p.email.trim() != trustedEmail) bad("Email must match verified identity email")
             if (trustedEmail.isNotBlank() && !Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches(trustedEmail)) bad("Invalid verified email")
             if (p.fullName.length > 200 || p.email.length > 320 || p.phone.length > 50 || p.specialization.length > 100 || p.industry.length > 100) bad("Profile field too long")
             call.respond(db.tx {

@@ -1,10 +1,7 @@
 package ru.fsp.career.matching.validation
 
-import ru.fsp.career.fsp.FspPointsPolicy
-import ru.fsp.career.matching.AchievementSignal
-import ru.fsp.career.matching.CandidateSignals
-import ru.fsp.career.matching.GRADES
-import ru.fsp.career.matching.NeedQuery
+import ru.fsp.career.achievements.domain.FspPointsPolicy
+import ru.fsp.career.matching.domain.*
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset

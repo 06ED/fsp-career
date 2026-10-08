@@ -1,5 +1,9 @@
 package ru.fsp.career
 
+import ru.fsp.career.profiles.domain.*
+import ru.fsp.career.profiles.infrastructure.*
+import ru.fsp.career.shared.domain.DomainError
+
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.text.PDFTextStripper
 import org.apache.pdfbox.pdmodel.PDDocument
@@ -15,8 +19,8 @@ import kotlin.test.assertTrue
 
 class ResumeTest {
     @Test fun rejectsNonPdfAndOversizedFiles() {
-        assertFailsWith<ApiError> { extractResume("not a PDF".toByteArray()) }
-        assertFailsWith<ApiError> { extractResume(ByteArray(5*1024*1024+1)) }
+        assertFailsWith<DomainError> { extractResume("not a PDF".toByteArray()) }
+        assertFailsWith<DomainError> { extractResume(ByteArray(5*1024*1024+1)) }
     }
     @Test fun extractsBoundedSuggestionsWithoutApplyingThem() {
         val pdf = PDDocument().use { document ->
@@ -44,11 +48,11 @@ class ResumeTest {
         assertTrue(text.contains("Анна Иванова"))
         assertTrue(text.contains("Компания"))
         assertTrue(text.contains("PostgreSQL"))
-        assertFailsWith<ApiError> { resumePdf(profile.copy(processingConsent=false)) }
-        assertFailsWith<ApiError> { resumePdf(profile.copy(fullName="")) }
+        assertFailsWith<DomainError> { resumePdf(profile.copy(processingConsent=false)) }
+        assertFailsWith<DomainError> { resumePdf(profile.copy(fullName="")) }
     }
     @Test fun validatesCvHistoryAndSkillLimits() {
-        assertFailsWith<ApiError> { validateCareerFields("",listOf(""), emptyList(),emptyList(), emptyList()) }
-        assertFailsWith<ApiError> { validateCareerFields("",emptyList(), emptyList(),emptyList(), listOf(CvEntry(company="",role="dev"))) }
+        assertFailsWith<DomainError> { validateCareerFields("",listOf(""), emptyList(),emptyList(), emptyList()) }
+        assertFailsWith<DomainError> { validateCareerFields("",emptyList(), emptyList(),emptyList(), listOf(CvEntry(company="",role="dev"))) }
     }
 }

@@ -1,13 +1,6 @@
 package ru.fsp.career.assessment.validation
 
-import ru.fsp.career.assessment.AssessmentCatalog
-import ru.fsp.career.assessment.Cat
-import ru.fsp.career.assessment.Grade
-import ru.fsp.career.assessment.Grading
-import ru.fsp.career.assessment.ItemBank
-import ru.fsp.career.assessment.RetakePolicy
-import ru.fsp.career.assessment.plural
-import ru.fsp.career.assessment.Topics
+import ru.fsp.career.assessment.domain.*
 
 /** Renders the study results as the Russian Markdown report docs/validation/assessment-results.md. */
 class Report(private val r: Map<String, Any?>) {

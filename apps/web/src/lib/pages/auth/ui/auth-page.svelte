@@ -136,7 +136,10 @@
         disabled={!ready || busy || !providers.fsp}
         onclick={() => enterProvider("fsp")}
       >
-        <span>ФСП ID</span>
+        <span class="auth-provider-label">
+          <img src="/fsp-mark.svg" alt="" width="24" height="24" />
+          ФСП ID
+        </span>
         {#if ready && !providers.fsp}<small>Не подключён</small>{/if}
       </button>
       <button
@@ -145,7 +148,10 @@
         disabled={!ready || busy || !providers.vk}
         onclick={() => enterProvider("vk")}
       >
-        <span>VK ID</span>
+        <span class="auth-provider-label">
+          <img src="/vk-mark.svg" alt="" width="24" height="24" />
+          VK ID
+        </span>
         {#if ready && !providers.vk}<small>Не подключён</small>{/if}
       </button>
     </div>
@@ -253,6 +259,14 @@
   .auth-provider small {
     font-size: 10px;
     font-weight: 400;
+  }
+  .auth-provider-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .auth-provider-label img {
+    object-fit: contain;
   }
   .auth-switch {
     margin: 24px 0 0;

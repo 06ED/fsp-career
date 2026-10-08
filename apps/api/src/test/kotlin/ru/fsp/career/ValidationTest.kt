@@ -1,5 +1,9 @@
 package ru.fsp.career
 
+import ru.fsp.career.shared.domain.*
+import ru.fsp.career.shared.http.status
+import ru.fsp.career.recruitment.domain.*
+
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.json.Json
 import kotlin.test.Test
@@ -9,12 +13,12 @@ import kotlin.test.assertFailsWith
 class ValidationTest {
     @Test fun gradesAreRestricted() {
         assertEquals("senior", grade("senior"))
-        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<ApiError> { grade("principal") }.status)
+        assertEquals(HttpStatusCode.BadRequest, assertFailsWith<DomainError> { grade("principal") }.status)
     }
     @Test fun requiredTextRejectsBlankAndExcessiveInput() {
         assertEquals("offer", requireText(" offer ", "Description"))
-        assertFailsWith<ApiError> { requireText("   ", "Description") }
-        assertFailsWith<ApiError> { requireText("a".repeat(401), "Description", 400) }
+        assertFailsWith<DomainError> { requireText("   ", "Description") }
+        assertFailsWith<DomainError> { requireText("a".repeat(401), "Description", 400) }
     }
     @Test fun invitationRequiresSalaryFields() {
         assertFailsWith<kotlinx.serialization.MissingFieldException> {

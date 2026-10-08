@@ -1,5 +1,7 @@
 package ru.fsp.career.matching
 
+import ru.fsp.career.matching.domain.*
+
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

@@ -1,5 +1,9 @@
 package ru.fsp.career
 
+import ru.fsp.career.identity.domain.*
+import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.shared.infrastructure.Database
+
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq

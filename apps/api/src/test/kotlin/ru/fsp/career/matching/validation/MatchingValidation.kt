@@ -1,12 +1,6 @@
 package ru.fsp.career.matching.validation
 
-import ru.fsp.career.matching.CandidateFilter
-import ru.fsp.career.matching.GRADES
-import ru.fsp.career.matching.MatchingEngine
-import ru.fsp.career.matching.MatchingPolicy
-import ru.fsp.career.matching.MatchingWeights
-import ru.fsp.career.matching.PreparedPool
-import ru.fsp.career.matching.TextAnalysis
+import ru.fsp.career.matching.domain.*
 import java.util.Random
 
 /** Per-need metric values of one ranking system. */

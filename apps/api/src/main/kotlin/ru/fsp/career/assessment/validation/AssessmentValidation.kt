@@ -1,14 +1,6 @@
 package ru.fsp.career.assessment.validation
 
-import ru.fsp.career.assessment.AssessmentCatalog
-import ru.fsp.career.assessment.Cat
-import ru.fsp.career.assessment.FamilyKind
-import ru.fsp.career.assessment.Grade
-import ru.fsp.career.assessment.Grading
-import ru.fsp.career.assessment.Irt
-import ru.fsp.career.assessment.ItemBank
-import ru.fsp.career.assessment.ItemFamily
-import ru.fsp.career.assessment.RetakePolicy
+import ru.fsp.career.assessment.domain.*
 import java.io.File
 import kotlin.math.exp
 import kotlin.math.sqrt

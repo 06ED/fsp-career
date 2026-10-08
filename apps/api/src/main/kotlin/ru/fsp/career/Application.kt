@@ -1,5 +1,11 @@
 package ru.fsp.career
 
+import ru.fsp.career.identity.http.*
+import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.identity.domain.IdentityRepository
+import ru.fsp.career.shared.domain.*
+import ru.fsp.career.shared.http.*
+
 import com.auth0.jwk.JwkProviderBuilder
 import io.ktor.http.*
 import io.ktor.client.HttpClient
@@ -16,6 +22,7 @@ import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.plugins.cors.routing.*
 import io.ktor.server.plugins.forwardedheaders.*
 import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.plugins.di.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
@@ -23,43 +30,27 @@ import java.net.URI
 import java.util.concurrent.TimeUnit
 
 fun main() {
-    val issuer = required("KEYCLOAK_ISSUER").trimEnd('/')
-    val audience = required("KEYCLOAK_AUDIENCE")
-    val jwksUrl = System.getenv("KEYCLOAK_JWKS_URL")
-        ?.takeIf { it.isNotBlank() }
-        ?: "$issuer/protocol/openid-connect/certs"
-
-    val db = Database(
-        required("DATABASE_URL"),
-        required("DATABASE_USER"),
-        required("DATABASE_PASSWORD")
-    )
-
-    Runtime.getRuntime().addShutdownHook(Thread { db.close() })
-
     embeddedServer(
         Netty,
         port = System.getenv("PORT")?.toIntOrNull() ?: 8080,
         host = "0.0.0.0"
     ) {
-        careerModule(db, issuer, audience, jwksUrl)
+        careerModule()
     }.start(wait = true)
 }
 
-private fun required(name: String): String =
-    System.getenv(name)?.takeIf { it.isNotBlank() } ?: error("$name is required")
-
 internal fun Application.careerModule(
-    db: Database,
-    issuer: String,
-    audience: String,
-    jwksUrl: String = "$issuer/protocol/openid-connect/certs",
-    authConfig: AuthConfig = AuthConfig.fromEnv(issuer),
-    authHttp: HttpClient = authHttpClient(),
+    issuer: String = requiredEnv("KEYCLOAK_ISSUER").trimEnd('/'),
+    audience: String = requiredEnv("KEYCLOAK_AUDIENCE"),
+    jwksUrl: String = System.getenv("KEYCLOAK_JWKS_URL")?.takeIf { it.isNotBlank() }
+        ?: "$issuer/protocol/openid-connect/certs",
     fspKeys: com.auth0.jwk.JwkProvider? = null
 ) {
     val logger = environment.log
-    monitor.subscribe(ApplicationStopped) { authHttp.close() }
+    careerDependencies(issuer)
+    val authConfig: AuthConfig by dependencies
+    val authHttp: HttpClient by dependencies
+    val identities: IdentityRepository by dependencies
     // The production API is private behind one Traefik hop, which sets X-Forwarded-For.
     if (authConfig.secure) install(XForwardedHeaders) { useLastProxy() }
 
@@ -76,19 +67,24 @@ internal fun Application.careerModule(
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Delete)
     }
+
     browserAuth(authConfig)
+
     install(createApplicationPlugin("BrowserCsrf") {
         onCall { call ->
             if (call.request.path().startsWith("/api/") && call.request.path() !in listOf(
-                    "/api/auth/login", "/api/auth/register", "/api/auth/logout") &&
-                call.request.httpMethod !in listOf(HttpMethod.Get, HttpMethod.Head, HttpMethod.Options)) {
+                    "/api/auth/login", "/api/auth/register", "/api/auth/logout"
+                ) &&
+                call.request.httpMethod !in listOf(HttpMethod.Get, HttpMethod.Head, HttpMethod.Options)
+            ) {
                 val cookie = call.sessions.get<BrowserCookie>()?.value
-                if (cookie != null) call.requireCsrf(authConfig.frontendOrigin, db.session(cookie))
+                if (cookie != null) call.requireCsrf(authConfig.frontendOrigin, identities.session(cookie))
             }
         }
     })
 
     install(StatusPages) {
+        exception<DomainError> { call, cause -> call.respond(cause.status, ErrorResponse(cause.message)) }
         exception<OAuthLoginFailed> { call, _ -> call.respondRedirect("${authConfig.frontendOrigin}/app?authError=failed") }
         exception<ApiError> { call, cause -> call.respond(cause.status, ErrorResponse(cause.message)) }
         exception<BadRequestException> { call, _ ->
@@ -117,7 +113,7 @@ internal fun Application.careerModule(
     install(Authentication) {
         externalOAuth(authConfig, authHttp)
         session<BrowserCookie>("browser") {
-            validate { cookie -> db.session(cookie.value)?.identity?.let { BrowserPrincipal(it) } }
+            validate { cookie -> identities.session(cookie.value)?.identity?.let { BrowserPrincipal(it) } }
             challenge { call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Authentication required")) }
         }
         jwt("keycloak") {
@@ -136,8 +132,9 @@ internal fun Application.careerModule(
             }
         }
     }
+
     routing {
-        browserAuthRoutes(db, authConfig, authHttp, fspKeys)
+        browserAuthRoutes(fspKeys)
         get("/health") { call.respond(mapOf("status" to "ok")) }
         get("/openapi.yaml") {
             call.respondText(
@@ -145,32 +142,8 @@ internal fun Application.careerModule(
                 ContentType.parse("application/yaml")
             )
         }
-        authenticate("keycloak", "browser", strategy = AuthenticationStrategy.FirstSuccessful) { careerRoutes(db, audience) }
+        authenticate("keycloak", "browser", strategy = AuthenticationStrategy.FirstSuccessful) {
+            careerRoutes(audience)
+        }
     }
-}
-
-/**
- * Returns the authenticated subject. The [requiredRole] is enforced by `Transaction.account(subject, role)`,
- * which compares it with the role bound to the account in the database.
- */
-@Suppress("UNUSED_PARAMETER")
-fun ApplicationCall.role(audience: String, requiredRole: String): String {
-    return principal<BrowserPrincipal>()?.identity?.subject ?: principal<JWTPrincipal>()?.payload?.subject
-        ?: throw ApiError(HttpStatusCode.Unauthorized, "Authentication required")
-}
-
-internal data class BrowserPrincipal(val identity: BrowserIdentity) : Principal
-
-fun ApplicationCall.authEmail(): String = principal<BrowserPrincipal>()?.identity?.email
-    ?: principal<JWTPrincipal>()?.payload?.getClaim("email")?.asString().orEmpty()
-
-fun ApplicationCall.verifiedEmail(): String = principal<BrowserPrincipal>()?.identity?.let { if (it.verified) it.email else "" }
-    ?: principal<JWTPrincipal>()?.payload?.let { if (it.getClaim("email_verified").asBoolean() == true) it.getClaim("email").asString().orEmpty() else "" }.orEmpty()
-
-/** Realm/client roles still matter for accounts created before in-app role choice (admin-assigned employers). */
-fun ApplicationCall.tokenRoles(audience: String): Set<String> {
-    val payload = principal<JWTPrincipal>()?.payload ?: return emptySet()
-    val realm = payload.getClaim("realm_access").asMap()?.get("roles") as? List<*>
-    val client = (payload.getClaim("resource_access").asMap()?.get(audience) as? Map<*, *>)?.get("roles") as? List<*>
-    return (realm.orEmpty() + client.orEmpty()).filterIsInstance<String>().toSet()
 }

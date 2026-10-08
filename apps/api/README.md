@@ -1,6 +1,44 @@
 # Career API
 
-Kotlin 2.1 / Ktor 3 / JetBrains Exposed SQL DSL / PostgreSQL / Flyway. HikariCP pools connections; Flyway alone owns schema migrations, while Exposed maps tables and manages transactions and all runtime queries. From this directory run `gradle test` or `gradle run` with Java 21. Startup migrates the database; no mock auth or public sample credentials exist. For optional live PostgreSQL integration tests, set `TEST_DATABASE_URL` (JDBC URL), `TEST_DATABASE_USER`, and `TEST_DATABASE_PASSWORD` before `gradle test`; without them that test is skipped.
+Kotlin 2.1 / Ktor 3.2 with built-in DI / JetBrains Exposed DAO / PostgreSQL / Flyway. HikariCP pools connections; Flyway alone owns schema migrations. Exposed DAO persists aggregates and their children; SQL DSL handles batched read projections, aggregate queries and bulk erasure. From this directory run `./gradlew test` or `./gradlew run` with Java 21. Startup migrates the database; no mock auth or public sample credentials exist. For live PostgreSQL integration tests, set `TEST_DATABASE_URL` (JDBC URL), `TEST_DATABASE_USER`, and `TEST_DATABASE_PASSWORD` before `./gradlew test`; without them those tests are skipped.
+
+## DDD organization
+
+The API is a modular monolith. Code under `src/main/kotlin/ru/fsp/career` is grouped by bounded context, then by responsibility:
+
+```text
+ru/fsp/career/
+├── Application.kt                  # composition root: server and Ktor plugins
+├── Dependencies.kt                 # composition of all DI registration modules
+├── PlatformDependencies.kt         # shared Database, AuthConfig and HttpClient factories
+├── DemoSeed.kt                     # stable deployment CLI entry point
+├── identity/                      # local/OAuth identities, sessions, one-time account role
+├── profiles/                      # candidate/company profiles, needs, consent, privacy, resumes
+├── assessment/                    # survey, adaptive attempts, grading and retake rules
+├── matching/                      # candidate signals, relevance, explanations and candidate bank
+├── recruitment/                   # invitations, vacancies, applications and weekly tasks
+├── achievements/                  # FSP ownership, registry port and verified achievement import
+└── shared/                        # shared domain vocabulary, HTTP errors, database connection
+```
+
+Each context has these packages:
+
+| Package | Responsibility | Examples |
+| --- | --- | --- |
+| `domain` | Models, validation, business policies and repository ports; independent of HTTP and persistence | `ProfileRepository`, `AssessmentRepository`, `VacancyRepository`, `RetakePolicy`, `FspOwnership` |
+| `application` | Use cases depending on ports and domain policies; query/document ports | `AuthService`, `ProfileService`, `AssessmentService`, `VacancyService`, `MatchingQueries`, `ResumeDocuments` |
+| `infrastructure` | Exposed DAO entities and repository implementations, SQL read projections, credentials, JWT verification, PDF and registry adapters | `CandidateProfileEntity`, `AssessmentAttemptEntity`, `ExposedProfileRepository`, `ExposedVacancyRepository`, `MockFspRegistry` |
+| `http` | Ktor routes, request parsing, response/status mapping and authentication plugin configuration | `BrowserAuth`, `ProfileRoutes`, `MatchingRoutes`, `TaskRoutes` |
+
+`domain` depends only on Kotlin/JDK, serialization and other domain vocabulary. Serializable data classes preserve the existing JSON contract without duplicate transport models. `application` depends on repository/query/document/password ports, never on infrastructure or HTTP adapters. Repository implementations execute each persistence operation in one transaction, including account ownership checks and domain policies that require persisted state. DAO entities and `EntityID` stay inside infrastructure and never leave a transaction; callers receive domain values. PostgreSQL remains shared so row locks, consent erasure and cross-context operations stay atomic.
+
+`Dependencies.kt` composes the DI registration modules. `PlatformDependencies.kt` registers lazy factories for the shared `Database`, `AuthConfig` and auth `HttpClient`. Each context registers its repository adapters and services in a root-level `*Dependencies.kt` file (`identity/IdentityDependencies.kt`, `profiles/ProfileDependencies.kt`, etc.), outside the domain/application/infrastructure packages. These are ordinary `Application` functions using Ktor's `ktor-server-di`; all modules share one application-scoped container. Constructor injection resolves ports; modules and HTTP routes obtain dependencies via `application.dependencies`. Ktor DI creates one instance per application and closes `AutoCloseable` resources, including the database pool and HTTP client, when the application stops. Tests register replacement providers before calling `careerModule`; fixture cleanup runs before application shutdown. Flyway keeps ownership of DDL; DAO mappings include existing UUID, string, generated long and composite primary keys without schema changes. Matching and list views use batched SQL projections rather than loading entity graphs.
+
+`shared/domain` defines `DomainError` and semantic failure kinds; `shared/http` translates them into the existing API status codes and error JSON. `FspRegistry` is the existing port for the external registry; its synthetic adapter is in `achievements/infrastructure`. `assessment/validation` and test-side `matching/validation` retain their CLI entry points. Flyway migrations, table/column names, API paths and `ApplicationKt` / `DemoSeedKt` entry points are preserved.
+
+Run `gradle test`: `ArchitectureTest` enforces the layer boundaries in addition to the domain and HTTP/database regression tests. With `TEST_DATABASE_URL` configured, the suite exercises both authentication modes, profile consent/privacy, assessment, matching, invitations, applications and weekly tasks against PostgreSQL.
+
+## Configuration and API
 
 Required environment:
 

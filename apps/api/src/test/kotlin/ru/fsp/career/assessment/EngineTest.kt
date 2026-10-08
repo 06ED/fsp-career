@@ -1,5 +1,7 @@
 package ru.fsp.career.assessment
 
+import ru.fsp.career.assessment.domain.*
+
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs

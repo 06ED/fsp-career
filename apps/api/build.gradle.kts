@@ -6,10 +6,12 @@ plugins {
 
 repositories { mavenCentral() }
 
-val ktorVersion = "3.1.2"
+val ktorVersion = "3.2.3"
 val exposedVersion = "0.61.0"
+
 dependencies {
     implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-di-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-auth-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-auth-jwt-jvm:$ktorVersion")
@@ -28,6 +30,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:11.3.4")
     implementation("com.zaxxer:HikariCP:6.2.1")
     implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-json:$exposedVersion")
@@ -45,7 +48,8 @@ tasks.test { useJUnitPlatform() }
 // Synthetic offline validation of the matching engine (see docs/validation/matching-results.md).
 tasks.register<JavaExec>("validateMatching") {
     group = "verification"
-    description = "Generates the synthetic vacancy–candidate set, evaluates ranking vs baselines and writes docs/validation/matching-*"
+    description =
+        "Generates the synthetic vacancy–candidate set, evaluates ranking vs baselines and writes docs/validation/matching-*"
     dependsOn("testClasses")
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("ru.fsp.career.matching.validation.ValidateMatchingKt")

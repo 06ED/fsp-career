@@ -1,9 +1,13 @@
 package ru.fsp.career
 
+import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.shared.infrastructure.Database
+
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import io.ktor.server.plugins.di.*
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -17,7 +21,10 @@ class AuthHttpTest {
         val url = System.getenv("TEST_DATABASE_URL")
         assumeTrue(!url.isNullOrBlank(), "TEST_DATABASE_URL not configured")
         Database(url!!, System.getenv("TEST_DATABASE_USER") ?: "career", System.getenv("TEST_DATABASE_PASSWORD") ?: "career").use { db ->
-            application { careerModule(db, "http://issuer.invalid", "career") }
+            application {
+                dependencies { provide<Database> { db } }
+                careerModule("http://issuer.invalid", "career")
+            }
             val bootstrap = client.get("/api/auth/session")
             assertEquals(HttpStatusCode.OK, bootstrap.status)
             val initial = Json.parseToJsonElement(bootstrap.bodyAsText()).jsonObject

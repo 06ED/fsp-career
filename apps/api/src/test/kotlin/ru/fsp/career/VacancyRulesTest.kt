@@ -1,5 +1,10 @@
 package ru.fsp.career
 
+import ru.fsp.career.profiles.domain.*
+import ru.fsp.career.recruitment.domain.*
+import ru.fsp.career.shared.domain.*
+import ru.fsp.career.shared.http.status
+
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.json.Json
 import java.time.LocalDate
@@ -18,7 +23,7 @@ class VacancyRulesTest {
         salaryMinRub = 200_000, salaryMaxRub = 280_000, workFormat = "Hybrid", city = " Москва ",
     )
 
-    private fun status(block: () -> Unit) = assertFailsWith<ApiError> { block() }.status
+    private fun status(block: () -> Unit) = assertFailsWith<DomainError> { block() }.status
 
     @Test fun vacancyIsNormalized() {
         val normalized = validateVacancy(vacancy)

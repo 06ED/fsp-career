@@ -8,12 +8,12 @@ import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
 import org.junit.jupiter.api.Assumptions.assumeTrue
-import ru.fsp.career.Accounts
-import ru.fsp.career.ApiError
-import ru.fsp.career.AssessmentAttempts
-import ru.fsp.career.CandidateProfiles
-import ru.fsp.career.Database
-import ru.fsp.career.profile
+import ru.fsp.career.identity.infrastructure.Accounts
+import ru.fsp.career.shared.domain.DomainError
+import ru.fsp.career.shared.infrastructure.Database
+import ru.fsp.career.assessment.domain.*
+import ru.fsp.career.assessment.infrastructure.*
+import ru.fsp.career.profiles.infrastructure.*
 import java.util.UUID
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -70,7 +70,7 @@ class AssessmentFlowDatabaseTest {
                 val candidate = db.tx { newCandidate() }
                 try {
                     val plan = planStart(StartAssessmentRequest(survey, "senior", vacancyId = "fintech-backend"))
-                    assertFailsWith<ApiError> { db.tx { startAttempt(candidate, plan, nowUtc()) } }
+                    assertFailsWith<DomainError> { db.tx { startAttempt(candidate, plan, nowUtc()) } }
                     db.tx { CandidateProfiles.update({ CandidateProfiles.accountId eq candidate }) { it[processingConsent] = true } }
 
                     val started = assertIs<StartOutcome.Started>(db.tx { startAttempt(candidate, plan, nowUtc()) }).attempt
@@ -84,7 +84,7 @@ class AssessmentFlowDatabaseTest {
                     }
                     assertIs<StartOutcome.Blocked>(db.tx { startAttempt(candidate, plan, nowUtc()) }, "one open attempt at a time")
                     val attemptId = UUID.fromString(started.attemptId)
-                    assertFailsWith<ApiError> { db.tx { answerItem(candidate, attemptId, AssessmentAnswerRequest(5, "a"), nowUtc()) } }
+                    assertFailsWith<DomainError> { db.tx { answerItem(candidate, attemptId, AssessmentAnswerRequest(5, "a"), nowUtc()) } }
 
                     val failed = db.finish(candidate, attemptId, correctly = false)
                     assertEquals(false, failed.passed)

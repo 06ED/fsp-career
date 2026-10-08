@@ -1,5 +1,7 @@
 package ru.fsp.career.matching
 
+import ru.fsp.career.matching.domain.*
+
 import java.time.Instant
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit

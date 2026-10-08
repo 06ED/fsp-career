@@ -1,6 +1,6 @@
 package ru.fsp.career.assessment.validation
 
-import ru.fsp.career.assessment.Grade
+import ru.fsp.career.assessment.domain.Grade
 import kotlin.math.sqrt
 
 /** Classification and reliability statistics used by the validation report. */

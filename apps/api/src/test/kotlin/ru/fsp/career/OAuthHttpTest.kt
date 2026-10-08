@@ -1,5 +1,8 @@
 package ru.fsp.career
 
+import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.shared.infrastructure.Database
+
 import com.auth0.jwk.Jwk
 import com.auth0.jwk.JwkProvider
 import com.auth0.jwt.JWT
@@ -10,6 +13,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import io.ktor.server.plugins.di.*
 import kotlinx.serialization.json.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import java.security.KeyPairGenerator
@@ -81,7 +85,14 @@ class OAuthHttpTest {
                 ProviderConfig("fsp-service", "fsp-secret", "http://localhost:8080/api/auth/fsp/callback"),
                 ProviderConfig("vk-service", "service-secret", "http://localhost:8080/api/auth/vk/callback"),
                 "$issuer/protocol/openid-connect/auth", "$issuer/protocol/openid-connect/token", "$issuer/protocol/openid-connect/certs", false)
-            application { careerModule(db, issuer, "fsp-api", authConfig = config, authHttp = http, fspKeys = keys) }
+            application {
+                dependencies {
+                    provide<Database> { db }
+                    provide<AuthConfig> { config }
+                    provide<HttpClient> { http }
+                }
+                careerModule(issuer, "fsp-api", fspKeys = keys)
+            }
             val browser = createClient { followRedirects = false }
             for (provider in listOf("fsp", "vk")) {
                 suspend fun start(): Pair<String, String> {

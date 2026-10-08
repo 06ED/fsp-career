@@ -1,5 +1,14 @@
 package ru.fsp.career
 
+import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.profiles.domain.*
+import ru.fsp.career.profiles.infrastructure.*
+import ru.fsp.career.assessment.infrastructure.*
+import ru.fsp.career.achievements.infrastructure.*
+import ru.fsp.career.matching.infrastructure.*
+import ru.fsp.career.recruitment.infrastructure.*
+import ru.fsp.career.shared.infrastructure.Database
+
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere
@@ -7,11 +16,8 @@ import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.update
 import org.junit.jupiter.api.Assumptions.assumeTrue
-import ru.fsp.career.fsp.FspOwnership
-import ru.fsp.career.fsp.MockFspRegistry
-import ru.fsp.career.matching.MatchingEngine
-import ru.fsp.career.matching.NeedQuery
-import ru.fsp.career.matching.PreparedPool
+import ru.fsp.career.achievements.domain.FspOwnership
+import ru.fsp.career.matching.domain.*
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.util.UUID

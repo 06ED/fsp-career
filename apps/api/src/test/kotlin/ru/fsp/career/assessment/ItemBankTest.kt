@@ -1,7 +1,9 @@
 package ru.fsp.career.assessment
 
+import ru.fsp.career.assessment.domain.*
+
 import kotlinx.serialization.json.Json
-import ru.fsp.career.assessment.content.contrastRatio
+import ru.fsp.career.assessment.domain.content.contrastRatio
 import kotlin.math.abs
 import kotlin.math.ceil
 import kotlin.math.log2

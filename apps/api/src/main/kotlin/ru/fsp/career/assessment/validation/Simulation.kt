@@ -1,21 +1,6 @@
 package ru.fsp.career.assessment.validation
 
-import ru.fsp.career.assessment.Blueprints
-import ru.fsp.career.assessment.Cat
-import ru.fsp.career.assessment.Decision
-import ru.fsp.career.assessment.Estimate
-import ru.fsp.career.assessment.FamilyKind
-import ru.fsp.career.assessment.Generated
-import ru.fsp.career.assessment.Grade
-import ru.fsp.career.assessment.Grading
-import ru.fsp.career.assessment.Irt
-import ru.fsp.career.assessment.ItemBank
-import ru.fsp.career.assessment.ItemFamily
-import ru.fsp.career.assessment.ItemParams
-import ru.fsp.career.assessment.LikelihoodGrid
-import ru.fsp.career.assessment.PastAttempt
-import ru.fsp.career.assessment.RetakePolicy
-import ru.fsp.career.assessment.RetakeReason
+import ru.fsp.career.assessment.domain.*
 import java.time.Instant
 import kotlin.math.PI
 import kotlin.math.cos

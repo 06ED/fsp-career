@@ -18,9 +18,9 @@
 | Библиотека | Версия | Назначение |
 |---|---|---|
 | Kotlin (JVM) | 2.1.20 | язык, JDK 21 (Eclipse Temurin) |
-| Ktor Server (core, netty, auth, auth-jwt, content-negotiation, status-pages, cors) | 3.1.2 | HTTP API |
+| Ktor Server (core, netty, di, auth, auth-jwt, content-negotiation, status-pages, cors) | 3.2.3 | HTTP API, встроенный DI |
 | kotlinx.serialization | (Kotlin 2.1.20) | JSON |
-| JetBrains Exposed (core, jdbc, java-time, json) | 0.61.0 | SQL DSL, транзакции |
+| JetBrains Exposed (core, dao, jdbc, java-time, json) | 0.61.0 | DAO агрегатов, SQL-проекции, транзакции |
 | Flyway | 11.3.4 | миграции схемы |
 | HikariCP | 6.2.1 | пул соединений |
 | PostgreSQL JDBC | 42.7.5 | драйвер БД |

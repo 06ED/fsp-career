@@ -1,10 +1,17 @@
 package ru.fsp.career
 
+import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.profiles.infrastructure.*
+import ru.fsp.career.assessment.infrastructure.*
+import ru.fsp.career.recruitment.infrastructure.*
+import ru.fsp.career.shared.infrastructure.Database
+
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.sun.net.httpserver.HttpServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.di.*
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonNull
@@ -109,21 +116,25 @@ class VacancyHttpTest {
             val port = ServerSocket(0).use { it.localPort }
             base = "http://127.0.0.1:$port"
             val server = embeddedServer(Netty, port = port, host = "127.0.0.1") {
-                careerModule(db, issuer, audience, "http://127.0.0.1:${jwks.address.port}/certs")
+                dependencies { provide<Database> { db } }
+                careerModule(issuer, audience, "http://127.0.0.1:${jwks.address.port}/certs")
             }.start(wait = false)
             try {
                 scenario(db, subjects)
             } finally {
-                server.stop(100, 1000)
-                jwks.stop(0)
-                kotlinx.coroutines.runBlocking {
-                    db.tx {
-                        val ids = Accounts.selectAll().where { Accounts.subject inList subjects }.map { it[Accounts.id] }
-                        AssessmentAttempts.deleteWhere { AssessmentAttempts.candidateId inList ids }
-                        InvitationsTable.deleteWhere { (InvitationsTable.candidateId inList ids) or (InvitationsTable.employerId inList ids) }
-                        // Cascades remove profiles, companies, vacancies, applications, tasks, answers and offers.
-                        Accounts.deleteWhere { Accounts.id inList ids }
+                try {
+                    kotlinx.coroutines.runBlocking {
+                        db.tx {
+                            val ids = Accounts.selectAll().where { Accounts.subject inList subjects }.map { it[Accounts.key] }
+                            AssessmentAttempts.deleteWhere { AssessmentAttempts.candidateId inList ids }
+                            InvitationsTable.deleteWhere { (InvitationsTable.candidateId inList ids) or (InvitationsTable.employerId inList ids) }
+                            // Cascades remove profiles, companies, vacancies, applications, tasks, answers and offers.
+                            Accounts.deleteWhere { Accounts.id inList ids }
+                        }
                     }
+                } finally {
+                    server.stop(100, 1000)
+                    jwks.stop(0)
                 }
             }
         }

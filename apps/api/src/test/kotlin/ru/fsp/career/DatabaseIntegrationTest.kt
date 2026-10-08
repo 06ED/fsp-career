@@ -1,5 +1,10 @@
 package ru.fsp.career
 
+import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.profiles.infrastructure.*
+import ru.fsp.career.assessment.infrastructure.*
+import ru.fsp.career.shared.infrastructure.Database
+
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.deleteWhere

@@ -1,10 +1,18 @@
 package ru.fsp.career
 
+import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.profiles.infrastructure.*
+import ru.fsp.career.assessment.infrastructure.*
+import ru.fsp.career.achievements.infrastructure.*
+import ru.fsp.career.recruitment.infrastructure.*
+import ru.fsp.career.shared.infrastructure.Database
+
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import com.sun.net.httpserver.HttpServer
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.server.plugins.di.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
@@ -91,7 +99,8 @@ class MatchingHttpTest {
         issuer = "http://127.0.0.1:${jwksServer.address.port}/realms/test"
         val db = Database(url!!, System.getenv("TEST_DATABASE_USER") ?: "career", System.getenv("TEST_DATABASE_PASSWORD") ?: "career")
         val server = embeddedServer(Netty, port = 0, host = "127.0.0.1") {
-            careerModule(db, issuer, audience, "http://127.0.0.1:${jwksServer.address.port}/certs")
+            dependencies { provide<Database> { db } }
+            careerModule(issuer, audience, "http://127.0.0.1:${jwksServer.address.port}/certs")
         }.start(wait = false)
         val subjects = List(4) { UUID.randomUUID().toString() }
         try {
@@ -118,7 +127,7 @@ class MatchingHttpTest {
             runBlocking {
                 db.tx {
                     subjects.take(2).forEach { subject ->
-                        val id = Accounts.selectAll().where { Accounts.subject eq subject }.single()[Accounts.id]
+                        val id = Accounts.selectAll().where { Accounts.subject eq subject }.single()[Accounts.key]
                         AssessmentAttempts.insert {
                             it[AssessmentAttempts.id] = UUID.randomUUID()
                             it[candidateId] = id
@@ -209,20 +218,22 @@ class MatchingHttpTest {
             assertTrue(call("GET", "/api/candidates/me/privacy", ivan).obj.getValue("fullName").jsonPrimitive.boolean)
             assertTrue((call("GET", "/api/bank/candidates", employer).obj.getValue("matches") as JsonArray).none { it.jsonObject.str("candidateId") == ivanId })
         } finally {
-            server.stop(100, 1000)
-            jwksServer.stop(0)
-            runBlocking {
-                db.tx {
-                    val ids = Accounts.selectAll().where { Accounts.subject inList subjects }.map { it[Accounts.id] }
-                    ids.forEach { id ->
-                        InvitationsTable.deleteWhere { (InvitationsTable.candidateId eq id) }
-                        InvitationsTable.deleteWhere { (InvitationsTable.employerId eq id) }
-                        AssessmentAttempts.deleteWhere { AssessmentAttempts.candidateId eq id }
-                        Accounts.deleteWhere { Accounts.id eq id }
+            try {
+                runBlocking {
+                    db.tx {
+                        val ids = Accounts.selectAll().where { Accounts.subject inList subjects }.map { it[Accounts.key] }
+                        ids.forEach { id ->
+                            InvitationsTable.deleteWhere { (InvitationsTable.candidateId eq id) }
+                            InvitationsTable.deleteWhere { (InvitationsTable.employerId eq id) }
+                            AssessmentAttempts.deleteWhere { AssessmentAttempts.candidateId eq id }
+                            Accounts.deleteWhere { Accounts.id eq id }
+                        }
                     }
                 }
+            } finally {
+                server.stop(100, 1000)
+                jwksServer.stop(0)
             }
-            db.close()
         }
     }
 }

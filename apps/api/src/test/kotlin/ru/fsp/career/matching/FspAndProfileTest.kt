@@ -2,20 +2,11 @@ package ru.fsp.career.matching
 
 import io.ktor.http.HttpStatusCode
 import kotlinx.serialization.json.Json
-import ru.fsp.career.ApiError
-import ru.fsp.career.CandidatePrivacy
-import ru.fsp.career.Company
-import ru.fsp.career.InviteRequest
-import ru.fsp.career.Need
-import ru.fsp.career.companyContactLine
-import ru.fsp.career.fsp.FspIds
-import ru.fsp.career.fsp.FspOwnership
-import ru.fsp.career.fsp.FspParticipant
-import ru.fsp.career.fsp.FspPointsPolicy
-import ru.fsp.career.fsp.FspRecord
-import ru.fsp.career.fsp.FspResult
-import ru.fsp.career.validateCompany
-import ru.fsp.career.validateNeedStack
+import ru.fsp.career.shared.domain.DomainError
+import ru.fsp.career.shared.http.status
+import ru.fsp.career.profiles.domain.*
+import ru.fsp.career.recruitment.domain.InviteRequest
+import ru.fsp.career.achievements.domain.*
 import java.time.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -70,14 +61,14 @@ class FspAndProfileTest {
             Company(name = "A", contactTelegram = "@ab"),
             Company(name = "A", website = "ftp://acme"),
             Company(name = " "),
-        ).forEach { assertEquals(HttpStatusCode.BadRequest, assertFailsWith<ApiError> { validateCompany(it) }.status) }
+        ).forEach { assertEquals(HttpStatusCode.BadRequest, assertFailsWith<DomainError> { validateCompany(it) }.status) }
         assertEquals("", companyContactLine(Company(name = "A")))
     }
 
     @Test fun needStackIsDedupedAndLimited() {
         assertEquals(listOf("Kotlin", "Kafka"), validateNeedStack(listOf(" Kotlin ", "kotlin", "", "Kafka")))
-        assertFailsWith<ApiError> { validateNeedStack((1..16).map { "skill$it" }) }
-        assertFailsWith<ApiError> { validateNeedStack(listOf("x".repeat(51))) }
+        assertFailsWith<DomainError> { validateNeedStack((1..16).map { "skill$it" }) }
+        assertFailsWith<DomainError> { validateNeedStack(listOf("x".repeat(51))) }
     }
 
     @Test fun olderPayloadsStillDecode() {

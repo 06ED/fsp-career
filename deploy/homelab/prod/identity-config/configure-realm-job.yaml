@@ -1,0 +1,56 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: fsp-career-keycloak-config
+  namespace: fsp-career
+  labels:
+    app.kubernetes.io/name: fsp-career-keycloak-config
+    app.kubernetes.io/part-of: fsp-career
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fsp-career-keycloak-config
+        app.kubernetes.io/part-of: fsp-career
+    spec:
+      restartPolicy: OnFailure
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: goodman
+      containers:
+        - name: configure
+          image: quay.io/keycloak/keycloak:26.0.8
+          command: [/bin/bash, /config/configure-realm.sh]
+          env:
+            - name: KEYCLOAK_URL
+              value: http://fsp-career-keycloak/auth
+            - name: PUBLIC_ORIGIN
+              value: https://brokenbrain.online
+            - name: JAVA_OPTS
+              value: -Xms32m -Xmx128m
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: fsp-career-keycloak-env
+                  key: KC_BOOTSTRAP_ADMIN_USERNAME
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: fsp-career-keycloak-env
+                  key: KC_BOOTSTRAP_ADMIN_PASSWORD
+          resources:
+            requests:
+              cpu: 25m
+              memory: 128Mi
+            limits:
+              memory: 384Mi
+          volumeMounts:
+            - name: configuration
+              mountPath: /config
+              readOnly: true
+      volumes:
+        - name: configuration
+          configMap:
+            name: fsp-career-keycloak-config

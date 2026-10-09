@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fsp-career-api
+  namespace: fsp-career
+  labels:
+    app.kubernetes.io/name: fsp-career-api
+    app.kubernetes.io/part-of: fsp-career
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fsp-career-api
+  template:
+    metadata:
+      annotations:
+        homelab.gitops/restart-token: "2026-10-09-vk-id"
+      labels:
+        app.kubernetes.io/name: fsp-career-api
+        app.kubernetes.io/part-of: fsp-career
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: goodman
+      imagePullSecrets:
+        - name: ghcr-registry-fsp-career
+      containers:
+        - name: api
+          image: ghcr.io/06ed/fsp-career-api
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: fsp-career-api-env
+          env:
+            - name: PORT
+              value: "8080"
+            - name: APP_ENV
+              value: production
+            - name: JAVA_OPTS
+              value: -Xms128m -Xmx384m
+            - name: DATABASE_URL
+              value: jdbc:postgresql://172.29.240.10:5432/fsp_career
+            - name: DATABASE_USER
+              value: fsp_career
+            - name: FRONTEND_ORIGIN
+              value: https://brokenbrain.online
+            - name: API_ORIGIN
+              value: https://brokenbrain.online
+            - name: KEYCLOAK_ISSUER
+              value: https://brokenbrain.online/auth/realms/fsp-career
+            - name: KEYCLOAK_AUDIENCE
+              value: fsp-api
+            - name: KEYCLOAK_JWKS_URL
+              value: http://fsp-career-keycloak/auth/realms/fsp-career/protocol/openid-connect/certs
+            - name: FSP_CLIENT_ID
+              value: fsp-service
+            - name: FSP_ISSUER
+              value: https://brokenbrain.online/auth/realms/fsp-career
+            - name: FSP_AUTH_URL
+              value: https://brokenbrain.online/auth/realms/fsp-career/protocol/openid-connect/auth
+            - name: FSP_TOKEN_URL
+              value: http://fsp-career-keycloak/auth/realms/fsp-career/protocol/openid-connect/token
+            - name: FSP_JWKS_URL
+              value: http://fsp-career-keycloak/auth/realms/fsp-career/protocol/openid-connect/certs
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 5
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              memory: 768Mi

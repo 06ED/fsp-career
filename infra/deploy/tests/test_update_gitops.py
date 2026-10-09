@@ -20,7 +20,7 @@ class PromotionTest(unittest.TestCase):
         self.digests.mkdir()
         self.paths = {}
         for directory, components in (("app", ("api", "web")), ("identity", ("keycloak",))):
-            path = self.repository / "clusters/homelab/apps/fsp-career/prod" / directory / "kustomization.yaml"
+            path = self.repository / "deploy/homelab/prod" / directory / "kustomization.yaml"
             path.parent.mkdir(parents=True)
             path.write_text(yaml.safe_dump({
                 "apiVersion": "kustomize.config.k8s.io/v1beta1",

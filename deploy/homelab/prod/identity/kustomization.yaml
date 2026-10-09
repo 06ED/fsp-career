@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: fsp-career
+components:
+  - ../runtime
+resources:
+  - keycloak-deployment.yaml
+  - keycloak-service.yaml
+  - mailpit-deployment.yaml
+  - mailpit-service.yaml
+configMapGenerator:
+  - name: fsp-career-keycloak-realm
+    files:
+      - fsp-career-realm.json
+images:
+  - name: ghcr.io/06ed/fsp-career-keycloak
+    newTag: sha-642373569292ceecd796a4afec992b3a2dace893
+    digest: sha256:a9e63c1f37f5126126eee1df98e8a8532a2803bed0a486fde66c709fe71ce3da

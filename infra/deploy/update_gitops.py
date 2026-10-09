@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pin all release images in homelab to the digests produced by this CI run."""
+"""Pin this project's deployment images to the digests produced by this CI run."""
 
 import re
 import sys
@@ -11,7 +11,7 @@ import yaml
 def promote(repository: Path, digests: Path, revision: str) -> None:
     if not re.fullmatch(r"[0-9a-f]{40}", revision):
         raise ValueError("Release revision must be a full Git commit SHA.")
-    base = repository / "clusters/homelab/apps/fsp-career/prod"
+    base = repository / "deploy/homelab/prod"
     paths = {
         "app": ("api", "web"),
         "identity": ("keycloak",),

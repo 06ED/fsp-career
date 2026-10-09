@@ -5,9 +5,7 @@
   import { auth, initAuth, signIn, providerUrl } from "$lib/shared/auth";
   import { ActionIcon } from "$lib/shared/ui";
 
-  const registering = $derived(
-    page.url.searchParams.get("mode") === "register",
-  );
+  const registering = $derived(page.url.searchParams.get("mode") === "register");
   const role = $derived(
     page.url.searchParams.get("role") === "employer" ? "employer" : "candidate",
   );
@@ -30,12 +28,10 @@
     try {
       await initAuth();
       providers = { ...auth.providers };
-      if (auth.authenticated)
-        await goto(`/app?role=${role}`, { replaceState: true });
+      if (auth.authenticated) await goto(`/app?role=${role}`, { replaceState: true });
       ready = true;
     } catch (e) {
-      error =
-        e instanceof Error ? e.message : "Не удалось подключить авторизацию.";
+      error = e instanceof Error ? e.message : "Не удалось подключить авторизацию.";
     }
   }
 
@@ -59,10 +55,7 @@
   }
 </script>
 
-<svelte:head
-  ><title>{registering ? "Регистрация" : "Вход"} — ФСП Карьера</title
-  ></svelte:head
->
+<svelte:head><title>{registering ? "Регистрация" : "Вход"} — ФСП Карьера</title></svelte:head>
 
 <main class="auth-page">
   <a href="/" class="auth-brand" aria-label="ФСП Карьера — на главную">
@@ -79,12 +72,14 @@
         ? "Зарегистрируйтесь по почте или через ФСП ID / VK ID."
         : "Войдите по почте или используйте ФСП ID / VK ID."}
     </p>
-    {#if error}<p role="alert" class="d-ui-error">{error}</p>{/if}
+    {#if error}
+      <p role="alert" class="d-ui-error">{error}</p>
+    {/if}
     {#if !ready}
       {#if error}
-        <button type="button" class="d-ui-outline" onclick={connect}
-          >Повторить подключение <ActionIcon name="refresh" /></button
-        >
+        <button type="button" class="d-ui-outline" onclick={connect}>
+          Повторить подключение <ActionIcon name="refresh" />
+        </button>
       {:else}
         <p class="d-ui-muted" role="status">Подключаем авторизацию…</p>
       {/if}
@@ -114,14 +109,10 @@
         required
         disabled={!ready || busy}
       />
-      {#if registering}<p id="password-hint" class="auth-hint">
-          От 12 до 128 символов.
-        </p>{/if}
-      <button
-        class="d-ui-button auth-submit"
-        type="submit"
-        disabled={!ready || busy}
-      >
+      {#if registering}
+        <p id="password-hint" class="auth-hint">От 12 до 128 символов.</p>
+      {/if}
+      <button class="d-ui-button auth-submit" type="submit" disabled={!ready || busy}>
         {busy ? "Подождите…" : registering ? "Создать аккаунт" : "Войти"}
         <ActionIcon name={registering ? "signup" : "login"} />
       </button>
@@ -140,7 +131,9 @@
           <img src="/fsp-mark.svg" alt="" width="24" height="24" />
           ФСП ID
         </span>
-        {#if ready && !providers.fsp}<small>Не подключён</small>{/if}
+        {#if ready && !providers.fsp}
+          <small>Не подключён</small>
+        {/if}
       </button>
       <button
         type="button"
@@ -152,7 +145,9 @@
           <img src="/vk-mark.svg" alt="" width="24" height="24" />
           VK ID
         </span>
-        {#if ready && !providers.vk}<small>Не подключён</small>{/if}
+        {#if ready && !providers.vk}
+          <small>Не подключён</small>
+        {/if}
       </button>
     </div>
     <p class="auth-switch">
@@ -182,8 +177,7 @@
     padding: 32px 20px;
     gap: 24px;
     background:
-      radial-gradient(ellipse at top, var(--accent-soft), transparent 65%),
-      var(--background);
+      radial-gradient(ellipse at top, var(--accent-soft), transparent 65%), var(--background);
   }
   .auth-brand {
     display: flex;

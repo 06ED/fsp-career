@@ -24,23 +24,21 @@
     <div class="d-a-history-item">
       <div class="d-ui-row">
         <div>
-          <strong
-            >{entryLabel(
-              catalog?.specializations,
-              attempt.specialization,
-            )}</strong
-          >
+          <strong>
+            {entryLabel(catalog?.specializations, attempt.specialization)}
+          </strong>
           {#if attempt.targetGrade}
             · тест на {gradeLabel(attempt.targetGrade)}
             <span
               class={attempt.passed ? "d-a-ok" : "d-a-fail"}
               style="margin-left: 6px;"
-              >{attempt.passed
+            >
+              {attempt.passed
                 ? "подтверждён"
                 : attempt.expired
                   ? "время истекло"
-                  : "не подтверждён"}</span
-            >
+                  : "не подтверждён"}
+            </span>
           {:else}
             · тест прежнего формата
           {/if}

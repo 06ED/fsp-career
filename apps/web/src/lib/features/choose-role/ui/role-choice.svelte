@@ -48,11 +48,12 @@
         disabled={busy}
         class={option.role === suggested ? "d-ui-button" : "d-ui-outline"}
         onclick={() => chooseRole(option.role)}
-        >Продолжить как {option.role === "candidate"
+      >
+        Продолжить как {option.role === "candidate"
           ? "специалист"
           : "работодатель"}
-        <ActionIcon name={option.icon} /></button
-      >
+        <ActionIcon name={option.icon} />
+      </button>
     </div>
   {/each}
 </div>

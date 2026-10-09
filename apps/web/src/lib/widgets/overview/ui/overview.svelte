@@ -112,10 +112,7 @@
     </div>
     <div class="d-ui-stat d-ui-stat-light">
       <div class="d-ui-stat-label">КОМПАНИЯ</div>
-      <div
-        class="d-ui-stat-number"
-        style="font-size: 22px; overflow-wrap: anywhere;"
-      >
+      <div class="d-ui-stat-number" style="font-size: 22px; overflow-wrap: anywhere;">
         {company.name || "—"}
       </div>
     </div>
@@ -123,16 +120,16 @@
   <div class="d-ui-panel">
     <h2 class="d-ui-panel-title">Подбор по подтверждённым навыкам</h2>
     <p class="d-ui-muted">
-      Опишите команду и задачу. Платформа покажет специалистов с проверенной
-      категорией, рейтингом и объяснением совпадения. Контакты откроются только
-      если кандидат примет приглашение.
+      Опишите команду и задачу. Платформа покажет специалистов с проверенной категорией, рейтингом и
+      объяснением совпадения. Контакты откроются только если кандидат примет приглашение.
     </p>
     <div class="d-ui-inline">
-      <button class="d-ui-button" onclick={() => openSection("needs")}
-        >Описать потребность <ActionIcon name="need" /></button
-      ><button class="d-ui-outline" onclick={() => openSection("matches")}
-        >Смотреть подборку <ActionIcon name="matches" /></button
-      >
+      <button class="d-ui-button" onclick={() => openSection("needs")}>
+        Описать потребность <ActionIcon name="need" />
+      </button>
+      <button class="d-ui-outline" onclick={() => openSection("matches")}>
+        Смотреть подборку <ActionIcon name="matches" />
+      </button>
     </div>
   </div>
 {/if}

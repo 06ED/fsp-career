@@ -10,11 +10,7 @@
   import type { Role, Section } from "$lib/entities/account";
   import type { Profile, ResumeDraft } from "$lib/entities/candidate";
   import type { Company, Need } from "$lib/entities/company";
-  import type {
-    Invitation,
-    InvitationStatusAction,
-    Offer,
-  } from "$lib/entities/invitation";
+  import type { Invitation, InvitationStatusAction, Offer } from "$lib/entities/invitation";
   import { DashboardNavigation } from "$lib/widgets/dashboard-navigation";
   import { Overview } from "$lib/widgets/overview";
   import {
@@ -93,8 +89,7 @@
   onMount(() => {
     const url = new URL(window.location.href);
     if (url.searchParams.get("section") === "profile") section = "profile";
-    desiredRole =
-      url.searchParams.get("role") === "employer" ? "employer" : "candidate";
+    desiredRole = url.searchParams.get("role") === "employer" ? "employer" : "candidate";
     if (url.searchParams.has("authError")) {
       error = "Не удалось войти через внешний сервис. Попробуйте ещё раз.";
       url.searchParams.delete("authError");
@@ -150,10 +145,7 @@
   async function refresh() {
     try {
       if (role === "candidate") {
-        const [p, i] = await Promise.all([
-          candidateApi.profile(),
-          invitationApi.invitations(),
-        ]);
+        const [p, i] = await Promise.all([candidateApi.profile(), invitationApi.invitations()]);
         profile = {
           ...profile,
           ...p,
@@ -303,10 +295,7 @@
       need = await companyApi.saveNeed(need);
     }, "Потребность сохранена. Теперь можно открыть подборку.");
   }
-  async function sendInvitation(
-    candidateId: string,
-    offer: Offer,
-  ): Promise<boolean> {
+  async function sendInvitation(candidateId: string, offer: Offer): Promise<boolean> {
     let sent = false;
     await action(async () => {
       await invitationApi.sendInvitation(candidateId, offer);
@@ -315,10 +304,7 @@
     }, "Приглашение отправлено кандидату. Контакты появятся после принятия.");
     return sent;
   }
-  async function updateInvitation(
-    invitation: Invitation,
-    status: InvitationStatusAction,
-  ) {
+  async function updateInvitation(invitation: Invitation, status: InvitationStatusAction) {
     await action(
       async () => {
         await invitationApi.updateInvitation(invitation.id, status);
@@ -340,21 +326,24 @@
     <div role="alert" class="d-ui-error">
       Не удалось подключить авторизацию: {initError}
     </div>
-    <button class="d-ui-button" onclick={connect}
-      >Повторить подключение <ActionIcon name="refresh" /></button
-    >
+    <button class="d-ui-button" onclick={connect}>
+      Повторить подключение <ActionIcon name="refresh" />
+    </button>
   </main>
 {:else if needsRole}
   <div class="d-ui-shell">
     <aside class="d-ui-sidebar">
-      <a href="/" class="d-ui-brand"
-        ><img src="/fsp-mark.svg" alt="" class="d-ui-emblem" /> ФСП / КАРЬЕРА</a
-      >
+      <a href="/" class="d-ui-brand">
+        <img src="/fsp-mark.svg" alt="" class="d-ui-emblem" />
+        ФСП / КАРЬЕРА
+      </a>
     </aside>
     <main class="d-ui-main">
       <div class="d-ui-kicker">ПЕРВЫЙ ВХОД / {identity}</div>
       <h1 class="d-ui-title">Выберите роль</h1>
-      {#if error}<p role="alert" class="d-ui-error">{error}</p>{/if}
+      {#if error}
+        <p role="alert" class="d-ui-error">{error}</p>
+      {/if}
       <RoleChoice suggested={desiredRole} {busy} {chooseRole} />
     </main>
   </div>
@@ -391,17 +380,14 @@
           </p>
         </div>
       </div>
-      {#if error}<div role="alert" class="d-ui-error">{error}</div>{/if}
-      {#if success}<div role="status" class="d-ui-success">{success}</div>{/if}
+      {#if error}
+        <div role="alert" class="d-ui-error">{error}</div>
+      {/if}
+      {#if success}
+        <div role="status" class="d-ui-success">{success}</div>
+      {/if}
       {#if section === "overview"}
-        <Overview
-          {role}
-          {profile}
-          {company}
-          {need}
-          {invitations}
-          {openSection}
-        />
+        <Overview {role} {profile} {company} {need} {invitations} {openSection} />
       {:else if section === "profile" && role === "candidate"}
         <CandidateProfile
           bind:profile
@@ -416,11 +402,7 @@
           {downloadResume}
           {revokeConsent}
         />
-        <CandidateSettings
-          processingConsent={profile.processingConsent}
-          {busy}
-          run={action}
-        />
+        <CandidateSettings processingConsent={profile.processingConsent} {busy} run={action} />
       {:else if section === "assessment" && role === "candidate"}
         <CandidateAssessment {profile} refreshProfile={refresh} />
       {:else if section === "company" && role === "employer"}
@@ -440,12 +422,9 @@
         {#if error || !invitationsLoaded}
           <div class="d-ui-panel">
             <p class="d-ui-muted">Не удалось загрузить приглашения.</p>
-            <button
-              class="d-ui-button"
-              disabled={busy}
-              onclick={() => openSection("invitations")}
-              >Повторить загрузку <ActionIcon name="refresh" /></button
-            >
+            <button class="d-ui-button" disabled={busy} onclick={() => openSection("invitations")}>
+              Повторить загрузку <ActionIcon name="refresh" />
+            </button>
           </div>
         {:else}
           <Invitations {invitations} {role} {busy} {updateInvitation} />

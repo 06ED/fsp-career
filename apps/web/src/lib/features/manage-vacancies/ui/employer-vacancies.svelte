@@ -171,13 +171,15 @@
       disabled={busy}
       class="d-ui-button"
       onclick={() => startEdit(null)}
-      >Новая вакансия <ActionIcon name="add" /></button
     >
+      Новая вакансия <ActionIcon name="add" />
+    </button>
   </div>
 </div>
 
 <div bind:this={workspace} style="scroll-margin-top: 16px;"></div>
-{#if editing}<form
+{#if editing}
+  <form
     class="d-ui-panel"
     aria-labelledby="vacancy-form-title"
     onsubmit={(event) => {
@@ -193,10 +195,12 @@
         type="button"
         class="d-ui-outline"
         onclick={() => (editing = null)}
-        >Закрыть <ActionIcon name="close" /></button
       >
+        Закрыть <ActionIcon name="close" />
+      </button>
     </div>
-    <label for="vac-title" class="d-ui-label">Название должности</label><input
+    <label for="vac-title" class="d-ui-label">Название должности</label>
+    <input
       id="vac-title"
       required
       maxlength="200"
@@ -206,41 +210,48 @@
     />
     <div class="d-vx-filters">
       <div>
-        <label for="vac-spec" class="d-ui-label">Специализация</label><select
+        <label for="vac-spec" class="d-ui-label">Специализация</label>
+        <select
           id="vac-spec"
           required
           bind:value={editing.draft.specialization}
           class="d-ui-field"
-          ><option value="">Выберите направление</option
-          >{#each specializations as item}<option value={item.value}
-              >{item.label}</option
-            >{/each}</select
         >
+          <option value="">Выберите направление</option>
+          {#each specializations as item}
+            <option value={item.value}>{item.label}</option>
+          {/each}
+        </select>
       </div>
       <div>
-        <label for="vac-grade" class="d-ui-label">Требуемый грейд</label><select
+        <label for="vac-grade" class="d-ui-label">Требуемый грейд</label>
+        <select
           id="vac-grade"
           required
           bind:value={editing.draft.grade}
           class="d-ui-field"
-          >{#each grades as item}<option value={item.value}>{item.label}</option
-            >{/each}</select
         >
+          {#each grades as item}
+            <option value={item.value}>{item.label}</option>
+          {/each}
+        </select>
       </div>
       <div>
-        <label for="vac-format" class="d-ui-label">Формат работы</label><select
+        <label for="vac-format" class="d-ui-label">Формат работы</label>
+        <select
           id="vac-format"
           required
           bind:value={editing.draft.workFormat}
           class="d-ui-field"
-          >{#each workFormats as item}<option value={item.value}
-              >{item.label}</option
-            >{/each}</select
         >
+          {#each workFormats as item}
+            <option value={item.value}>{item.label}</option>
+          {/each}
+        </select>
       </div>
       <div>
-        <label for="vac-min" class="d-ui-label">Зарплата от, ₽ в месяц</label
-        ><input
+        <label for="vac-min" class="d-ui-label">Зарплата от, ₽ в месяц</label>
+        <input
           id="vac-min"
           type="number"
           required
@@ -253,8 +264,8 @@
         />
       </div>
       <div>
-        <label for="vac-max" class="d-ui-label">Зарплата до, ₽ в месяц</label
-        ><input
+        <label for="vac-max" class="d-ui-label">Зарплата до, ₽ в месяц</label>
+        <input
           id="vac-max"
           type="number"
           required
@@ -268,11 +279,10 @@
         />
       </div>
       <div>
-        <label for="vac-city" class="d-ui-label"
-          >Город{editing.draft.workFormat === "remote"
-            ? " · необязательно"
-            : ""}</label
-        ><input
+        <label for="vac-city" class="d-ui-label">
+          Город{editing.draft.workFormat === "remote" ? " · необязательно" : ""}
+        </label>
+        <input
           id="vac-city"
           maxlength="100"
           required={editing.draft.workFormat !== "remote"}
@@ -290,7 +300,8 @@
       Вилка обязательна: кандидат видит условия до начала общения. «До» не может
       быть меньше «от».
     </p>
-    <label for="vac-stack" class="d-ui-label">Стек · через запятую</label><input
+    <label for="vac-stack" class="d-ui-label">Стек · через запятую</label>
+    <input
       id="vac-stack"
       placeholder="Kotlin, PostgreSQL, Kafka"
       bind:value={stackText}
@@ -298,7 +309,8 @@
     />
     <label for="vac-description" class="d-ui-label"
       >Задачи, команда и условия</label
-    ><textarea
+    >
+    <textarea
       id="vac-description"
       required
       maxlength="6000"
@@ -306,13 +318,15 @@
       bind:value={editing.draft.description}
       class="d-ui-textarea"
     ></textarea>
-    <button type="submit" disabled={busy || salaryInvalid} class="d-ui-button"
-      >{editing.id ? "Сохранить изменения" : "Опубликовать вакансию"}
-      <ActionIcon name="save" /></button
-    >
-  </form>{/if}
+    <button type="submit" disabled={busy || salaryInvalid} class="d-ui-button">
+      {editing.id ? "Сохранить изменения" : "Опубликовать вакансию"}
+      <ActionIcon name="save" />
+    </button>
+  </form>
+{/if}
 
-{#if selected}<section class="d-ui-panel" aria-labelledby="applicants-title">
+{#if selected}
+  <section class="d-ui-panel" aria-labelledby="applicants-title">
     <div class="d-ui-row">
       <div>
         <div class="d-ui-kicker">ОТКЛИКИ НА ВАКАНСИЮ</div>
@@ -328,15 +342,17 @@
         type="button"
         class="d-ui-outline"
         onclick={() => (selected = null)}
-        >Закрыть <ActionIcon name="close" /></button
       >
+        Закрыть <ActionIcon name="close" />
+      </button>
     </div>
     <p class="d-ui-muted" style="margin-top: 0;">
       Сначала — кандидаты, чья подтверждённая тестом категория соответствует
       вакансии, затем по грейду и баллу оценки. Контакты открыты, потому что
       кандидат откликнулся сам.
     </p>
-    {#each applicants as applicant (applicant.id)}<article
+    {#each applicants as applicant (applicant.id)}
+      <article
         style="border-top: 1px solid var(--border); padding: 20px 0;"
         aria-labelledby={"applicant-" + applicant.id}
       >
@@ -356,56 +372,77 @@
             </h3>
           </div>
           <div style="text-align: right;">
-            {#if applicant.score != null}<div class="d-ui-score">
-                {applicant.score}<span style="font-size: 14px;"> / 100</span>
-              </div>{/if}
+            {#if applicant.score != null}
+              <div class="d-ui-score">
+                {applicant.score}
+                <span style="font-size: 14px;">/ 100</span>
+              </div>
+            {/if}
             <span
               class={`d-vx-badge ${applicant.status === "accepted" ? "d-vx-badge-success" : ""} ${applicant.status === "rejected" ? "d-vx-badge-danger" : ""}`}
-              >{applicationStatusLabels[applicant.status]}</span
             >
+              {applicationStatusLabels[applicant.status]}
+            </span>
           </div>
         </div>
         <p class="d-ui-muted">
-          {#if applicant.categoryMatch}<span class="d-ui-tag d-vx-tag-match"
-              >Категория подходит</span
-            >{/if}{applicant.fit}
+          {#if applicant.categoryMatch}
+            <span class="d-ui-tag d-vx-tag-match">Категория подходит</span>
+          {/if}
+          {applicant.fit}
         </p>
-        {#if applicant.techStack.length}<div aria-label="Стек кандидата">
-            {#each applicant.techStack as skill}<span
+        {#if applicant.techStack.length}
+          <div aria-label="Стек кандидата">
+            {#each applicant.techStack as skill}
+              <span
                 class={`d-ui-tag ${
                   applicant.stackOverlap.some(
                     (item) => item.toLowerCase() === skill.toLowerCase(),
                   )
                     ? "d-vx-tag-match"
                     : "d-vx-tag-muted"
-                }`}>{skill}</span
-              >{/each}
-          </div>{/if}
+                }`}
+              >
+                {skill}
+              </span>
+            {/each}
+          </div>
+        {/if}
         <!-- Keep contact links green against the success panel. -->
         <div class="d-vx-contacts">
           <strong>Контакты кандидата</strong>
-          {#if applicant.contactEmail}<div>
+          {#if applicant.contactEmail}
+            <div>
               Email: <a
                 class="d-vx-contact-link"
                 href={"mailto:" + applicant.contactEmail}
-                >{applicant.contactEmail}</a
               >
-            </div>{/if}
-          {#if applicant.contactPhone}<div>
+                {applicant.contactEmail}
+              </a>
+            </div>
+          {/if}
+          {#if applicant.contactPhone}
+            <div>
               Телефон: <a
                 class="d-vx-contact-link"
                 href={"tel:" + applicant.contactPhone.replace(/[^\d+]/g, "")}
-                >{applicant.contactPhone}</a
               >
-            </div>{/if}
+                {applicant.contactPhone}
+              </a>
+            </div>
+          {/if}
         </div>
-        {#if applicant.coverNote}<div class="d-vx-quote">
+        {#if applicant.coverNote}
+          <div class="d-vx-quote">
             {applicant.coverNote}
-          </div>{/if}
-        {#if applicant.experience}<details class="d-vx-details">
+          </div>
+        {/if}
+        {#if applicant.experience}
+          <details class="d-vx-details">
             <summary class="d-vx-summary">Опыт из профиля</summary>
             <p class="d-vx-text">{applicant.experience}</p>
-          </details>{/if}
+          </details>
+        {/if}
         <p class="d-ui-muted" style="margin-top: 0;">
           Отклик от {shortDate(
             applicant.createdAt,
@@ -413,34 +450,39 @@
             ? ` · последнее регулярное задание ${shortDate(applicant.lastTaskActivityAt)}`
             : ""}
         </p>
-        {#if applicant.status === "sent" || applicant.status === "viewed"}<div
-            class="d-ui-inline"
-          >
+        {#if applicant.status === "sent" || applicant.status === "viewed"}
+          <div class="d-ui-inline">
             <button
               type="button"
               disabled={busy}
               class="d-ui-button"
               onclick={() => decide(applicant, "accepted")}
-              >Принять отклик <ActionIcon name="accept" /></button
-            ><button
+            >
+              Принять отклик <ActionIcon name="accept" />
+            </button>
+            <button
               type="button"
               disabled={busy}
               class="d-ui-danger"
               onclick={() => decide(applicant, "rejected")}
-              >Отказать <ActionIcon name="reject" /></button
             >
-          </div>{/if}
-      </article>{:else}<EmptyState
+              Отказать <ActionIcon name="reject" />
+            </button>
+          </div>
+        {/if}
+      </article>
+    {:else}
+      <EmptyState
         icon="applications"
         title="Откликов пока нет"
         description="Кандидатов можно найти и пригласить в разделе «Подбор кандидатов»."
-      />{/each}
-  </section>{/if}
+      />
+    {/each}
+  </section>
+{/if}
 
-{#each vacancies as vacancy (vacancy.id)}<article
-    class="d-ui-panel"
-    aria-labelledby={"own-vacancy-" + vacancy.id}
-  >
+{#each vacancies as vacancy (vacancy.id)}
+  <article class="d-ui-panel" aria-labelledby={"own-vacancy-" + vacancy.id}>
     <div class="d-ui-row" style="align-items: flex-start;">
       <div style="min-width: 0;">
         <div class="d-ui-kicker">
@@ -462,16 +504,19 @@
       </div>
       <span
         class={`d-vx-badge ${vacancy.status === "open" ? "d-vx-badge-success" : "d-vx-badge-muted"}`}
-        >{vacancy.status === "open" ? "Открыта" : "Закрыта"}</span
       >
+        {vacancy.status === "open" ? "Открыта" : "Закрыта"}
+      </span>
     </div>
     <div>
-      <span class="d-ui-tag d-vx-tag-muted"
-        >{workFormatName(vacancy.workFormat)}{vacancy.city
+      <span class="d-ui-tag d-vx-tag-muted">
+        {workFormatName(vacancy.workFormat)}{vacancy.city
           ? ` · ${vacancy.city}`
-          : ""}</span
-      >{#each vacancy.techStack as skill}<span class="d-ui-tag">{skill}</span
-        >{/each}
+          : ""}
+      </span>
+      {#each vacancy.techStack as skill}
+        <span class="d-ui-tag">{skill}</span>
+      {/each}
     </div>
     <p class="d-ui-muted">
       Откликов: {vacancy.applications.total} · новых: {vacancy.applications
@@ -486,34 +531,42 @@
         disabled={busy}
         class="d-ui-button"
         onclick={() => openApplicants(vacancy)}
-        >Отклики ({vacancy.applications.total}) <ActionIcon
+      >
+        Отклики ({vacancy.applications.total}) <ActionIcon
           name="applications"
-        /></button
-      ><button
+        />
+      </button>
+      <button
         type="button"
         disabled={busy}
         class="d-ui-outline"
         onclick={() => startEdit(vacancy)}
-        >Редактировать <ActionIcon name="edit" /></button
-      ><button
+      >
+        Редактировать <ActionIcon name="edit" />
+      </button>
+      <button
         type="button"
         disabled={busy}
         class={vacancy.status === "open" ? "d-ui-danger" : "d-ui-outline"}
         onclick={() => toggle(vacancy)}
-        >{vacancy.status === "open" ? "Закрыть вакансию" : "Открыть снова"}
-        <ActionIcon
-          name={vacancy.status === "open" ? "archive" : "undo"}
-        /></button
       >
+        {vacancy.status === "open" ? "Закрыть вакансию" : "Открыть снова"}
+        <ActionIcon name={vacancy.status === "open" ? "archive" : "undo"} />
+      </button>
     </div>
-  </article>{:else}{#if loaded && !editing}<EmptyState
+  </article>
+{:else}
+  {#if loaded && !editing}
+    <EmptyState
       icon="vacancies"
       title="Вакансий пока нет"
       description="Опубликуйте первую вакансию или найдите кандидатов напрямую через подборку."
     >
-      {#snippet action()}<button
-          class="d-ui-button"
-          onclick={() => startEdit(null)}
-          >Новая вакансия <ActionIcon name="add" /></button
-        >{/snippet}
-    </EmptyState>{/if}{/each}
+      {#snippet action()}
+        <button class="d-ui-button" onclick={() => startEdit(null)}>
+          Новая вакансия <ActionIcon name="add" />
+        </button>
+      {/snippet}
+    </EmptyState>
+  {/if}
+{/each}

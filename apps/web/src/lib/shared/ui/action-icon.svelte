@@ -20,15 +20,7 @@
     X,
   } from "@jis3r/icons";
   // Vacancies, applications and short tasks screens.
-  import {
-    Archive,
-    Briefcase,
-    ClipboardList,
-    Lightbulb,
-    Pencil,
-    Star,
-    Undo,
-  } from "@jis3r/icons";
+  import { Archive, Briefcase, ClipboardList, Lightbulb, Pencil, Star, Undo } from "@jis3r/icons";
   // Moving Icons doesn't currently include these four shapes.
   import { Building2, Save, Target, UserPlus } from "@lucide/svelte";
 
@@ -78,9 +70,7 @@
 
   let playing = $state(false);
   let MovingIcon = $derived(movingIcons[name as keyof typeof movingIcons]);
-  let FallbackIcon = $derived(
-    fallbackIcons[name as keyof typeof fallbackIcons],
-  );
+  let FallbackIcon = $derived(fallbackIcons[name as keyof typeof fallbackIcons]);
 
   function bindParentHover(node: HTMLElement) {
     const parent = node.closest("button, a[data-interactive]");
@@ -103,12 +93,7 @@
   }
 </script>
 
-<span
-  use:bindParentHover
-  data-action-icon
-  data-position={placement}
-  aria-hidden="true"
->
+<span use:bindParentHover data-action-icon data-position={placement} aria-hidden="true">
   {#if name in movingIcons}
     <MovingIcon {size} strokeWidth={2} animate={playing} />
   {:else}

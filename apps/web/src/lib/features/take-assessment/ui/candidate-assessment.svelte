@@ -1,12 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import { ActionIcon } from "$lib/shared/ui";
-  import {
-    assessmentApi,
-    entryLabel,
-    formatDate,
-    gradeLabel,
-  } from "$lib/entities/assessment";
+  import { assessmentApi, entryLabel, formatDate, gradeLabel } from "$lib/entities/assessment";
   import AssessmentSetup from "./assessment-setup.svelte";
   import AssessmentRunner from "./assessment-runner.svelte";
   import AssessmentResultPanel from "./assessment-result-panel.svelte";
@@ -22,10 +17,8 @@
   } from "$lib/entities/assessment";
   import type { Profile } from "$lib/entities/candidate";
 
-  let {
-    profile,
-    refreshProfile,
-  }: { profile: Profile; refreshProfile: () => Promise<void> } = $props();
+  let { profile, refreshProfile }: { profile: Profile; refreshProfile: () => Promise<void> } =
+    $props();
 
   type View = "status" | "setup" | "test" | "result";
   let view = $state<View>("status");
@@ -65,14 +58,10 @@
         ? { ...previous, teamRoles: [...previous.teamRoles] }
         : {
             ...survey,
-            specialization: c.specializations.some(
-              (x) => x.id === profile.specialization,
-            )
+            specialization: c.specializations.some((x) => x.id === profile.specialization)
               ? profile.specialization
               : "",
-            industry: c.industries.some((x) => x.id === profile.industry)
-              ? profile.industry
-              : "",
+            industry: c.industries.some((x) => x.id === profile.industry) ? profile.industry : "",
           };
       if (current.attempt) {
         attempt = current.attempt;
@@ -98,9 +87,7 @@
   }
 
   async function loadEligibility(specialization: string) {
-    eligibility = specialization
-      ? await assessmentApi.eligibility(specialization)
-      : null;
+    eligibility = specialization ? await assessmentApi.eligibility(specialization) : null;
   }
 
   async function afterAttempt(finished: AssessmentResult) {
@@ -129,11 +116,7 @@
     if (!attempt) return;
     const current = attempt;
     await run(async () => {
-      const outcome = await assessmentApi.answer(
-        current.attemptId,
-        current.position,
-        value,
-      );
+      const outcome = await assessmentApi.answer(current.attemptId, current.position, value);
       if (outcome.done && outcome.result) await afterAttempt(outcome.result);
       else if (outcome.attempt) attempt = outcome.attempt;
     });
@@ -148,14 +131,16 @@
   }
 </script>
 
-{#if error}<div role="alert" class="d-ui-error">{error}</div>{/if}
+{#if error}
+  <div role="alert" class="d-ui-error">{error}</div>
+{/if}
 
 {#if !catalog}
   <div class="d-ui-panel">
     {#if error}
-      <button class="d-ui-button" disabled={busy} onclick={loadInitial}
-        >Повторить загрузку <ActionIcon name="refresh" /></button
-      >
+      <button class="d-ui-button" disabled={busy} onclick={loadInitial}>
+        Повторить загрузку <ActionIcon name="refresh" />
+      </button>
     {:else}
       <p class="d-ui-muted">Загружаем тестирование…</p>
     {/if}
@@ -186,17 +171,18 @@
       <div>
         <h2 class="d-ui-panel-title">Категория и грейд</h2>
         <p class="d-ui-muted" style="margin-top: 0;">
-          Категорию, которую видит работодатель, определяет не резюме, а путь:
-          опрос → заявленный грейд → адаптивный тест на этот грейд.
+          Категорию, которую видит работодатель, определяет не резюме, а путь: опрос → заявленный
+          грейд → адаптивный тест на этот грейд.
         </p>
       </div>
       <button
         class="d-ui-button"
         disabled={busy || !!eligibility?.openAttemptId}
         onclick={() => (view = "setup")}
-        >{history.length ? "Пройти тестирование" : "Начать: опрос и тест"}
-        <ActionIcon name="assessment" /></button
       >
+        {history.length ? "Пройти тестирование" : "Начать: опрос и тест"}
+        <ActionIcon name="assessment" />
+      </button>
     </div>
     <div class="d-a-stats">
       <div class="d-a-stat">
@@ -211,10 +197,7 @@
       <div class="d-a-stat">
         <div class="d-a-small">Отрасль</div>
         <div class="d-a-stat-value" style="font-size: 17px;">
-          {entryLabel(
-            catalog.industries,
-            profile.industry || lastSurvey?.industry,
-          )}
+          {entryLabel(catalog.industries, profile.industry || lastSurvey?.industry)}
         </div>
       </div>
       <div class="d-a-stat">
@@ -234,21 +217,19 @@
       <span class="d-ui-label">Куда можно пройти тест сейчас</span>
       <div>
         {#each eligibility.options as option}
-          <span
-            class={`d-a-chip ${option.allowed ? "d-a-chip-on" : ""}`}
-            title={option.message}
-            >{gradeLabel(option.grade)}: {option.allowed
+          <span class={`d-a-chip ${option.allowed ? "d-a-chip-on" : ""}`} title={option.message}>
+            {gradeLabel(option.grade)}: {option.allowed
               ? "можно сейчас"
               : option.availableAt
                 ? `с ${formatDate(option.availableAt)}`
-                : "уже подтверждён более высокий грейд"}</span
-          >
+                : "уже подтверждён более высокий грейд"}
+          </span>
         {/each}
       </div>
       <p class="d-a-small">
-        Грейд меняется не чаще раза в {eligibility.cooldownDays} дней. Исключения:
-        после неудачи можно сразу пройти тест на уровень ниже, после уверенного результата
-        — на уровень выше. Подтверждённый грейд не понижается.
+        Грейд меняется не чаще раза в {eligibility.cooldownDays} дней. Исключения: после неудачи можно
+        сразу пройти тест на уровень ниже, после уверенного результата — на уровень выше. Подтверждённый
+        грейд не понижается.
       </p>
     {/if}
   </div>

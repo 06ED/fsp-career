@@ -61,6 +61,7 @@
       loaded = true;
     }, confirmation);
   }
+
   async function apply(vacancy: VacancyCard) {
     await run(async () => {
       await vacancyApi.apply(vacancy.id, coverNote.trim());
@@ -69,6 +70,7 @@
       vacancies = await vacancyApi.vacancies(filters);
     }, `Отклик на «${vacancy.title}» отправлен. Компания видит ваши контакты и подтверждённую категорию.`);
   }
+
   onMount(() => {
     load();
   });
@@ -95,38 +97,39 @@
   </div>
   <div class="d-vx-filters">
     <div>
-      <label for="vf-spec" class="d-ui-label">Специализация</label><select
+      <label for="vf-spec" class="d-ui-label">Специализация</label>
+      <select
         id="vf-spec"
         bind:value={filters.specialization}
         class="d-ui-field"
-        ><option value="">Любая</option>{#each specializations as item}<option
-            value={item.value}>{item.label}</option
-          >{/each}</select
       >
+        <option value="">Любая</option>
+        {#each specializations as item}
+          <option value={item.value}>{item.label}</option>
+        {/each}
+      </select>
     </div>
     <div>
-      <label for="vf-grade" class="d-ui-label">Грейд</label><select
-        id="vf-grade"
-        bind:value={filters.grade}
-        class="d-ui-field"
-        ><option value="">Любой</option>{#each grades as item}<option
-            value={item.value}>{item.label}</option
-          >{/each}</select
-      >
+      <label for="vf-grade" class="d-ui-label">Грейд</label>
+      <select id="vf-grade" bind:value={filters.grade} class="d-ui-field">
+        <option value="">Любой</option>
+        {#each grades as item}
+          <option value={item.value}>{item.label}</option>
+        {/each}
+      </select>
     </div>
     <div>
-      <label for="vf-format" class="d-ui-label">Формат работы</label><select
-        id="vf-format"
-        bind:value={filters.workFormat}
-        class="d-ui-field"
-        ><option value="">Любой</option>{#each workFormats as item}<option
-            value={item.value}>{item.label}</option
-          >{/each}</select
-      >
+      <label for="vf-format" class="d-ui-label">Формат работы</label>
+      <select id="vf-format" bind:value={filters.workFormat} class="d-ui-field">
+        <option value="">Любой</option>
+        {#each workFormats as item}
+          <option value={item.value}>{item.label}</option>
+        {/each}
+      </select>
     </div>
     <div>
-      <label for="vf-salary" class="d-ui-label">Зарплата от, ₽ в месяц</label
-      ><input
+      <label for="vf-salary" class="d-ui-label">Зарплата от, ₽ в месяц</label>
+      <input
         id="vf-salary"
         type="number"
         min="0"
@@ -138,8 +141,8 @@
       />
     </div>
     <div>
-      <label for="vf-stack" class="d-ui-label">Стек · все через запятую</label
-      ><input
+      <label for="vf-stack" class="d-ui-label">Стек · все через запятую</label>
+      <input
         id="vf-stack"
         placeholder="Kotlin, PostgreSQL"
         bind:value={filters.techStack}
@@ -147,7 +150,8 @@
       />
     </div>
     <div>
-      <label for="vf-q" class="d-ui-label">Поиск по тексту</label><input
+      <label for="vf-q" class="d-ui-label">Поиск по тексту</label>
+      <input
         id="vf-q"
         type="search"
         maxlength="100"
@@ -158,21 +162,25 @@
     </div>
   </div>
   <div class="d-ui-inline">
-    <button type="submit" disabled={busy} class="d-ui-button"
-      >Найти <ActionIcon name="matches" /></button
-    ><button
+    <button type="submit" disabled={busy} class="d-ui-button">
+      Найти <ActionIcon name="matches" />
+    </button>
+    <button
       type="button"
       disabled={busy}
       class="d-ui-outline"
       onclick={() => {
         filters = emptyFilters();
         load();
-      }}>Сбросить фильтры <ActionIcon name="refresh" /></button
+      }}
     >
+      Сбросить фильтры <ActionIcon name="refresh" />
+    </button>
   </div>
 </form>
 
-{#if blocker}<div class="d-ui-note">
+{#if blocker}
+  <div class="d-ui-note">
     {blocker}
     <div class="d-ui-inline" style="margin-top: 12px;">
       <button
@@ -186,20 +194,20 @@
               ? "profile"
               : "assessment",
           )}
-        >{!profile.processingConsent ||
+      >
+        {!profile.processingConsent ||
         !profile.fullName ||
         !profile.specialization
           ? "Открыть профиль"
           : "Перейти к оценке"}
-        <ActionIcon name="arrow" /></button
-      >
+        <ActionIcon name="arrow" />
+      </button>
     </div>
-  </div>{/if}
+  </div>
+{/if}
 
-{#each vacancies as vacancy (vacancy.id)}<article
-    class="d-ui-panel"
-    aria-labelledby={"vacancy-" + vacancy.id}
-  >
+{#each vacancies as vacancy (vacancy.id)}
+  <article class="d-ui-panel" aria-labelledby={"vacancy-" + vacancy.id}>
     <div class="d-ui-row" style="align-items: flex-start;">
       <div style="min-width: 0;">
         <div class="d-ui-kicker">
@@ -217,51 +225,68 @@
           <span class="d-vx-salary-unit">в месяц</span>
         </div>
       </div>
-      {#if vacancy.myApplicationStatus}<span
+      {#if vacancy.myApplicationStatus}
+        <span
           class={`d-vx-badge ${vacancy.myApplicationStatus === "accepted" ? "d-vx-badge-success" : ""} ${vacancy.myApplicationStatus === "rejected" ? "d-vx-badge-danger" : ""}`}
-          >Отклик: {applicationStatusLabels[vacancy.myApplicationStatus]}</span
-        >{:else if vacancy.categoryMatch}<span
-          class="d-vx-badge d-vx-badge-success">Подходит вашей категории</span
-        >{/if}
+        >
+          Отклик: {applicationStatusLabels[vacancy.myApplicationStatus]}
+        </span>
+      {:else if vacancy.categoryMatch}
+        <span class="d-vx-badge d-vx-badge-success"
+          >Подходит вашей категории</span
+        >
+      {/if}
     </div>
     <div>
-      <span class="d-ui-tag">{specializationName(vacancy.specialization)}</span
-      ><span class="d-ui-tag">{gradeName(vacancy.grade)}</span><span
-        class="d-ui-tag d-vx-tag-muted"
-        >{workFormatName(vacancy.workFormat)}{vacancy.city
+      <span class="d-ui-tag">{specializationName(vacancy.specialization)}</span>
+      <span class="d-ui-tag">{gradeName(vacancy.grade)}</span>
+      <span class="d-ui-tag d-vx-tag-muted">
+        {workFormatName(vacancy.workFormat)}{vacancy.city
           ? ` · ${vacancy.city}`
-          : ""}</span
-      >
+          : ""}
+      </span>
     </div>
-    {#if vacancy.techStack.length}<div aria-label="Стек вакансии">
-        {#each vacancy.techStack as skill}<span
+    {#if vacancy.techStack.length}
+      <div aria-label="Стек вакансии">
+        {#each vacancy.techStack as skill}
+          <span
             class={`d-ui-tag ${vacancy.stackOverlap.includes(skill) ? "d-vx-tag-match" : "d-vx-tag-muted"}`}
             title={vacancy.stackOverlap.includes(skill)
               ? "Есть в вашем профиле"
-              : undefined}>{skill}</span
-          >{/each}
-      </div>{/if}
+              : undefined}
+          >
+            {skill}
+          </span>
+        {/each}
+      </div>
+    {/if}
     <p class="d-ui-muted">{vacancy.fit}</p>
     <details class="d-vx-details">
       <summary class="d-vx-summary">Описание вакансии и компании</summary>
       <p class="d-vx-text">{vacancy.description}</p>
-      {#if vacancy.companyDescription}<p class="d-ui-muted">
+      {#if vacancy.companyDescription}
+        <p class="d-ui-muted">
           {vacancy.companyName}: {vacancy.companyDescription}
-        </p>{/if}
-      {#if vacancy.companyWebsite}<p class="d-ui-muted">
+        </p>
+      {/if}
+      {#if vacancy.companyWebsite}
+        <p class="d-ui-muted">
           Сайт: {vacancy.companyWebsite}
-        </p>{/if}
+        </p>
+      {/if}
     </details>
     {#if !vacancy.myApplicationStatus}
-      {#if applyingTo === vacancy.id}<form
+      {#if applyingTo === vacancy.id}
+        <form
           onsubmit={(event) => {
             event.preventDefault();
             apply(vacancy);
           }}
         >
-          <label for={"cover-" + vacancy.id} class="d-ui-label"
-            >Сопроводительное письмо · необязательно</label
-          ><textarea
+          <label for={"cover-" + vacancy.id} class="d-ui-label">
+            Сопроводительное письмо · необязательно
+          </label>
+          <textarea
             id={"cover-" + vacancy.id}
             maxlength="2000"
             placeholder="Почему вам интересна эта команда и какой опыт будет полезен"
@@ -274,42 +299,62 @@
             отозвать.
           </p>
           <div class="d-ui-inline">
-            <button type="submit" disabled={busy} class="d-ui-button"
-              >Отправить отклик <ActionIcon name="send" /></button
-            ><button
+            <button type="submit" disabled={busy} class="d-ui-button">
+              Отправить отклик <ActionIcon name="send" />
+            </button>
+            <button
               type="button"
               class="d-ui-outline"
               onclick={() => {
                 applyingTo = null;
                 coverNote = "";
-              }}>Отмена <ActionIcon name="close" /></button
+              }}
             >
+              Отмена <ActionIcon name="close" />
+            </button>
           </div>
-        </form>{:else}<button
+        </form>
+      {:else}
+        <button
           type="button"
           disabled={busy || !!blocker}
           class="d-ui-button"
           onclick={() => {
             applyingTo = vacancy.id;
             coverNote = "";
-          }}>Откликнуться <ActionIcon name="send" /></button
-        >{/if}
-    {:else}<button
+          }}
+        >
+          Откликнуться <ActionIcon name="send" />
+        </button>
+      {/if}
+    {:else}
+      <button
         type="button"
         class="d-ui-outline"
         onclick={() => openSection("applications")}
-        >Мои отклики <ActionIcon name="applications" /></button
-      >{/if}
-  </article>{:else}{#if loaded}<EmptyState
+      >
+        Мои отклики <ActionIcon name="applications" />
+      </button>
+    {/if}
+  </article>
+{:else}
+  {#if loaded}
+    <EmptyState
       icon="vacancies"
       title="Вакансии не найдены"
       description="По этим условиям открытых вакансий нет. Измените фильтры или дождитесь приглашения от компании."
     >
-      {#snippet action()}<button
+      {#snippet action()}
+        <button
           class="d-ui-outline"
           onclick={() => {
             filters = emptyFilters();
             load();
-          }}>Сбросить фильтры <ActionIcon name="refresh" /></button
-        >{/snippet}
-    </EmptyState>{/if}{/each}
+          }}
+        >
+          Сбросить фильтры <ActionIcon name="refresh" />
+        </button>
+      {/snippet}
+    </EmptyState>
+  {/if}
+{/each}

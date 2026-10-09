@@ -116,13 +116,16 @@
       onclick={() => {
         selected = null;
         draft = blank();
-      }}>Новое задание <ActionIcon name="add" /></button
+      }}
     >
+      Новое задание <ActionIcon name="add" />
+    </button>
   </div>
 </div>
 
 <div bind:this={workspace} style="scroll-margin-top: 16px;"></div>
-{#if draft}<form
+{#if draft}
+  <form
     class="d-ui-panel"
     aria-labelledby="task-form-title"
     onsubmit={(event) => {
@@ -132,11 +135,12 @@
   >
     <div class="d-ui-row">
       <h2 id="task-form-title" class="d-ui-panel-title">Новое задание</h2>
-      <button type="button" class="d-ui-outline" onclick={() => (draft = null)}
-        >Закрыть <ActionIcon name="close" /></button
-      >
+      <button type="button" class="d-ui-outline" onclick={() => (draft = null)}>
+        Закрыть <ActionIcon name="close" />
+      </button>
     </div>
-    <label for="task-title" class="d-ui-label">Название</label><input
+    <label for="task-title" class="d-ui-label">Название</label>
+    <input
       id="task-title"
       required
       maxlength="200"
@@ -146,29 +150,31 @@
     />
     <div class="d-ui-grid">
       <div>
-        <label for="task-spec" class="d-ui-label">Специализация</label><select
+        <label for="task-spec" class="d-ui-label">Специализация</label>
+        <select
           id="task-spec"
           required
           bind:value={draft.specialization}
           class="d-ui-field"
-          ><option value="">Выберите направление</option
-          >{#each specializations as item}<option value={item.value}
-              >{item.label}</option
-            >{/each}</select
         >
+          <option value="">Выберите направление</option>
+          {#each specializations as item}
+            <option value={item.value}>{item.label}</option>
+          {/each}
+        </select>
       </div>
       <div>
-        <label for="task-grade" class="d-ui-label">Грейд</label><select
-          id="task-grade"
-          bind:value={draft.grade}
-          class="d-ui-field"
-          ><option value={null}>Любой грейд</option
-          >{#each grades as item}<option value={item.value}>{item.label}</option
-            >{/each}</select
-        >
+        <label for="task-grade" class="d-ui-label">Грейд</label>
+        <select id="task-grade" bind:value={draft.grade} class="d-ui-field">
+          <option value={null}>Любой грейд</option>
+          {#each grades as item}
+            <option value={item.value}>{item.label}</option>
+          {/each}
+        </select>
       </div>
     </div>
-    <label for="task-body" class="d-ui-label">Условие задачи</label><textarea
+    <label for="task-body" class="d-ui-label">Условие задачи</label>
+    <textarea
       id="task-body"
       required
       maxlength="4000"
@@ -177,12 +183,14 @@
       bind:value={draft.body}
       class="d-ui-textarea"
     ></textarea>
-    <button type="submit" disabled={busy} class="d-ui-button"
-      >Опубликовать задание <ActionIcon name="save" /></button
-    >
-  </form>{/if}
+    <button type="submit" disabled={busy} class="d-ui-button">
+      Опубликовать задание <ActionIcon name="save" />
+    </button>
+  </form>
+{/if}
 
-{#if selected}<section class="d-ui-panel" aria-labelledby="task-answers-title">
+{#if selected}
+  <section class="d-ui-panel" aria-labelledby="task-answers-title">
     <div class="d-ui-row">
       <div>
         <div class="d-ui-kicker">ОТВЕТЫ НА ЗАДАНИЕ</div>
@@ -198,10 +206,12 @@
         type="button"
         class="d-ui-outline"
         onclick={() => (selected = null)}
-        >Закрыть <ActionIcon name="close" /></button
       >
+        Закрыть <ActionIcon name="close" />
+      </button>
     </div>
-    {#each submissions as item (item.id)}<article
+    {#each submissions as item (item.id)}
+      <article
         style="border-top: 1px solid var(--border); padding: 20px 0;"
         aria-labelledby={"answer-" + item.id}
       >
@@ -223,7 +233,8 @@
           )}{item.ratedAt ? ` · оценено ${shortDate(item.ratedAt)}` : ""}
         </p>
         <div class="d-vx-quote">{item.answer}</div>
-        {#if ratings[item.id]}<form
+        {#if ratings[item.id]}
+          <form
             onsubmit={(event) => {
               event.preventDefault();
               rate(item);
@@ -231,21 +242,23 @@
           >
             <fieldset class="d-vx-radio-row">
               <legend class="d-vx-legend">Оценка ответа</legend>
-              {#each [1, 2, 3, 4, 5] as value}<label
-                  class="d-ui-answer"
-                  style="margin-bottom: 0;"
-                  ><input
+              {#each [1, 2, 3, 4, 5] as value}
+                <label class="d-ui-answer" style="margin-bottom: 0;">
+                  <input
                     type="radio"
                     name={"rating-" + item.id}
                     {value}
                     required
                     bind:group={ratings[item.id].rating}
-                  />{value}</label
-                >{/each}
+                  />
+                  {value}
+                </label>
+              {/each}
             </fieldset>
-            <label for={"comment-" + item.id} class="d-ui-label"
-              >Комментарий кандидату · необязательно</label
-            ><input
+            <label for={"comment-" + item.id} class="d-ui-label">
+              Комментарий кандидату · необязательно
+            </label>
+            <input
               id={"comment-" + item.id}
               maxlength="1000"
               bind:value={ratings[item.id].comment}
@@ -255,21 +268,25 @@
               type="submit"
               disabled={busy || !ratings[item.id].rating}
               class="d-ui-outline"
-              >{item.rating ? "Изменить оценку" : "Сохранить оценку"}
-              <ActionIcon name="star" /></button
             >
-          </form>{/if}
-      </article>{:else}<EmptyState
+              {item.rating ? "Изменить оценку" : "Сохранить оценку"}
+              <ActionIcon name="star" />
+            </button>
+          </form>
+        {/if}
+      </article>
+    {:else}
+      <EmptyState
         icon="tasks"
         title="Ответов пока нет"
         description="Задание предлагается кандидатам по одному в неделю."
-      />{/each}
-  </section>{/if}
+      />
+    {/each}
+  </section>
+{/if}
 
-{#each tasks as task (task.id)}<article
-    class="d-ui-panel"
-    aria-labelledby={"task-" + task.id}
-  >
+{#each tasks as task (task.id)}
+  <article class="d-ui-panel" aria-labelledby={"task-" + task.id}>
     <div class="d-ui-row" style="align-items: flex-start;">
       <div style="min-width: 0;">
         <div class="d-ui-kicker">
@@ -287,8 +304,9 @@
       </div>
       <span
         class={`d-vx-badge ${task.active ? "d-vx-badge-success" : "d-vx-badge-muted"}`}
-        >{task.active ? "В ротации" : "Снято"}</span
       >
+        {task.active ? "В ротации" : "Снято"}
+      </span>
     </div>
     <details class="d-vx-details">
       <summary class="d-vx-summary">Условие</summary>
@@ -305,26 +323,38 @@
         disabled={busy}
         class="d-ui-button"
         onclick={() => openSubmissions(task)}
-        >Ответы ({task.submissions}) <ActionIcon name="applications" /></button
-      ><button
+      >
+        Ответы ({task.submissions}) <ActionIcon name="applications" />
+      </button>
+      <button
         type="button"
         disabled={busy}
         class={task.active ? "d-ui-danger" : "d-ui-outline"}
         onclick={() => toggle(task)}
-        >{task.active ? "Снять с ротации" : "Вернуть в ротацию"}
-        <ActionIcon name={task.active ? "archive" : "undo"} /></button
       >
+        {task.active ? "Снять с ротации" : "Вернуть в ротацию"}
+        <ActionIcon name={task.active ? "archive" : "undo"} />
+      </button>
     </div>
-  </article>{:else}{#if loaded && !draft}<EmptyState
+  </article>
+{:else}
+  {#if loaded && !draft}
+    <EmptyState
       icon="tasks"
       title="Заданий пока нет"
       description="Опубликуйте короткую задачу из работы команды, чтобы увидеть, как кандидаты рассуждают."
     >
-      {#snippet action()}<button
+      {#snippet action()}
+        <button
           class="d-ui-button"
           onclick={() => {
             selected = null;
             draft = blank();
-          }}>Новое задание <ActionIcon name="add" /></button
-        >{/snippet}
-    </EmptyState>{/if}{/each}
+          }}
+        >
+          Новое задание <ActionIcon name="add" />
+        </button>
+      {/snippet}
+    </EmptyState>
+  {/if}
+{/each}

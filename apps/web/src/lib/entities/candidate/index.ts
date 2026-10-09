@@ -5,6 +5,7 @@ export type CvEntry = {
   endDate: string;
   description: string;
 };
+
 export type Profile = {
   fullName: string;
   email: string;
@@ -23,11 +24,13 @@ export type Profile = {
   score?: number;
   category?: string;
 };
+
 export type ResumeDraft = {
   draftId: string;
   parsedFields: Partial<Profile>;
   reviewed: boolean;
 };
+
 export type CandidatePrivacy = {
   fullName: boolean;
   techStack: boolean;
@@ -36,6 +39,7 @@ export type CandidatePrivacy = {
   softSkills: boolean;
   fspAchievements: boolean;
 };
+
 export type VerifiedAchievement = {
   title: string;
   issuer: string;
@@ -50,6 +54,7 @@ export type VerifiedAchievement = {
   result?: string | null;
   resultLabel?: string | null;
 };
+
 export { industries, industryLabel } from "./model/industries";
 export { specializations } from "./model/specializations";
 export { candidateApi } from "./api/candidate";

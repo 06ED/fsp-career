@@ -1,5 +1,6 @@
 import { api, save } from "$lib/shared/api";
 import type { CandidatePrivacy, Profile, ResumeDraft } from "..";
+
 export const candidateApi = {
   profile: () => api<Profile>("/api/candidates/me"),
   saveProfile: (profile: Profile) =>

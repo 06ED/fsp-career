@@ -75,9 +75,7 @@
       privacyReady = true;
     } catch (error) {
       loadError =
-        error instanceof Error
-          ? error.message
-          : "Не удалось загрузить настройки приватности.";
+        error instanceof Error ? error.message : "Не удалось загрузить настройки приватности.";
     }
   }
 
@@ -108,9 +106,7 @@
           title={!enabled ? `${provider.label} пока не настроен` : undefined}
         >
           <img src={provider.icon} alt="" width="24" height="24" />
-          {linked
-            ? `${provider.label} привязан`
-            : `Привязать ${provider.label}`}
+          {linked ? `${provider.label} привязан` : `Привязать ${provider.label}`}
           <ActionIcon name={linked ? "accept" : "signup"} placement="solo" />
         </button>
       </form>
@@ -134,24 +130,23 @@
       </button>
     {/if}
     <p class="d-ui-muted">
-      Специализация, подтверждённый грейд и балл теста видны всегда — на них
-      строится подбор. Скрытые разделы не показываются работодателю и не
-      участвуют в ранжировании. Контакты открываются только после того, как вы
-      примете приглашение.
+      Специализация, подтверждённый грейд и балл теста видны всегда — на них строится подбор.
+      Скрытые разделы не показываются работодателю и не участвуют в ранжировании. Контакты
+      открываются только после того, как вы примете приглашение.
     </p>
     {#each sections as section (section.key)}
       <label class="d-ui-answer">
         <input type="checkbox" bind:checked={privacy[section.key]} />
-        <span
-          ><strong>{section.label}</strong><br /><span class="d-ui-muted"
-            >{section.hint}</span
-          ></span
-        >
+        <span>
+          <strong>{section.label}</strong>
+          <br />
+          <span class="d-ui-muted">{section.hint}</span>
+        </span>
       </label>
     {/each}
-    <button type="submit" disabled={busy || !privacyReady} class="d-ui-button"
-      >Сохранить настройки приватности <ActionIcon name="save" /></button
-    >
+    <button type="submit" disabled={busy || !privacyReady} class="d-ui-button">
+      Сохранить настройки приватности <ActionIcon name="save" />
+    </button>
   </form>
 {/if}
 

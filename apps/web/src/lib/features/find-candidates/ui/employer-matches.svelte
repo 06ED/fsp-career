@@ -1,9 +1,5 @@
 <script lang="ts">
-  import {
-    achievementLabel,
-    industryLabel,
-    specializations,
-  } from "$lib/entities/candidate";
+  import { achievementLabel, industryLabel, specializations } from "$lib/entities/candidate";
   import { onMount } from "svelte";
   import { ActionIcon, EmptyState, modal } from "$lib/shared/ui";
   import FactorBreakdown from "./factor-breakdown.svelte";
@@ -12,12 +8,7 @@
   import { companyContactLine, splitTags } from "$lib/entities/company";
   import { invitationStatusLabels } from "$lib/entities/invitation";
   import { fitLabels, gradeLabel } from "../model/matching";
-  import type {
-    CandidateCard,
-    Match,
-    MatchCategory,
-    MatchResponse,
-  } from "../model/types";
+  import type { CandidateCard, Match, MatchCategory, MatchResponse } from "../model/types";
   import type { Company, Need } from "$lib/entities/company";
   import type { Offer } from "$lib/entities/invitation";
   import type { RunAction } from "$lib/shared/api";
@@ -193,8 +184,8 @@
     <div>
       <h2 class="d-ui-panel-title">Подбор кандидатов</h2>
       <p class="d-ui-muted" style="margin: 0;">
-        Выдача строится по подтверждённым категориям (специализация + грейд по
-        тесту). У каждого кандидата — объяснение, почему он в подборке.
+        Выдача строится по подтверждённым категориям (специализация + грейд по тесту). У каждого
+        кандидата — объяснение, почему он в подборке.
       </p>
     </div>
     <div class="d-mx-segmented" role="tablist" aria-label="Режим подбора">
@@ -202,43 +193,47 @@
         role="tab"
         aria-selected={mode === "need"}
         class={`d-mx-segment ${mode === "need" ? "d-mx-segment-active" : ""}`}
-        onclick={() => switchMode("need")}>Подборка по потребности</button
+        onclick={() => switchMode("need")}
       >
+        Подборка по потребности
+      </button>
       <button
         role="tab"
         aria-selected={mode === "bank"}
         class={`d-mx-segment ${mode === "bank" ? "d-mx-segment-active" : ""}`}
-        onclick={() => switchMode("bank")}>Банк кандидатов</button
+        onclick={() => switchMode("bank")}
       >
+        Банк кандидатов
+      </button>
     </div>
   </div>
 
   {#if mode === "need"}
     {#if !need.specialization}
       <div class="d-ui-note" style="margin-top: 18px;">
-        Сначала опишите потребность: специализацию, грейд, стек и задачи команды
-        — на её основе формируется подборка.
+        Сначала опишите потребность: специализацию, грейд, стек и задачи команды — на её основе
+        формируется подборка.
       </div>
-      <button class="d-ui-button" onclick={openNeeds}
-        >Описать потребность <ActionIcon name="need" /></button
-      >
+      <button class="d-ui-button" onclick={openNeeds}>
+        Описать потребность <ActionIcon name="need" />
+      </button>
     {:else}
       <p class="d-mx-summary-line" style="margin-top: 18px;">
-        <strong
-          >{specializations.find((i) => i.value === need.specialization)
-            ?.label ?? need.specialization} · {gradeLabel(
-            need.minGrade,
-          )}</strong
-        >{need.industry ? ` · ${industryLabel(need.industry)}` : ""}{need
-          .techStack?.length
+        <strong>
+          {specializations.find((i) => i.value === need.specialization)?.label ??
+            need.specialization} · {gradeLabel(need.minGrade)}
+        </strong>
+        {need.industry ? ` · ${industryLabel(need.industry)}` : ""}{need.techStack?.length
           ? ` · стек: ${need.techStack.join(", ")}`
           : ""}
         <button
           type="button"
           class="d-ui-outline"
           style="padding: 6px 10px; margin-left: 8px;"
-          onclick={openNeeds}>Изменить</button
+          onclick={openNeeds}
         >
+          Изменить
+        </button>
       </p>
       <form
         class="d-mx-need-toolbar"
@@ -248,9 +243,9 @@
         }}
       >
         <div>
-          <label for="refineQuery" class="d-ui-label"
-            >Уточнить запрос (добавляется к описанию потребности)</label
-          >
+          <label for="refineQuery" class="d-ui-label">
+            Уточнить запрос (добавляется к описанию потребности)
+          </label>
           <input
             id="refineQuery"
             placeholder="Например: антифрод, высокие нагрузки"
@@ -259,16 +254,12 @@
           />
         </div>
         <label class="d-mx-checkbox-row">
-          <input type="checkbox" bind:checked={allowLowerGrade} /> Показывать грейд
-          ниже
+          <input type="checkbox" bind:checked={allowLowerGrade} />
+          Показывать грейд ниже
         </label>
-        <button
-          type="submit"
-          disabled={busy}
-          class="d-ui-button"
-          style="margin-bottom: 18px;"
-          >Обновить подборку <ActionIcon name="refresh" /></button
-        >
+        <button type="submit" disabled={busy} class="d-ui-button" style="margin-bottom: 18px;">
+          Обновить подборку <ActionIcon name="refresh" />
+        </button>
       </form>
     {/if}
   {:else}
@@ -281,9 +272,7 @@
     >
       <div class="d-mx-toolbar">
         <div>
-          <label for="bankQuery" class="d-ui-label"
-            >Поиск по опыту и стеку</label
-          >
+          <label for="bankQuery" class="d-ui-label">Поиск по опыту и стеку</label>
           <input
             id="bankQuery"
             placeholder="Kafka, платежи, дизайн-система…"
@@ -295,9 +284,9 @@
           <label for="bankSpec" class="d-ui-label">Специализация</label>
           <select id="bankSpec" bind:value={bankSpec} class="d-ui-field">
             <option value="">Все</option>
-            {#each specializations as item}<option value={item.value}
-                >{item.label}</option
-              >{/each}
+            {#each specializations as item}
+              <option value={item.value}>{item.label}</option>
+            {/each}
           </select>
         </div>
         <div>
@@ -310,9 +299,7 @@
           </select>
         </div>
         <div>
-          <label for="bankStack" class="d-ui-label"
-            >Стек (все, через запятую)</label
-          >
+          <label for="bankStack" class="d-ui-label">Стек (все, через запятую)</label>
           <input
             id="bankStack"
             placeholder="Kotlin, PostgreSQL"
@@ -323,12 +310,12 @@
       </div>
       <div class="d-ui-inline">
         <label class="d-mx-checkbox-row" style="margin: 0;">
-          <input type="checkbox" bind:checked={bankFsp} /> Только с подтверждёнными
-          достижениями ФСП
+          <input type="checkbox" bind:checked={bankFsp} />
+          Только с подтверждёнными достижениями ФСП
         </label>
-        <button type="submit" disabled={busy} class="d-ui-button"
-          >Найти <ActionIcon name="matches" /></button
-        >
+        <button type="submit" disabled={busy} class="d-ui-button">
+          Найти <ActionIcon name="matches" />
+        </button>
       </div>
     </form>
   {/if}
@@ -344,12 +331,15 @@
         class="d-ui-outline"
         onclick={() => (showFormula = !showFormula)}
         aria-expanded={showFormula}
-        >{showFormula ? "Скрыть" : "Как считается рейтинг"}</button
       >
+        {showFormula ? "Скрыть" : "Как считается рейтинг"}
+      </button>
     </div>
     {#if showFormula}
       <ul class="d-mx-formula" style="margin-top: 12px;">
-        {#each current.formula as line}<li>{line}</li>{/each}
+        {#each current.formula as line}
+          <li>{line}</li>
+        {/each}
       </ul>
     {/if}
     <div class="d-mx-chips">
@@ -358,24 +348,24 @@
           type="button"
           title={category.reason}
           class={`d-mx-chip ${category.recommended ? "d-mx-chip-recommended" : ""} ${
-            mode === "bank" &&
-            bankSpec === category.specialization &&
-            bankGrade === category.grade
+            mode === "bank" && bankSpec === category.specialization && bankGrade === category.grade
               ? "d-mx-chip-active"
               : ""
           }`}
           onclick={() => openCategory(category)}
         >
           <span class="d-mx-chip-title">{category.label}</span>
-          <span class="d-mx-chip-meta"
-            >{category.candidates} канд. · ср. тест {category.avgTestScore} · с ФСП
-            {category.withFsp}</span
-          >
-          {#if mode === "need"}<span class="d-mx-chip-meta"
-              >{fitLabels[category.fit] ?? category.fit}{category.recommended
+          <span class="d-mx-chip-meta">
+            {category.candidates} канд. · ср. тест {category.avgTestScore} · с ФСП
+            {category.withFsp}
+          </span>
+          {#if mode === "need"}
+            <span class="d-mx-chip-meta">
+              {fitLabels[category.fit] ?? category.fit}{category.recommended
                 ? " · рекомендуем"
-                : ""}</span
-            >{/if}
+                : ""}
+            </span>
+          {/if}
         </button>
       {:else}
         <EmptyState
@@ -392,9 +382,7 @@
   <div class="d-ui-panel">
     <div class="d-mx-toolbar">
       <div>
-        <label for="search" class="d-ui-label"
-          >Уточнить внутри подборки (без нового запроса)</label
-        >
+        <label for="search" class="d-ui-label">Уточнить внутри подборки (без нового запроса)</label>
         <input
           id="search"
           placeholder="Имя, стек, событие ФСП, отрасль…"
@@ -414,9 +402,7 @@
       <div>
         <label for="sort" class="d-ui-label">Сортировка</label>
         <select id="sort" bind:value={sort} class="d-ui-field">
-          <option value="score"
-            >{mode === "need" ? "По релевантности" : "По силе профиля"}</option
-          >
+          <option value="score">{mode === "need" ? "По релевантности" : "По силе профиля"}</option>
           <option value="test">По баллу теста</option>
           <option value="fsp">По достижениям ФСП</option>
           <option value="fresh">По свежести профиля</option>
@@ -426,22 +412,25 @@
         type="button"
         class="d-ui-outline"
         style="margin-bottom: 18px;"
-        onclick={resetRefinement}>Сбросить уточнения</button
+        onclick={resetRefinement}
       >
+        Сбросить уточнения
+      </button>
     </div>
     <div class="d-ui-inline">
       <label class="d-mx-checkbox-row" style="margin: 0;">
-        <input type="checkbox" bind:checked={fspOnly} /> С достижениями ФСП
+        <input type="checkbox" bind:checked={fspOnly} />
+        С достижениями ФСП
       </label>
       <label class="d-mx-checkbox-row" style="margin: 0;">
-        <input type="checkbox" bind:checked={hideInvited} /> Скрыть уже приглашённых
+        <input type="checkbox" bind:checked={hideInvited} />
+        Скрыть уже приглашённых
       </label>
-      <span class="d-ui-muted"
-        >Показано {visible.length} из {current.matches.length}{current.total >
-        current.matches.length
+      <span class="d-ui-muted">
+        Показано {visible.length} из {current.matches.length}{current.total > current.matches.length
           ? ` (всего найдено ${current.total})`
-          : ""} — исходная подборка сохранена.</span
-      >
+          : ""} — исходная подборка сохранена.
+      </span>
     </div>
   </div>
 
@@ -461,7 +450,8 @@
         </div>
         <div style="text-align: right;">
           <div class="d-ui-score">
-            {match.totalScore}<span style="font-size: 14px;"> / 100</span>
+            {match.totalScore}
+            <span style="font-size: 14px;">/ 100</span>
           </div>
           <div class="d-ui-muted">
             {mode === "need" ? "релевантность" : "сила профиля"}
@@ -469,32 +459,37 @@
         </div>
       </div>
       <div style="margin-top: 12px;">
-        {#if match.invitationStatus}<span class="d-mx-badge d-mx-badge-ok"
-            >Приглашение: {invitationStatusLabels[match.invitationStatus] ??
-              match.invitationStatus}</span
-          >{/if}
-        {#each match.achievements.slice(0, 3) as achievement}<span
-            class="d-mx-badge d-mx-badge-fsp"
-            title={achievement.discipline ?? ""}
-            >ФСП: {achievementLabel(achievement)}</span
-          >{/each}
-        {#if match.achievements.length > 3}<span
-            class="d-mx-badge d-mx-badge-fsp"
-            >ещё {match.achievements.length - 3}</span
-          >{/if}
-        {#each match.flags as flag}<span class={`d-mx-badge ${flagClass(flag)}`}
-            >{flag}</span
-          >{/each}
+        {#if match.invitationStatus}
+          <span class="d-mx-badge d-mx-badge-ok">
+            Приглашение: {invitationStatusLabels[match.invitationStatus] ?? match.invitationStatus}
+          </span>
+        {/if}
+        {#each match.achievements.slice(0, 3) as achievement}
+          <span class="d-mx-badge d-mx-badge-fsp" title={achievement.discipline ?? ""}>
+            ФСП: {achievementLabel(achievement)}
+          </span>
+        {/each}
+        {#if match.achievements.length > 3}
+          <span class="d-mx-badge d-mx-badge-fsp">
+            ещё {match.achievements.length - 3}
+          </span>
+        {/if}
+        {#each match.flags as flag}
+          <span class={`d-mx-badge ${flagClass(flag)}`}>
+            {flag}
+          </span>
+        {/each}
       </div>
       <details open={index < 3}>
-        <summary style="cursor: pointer; font-size: 13px; font-weight: 600;"
-          >Почему кандидат в подборке</summary
-        >
+        <summary style="cursor: pointer; font-size: 13px; font-weight: 600;">
+          Почему кандидат в подборке
+        </summary>
         <FactorBreakdown factors={match.factors} />
       </details>
       <div style="margin-top: 8px;">
-        {#each match.techStack as skill}<span class="d-ui-tag">{skill}</span
-          >{/each}
+        {#each match.techStack as skill}
+          <span class="d-ui-tag">{skill}</span>
+        {/each}
       </div>
       <div class="d-ui-separator"></div>
       <div class="d-ui-inline">
@@ -503,14 +498,16 @@
           class="d-ui-outline"
           disabled={busy}
           onclick={() => openCard(match.candidateId)}
-          >Карточка кандидата <ActionIcon name="view" /></button
         >
+          Карточка кандидата <ActionIcon name="view" />
+        </button>
         <button
           type="button"
           class="d-ui-button"
           onclick={() => startInvite(match.candidateId, match.fullName)}
-          >Пригласить <ActionIcon name="send" /></button
         >
+          Пригласить <ActionIcon name="send" />
+        </button>
       </div>
     </article>
   {:else}
@@ -523,15 +520,17 @@
           ? "Под эту потребность пока нет кандидатов с подтверждённой категорией. Попробуйте другой грейд или банк кандидатов."
           : "По этим фильтрам кандидатов нет."}
     >
-      {#snippet action()}{#if current.matches.length}<button
-            class="d-ui-outline"
-            onclick={resetRefinement}
-            >Сбросить уточнения <ActionIcon name="refresh" /></button
-          >{:else if mode === "need"}<button
-            class="d-ui-outline"
-            onclick={() => switchMode("bank")}
-            >Открыть банк кандидатов <ActionIcon name="matches" /></button
-          >{:else}<button
+      {#snippet action()}
+        {#if current.matches.length}
+          <button class="d-ui-outline" onclick={resetRefinement}>
+            Сбросить уточнения <ActionIcon name="refresh" />
+          </button>
+        {:else if mode === "need"}
+          <button class="d-ui-outline" onclick={() => switchMode("bank")}>
+            Открыть банк кандидатов <ActionIcon name="matches" />
+          </button>
+        {:else}
+          <button
             class="d-ui-outline"
             onclick={() => {
               bankSpec = "";
@@ -540,26 +539,22 @@
               bankFsp = false;
               bankQuery = "";
               loadBank();
-            }}>Сбросить фильтры <ActionIcon name="refresh" /></button
-          >{/if}{/snippet}
+            }}
+          >
+            Сбросить фильтры <ActionIcon name="refresh" />
+          </button>
+        {/if}
+      {/snippet}
     </EmptyState>
   {/each}
 {/if}
 
 {#if card}
-  <CandidateCardModal
-    {card}
-    onClose={() => (card = null)}
-    onInvite={startInvite}
-  />
+  <CandidateCardModal {card} onClose={() => (card = null)} onInvite={startInvite} />
 {/if}
 
 {#if inviteFor}
-  <dialog
-    class="d-mx-modal"
-    aria-labelledby="invite-title"
-    use:modal={() => (inviteFor = null)}
-  >
+  <dialog class="d-mx-modal" aria-labelledby="invite-title" use:modal={() => (inviteFor = null)}>
     <form
       onsubmit={(event) => {
         event.preventDefault();
@@ -570,16 +565,14 @@
         <h2 id="invite-title" class="d-ui-panel-title">
           Приглашение кандидату: {inviteFor.name}
         </h2>
-        <button
-          type="button"
-          class="d-ui-outline"
-          onclick={() => (inviteFor = null)}
-          >Закрыть <ActionIcon name="close" /></button
-        >
+        <button type="button" class="d-ui-outline" onclick={() => (inviteFor = null)}>
+          Закрыть <ActionIcon name="close" />
+        </button>
       </div>
-      <label for="offerDescription" class="d-ui-label"
-        >Описание предложения (роль, задачи, формат работы)</label
-      ><textarea
+      <label for="offerDescription" class="d-ui-label">
+        Описание предложения (роль, задачи, формат работы)
+      </label>
+      <textarea
         id="offerDescription"
         required
         maxlength="4000"
@@ -588,7 +581,8 @@
       ></textarea>
       <div class="d-ui-grid">
         <div>
-          <label for="salaryMin" class="d-ui-label">Зарплата от, ₽</label><input
+          <label for="salaryMin" class="d-ui-label">Зарплата от, ₽</label>
+          <input
             id="salaryMin"
             required
             type="number"
@@ -598,7 +592,8 @@
           />
         </div>
         <div>
-          <label for="salaryMax" class="d-ui-label">Зарплата до, ₽</label><input
+          <label for="salaryMax" class="d-ui-label">Зарплата до, ₽</label>
+          <input
             id="salaryMax"
             required
             type="number"
@@ -608,9 +603,8 @@
           />
         </div>
       </div>
-      <label for="contactMethod" class="d-ui-label"
-        >Способ связи для кандидата</label
-      ><input
+      <label for="contactMethod" class="d-ui-label">Способ связи для кандидата</label>
+      <input
         id="contactMethod"
         required
         maxlength="300"
@@ -620,23 +614,20 @@
       />
       {#if !companyContactLine(company)}
         <p class="d-ui-muted">
-          Совет: укажите контакты в профиле компании — они будут подставляться
-          автоматически.
+          Совет: укажите контакты в профиле компании — они будут подставляться автоматически.
         </p>
       {/if}
       <p class="d-ui-muted">
-        Кандидат увидит название компании «{company.name || "—"}», условия и
-        способ связи. Его контакты станут доступны вам только после принятия
-        приглашения.
+        Кандидат увидит название компании «{company.name || "—"}», условия и способ связи. Его
+        контакты станут доступны вам только после принятия приглашения.
       </p>
       <button
         type="submit"
-        disabled={busy ||
-          offer.salaryMaxRub < offer.salaryMinRub ||
-          !offer.contactMethod.trim()}
+        disabled={busy || offer.salaryMaxRub < offer.salaryMinRub || !offer.contactMethod.trim()}
         class="d-ui-button"
-        >Отправить приглашение <ActionIcon name="send" /></button
       >
+        Отправить приглашение <ActionIcon name="send" />
+      </button>
     </form>
   </dialog>
 {/if}

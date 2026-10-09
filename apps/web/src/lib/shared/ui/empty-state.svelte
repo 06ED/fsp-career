@@ -8,13 +8,7 @@
     description,
     action,
   }: {
-    icon:
-      | "invitations"
-      | "vacancies"
-      | "applications"
-      | "tasks"
-      | "assessment"
-      | "matches";
+    icon: "invitations" | "vacancies" | "applications" | "tasks" | "assessment" | "matches";
     title: string;
     description: string;
     action?: Snippet;
@@ -22,12 +16,12 @@
 </script>
 
 <div class="empty-state" role="status">
-  <span class="empty-state-icon"
-    ><ActionIcon name={icon} size={26} placement="solo" /></span
-  >
+  <span class="empty-state-icon"><ActionIcon name={icon} size={26} placement="solo" /></span>
   <h3>{title}</h3>
   <p>{description}</p>
-  {#if action}<div class="d-ui-inline">{@render action()}</div>{/if}
+  {#if action}
+    <div class="d-ui-inline">{@render action()}</div>
+  {/if}
 </div>
 
 <style>

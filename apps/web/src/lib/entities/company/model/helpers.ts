@@ -1,4 +1,5 @@
 import type { Company } from "..";
+
 export function companyContactLine(company: Company): string {
   return [
     company.contactEmail && `Email: ${company.contactEmail}`,

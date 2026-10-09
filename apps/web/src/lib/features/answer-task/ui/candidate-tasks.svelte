@@ -47,6 +47,7 @@
       loaded = true;
     }, "");
   }
+
   async function submit() {
     const task = current?.task;
     if (!task) return;
@@ -59,9 +60,11 @@
       ]);
     }, "Ответ отправлен компании. Профиль отмечен как активный на этой неделе.");
   }
+
   function stars(rating: number) {
     return "★".repeat(rating) + "☆".repeat(5 - rating);
   }
+
   onMount(() => {
     load();
   });
@@ -75,7 +78,8 @@
     профиль актуальным и даёт работодателям свежий сигнал. Ответ видит только
     компания-автор: имя, категорию и текст ответа, без контактов.
   </p>
-  {#if !ready}<div class="d-ui-note">
+  {#if !ready}
+    <div class="d-ui-note">
       Чтобы получать задания, сохраните профиль со специализацией и согласием на
       обработку данных.
       <div class="d-ui-inline" style="margin-top: 12px;">
@@ -83,22 +87,25 @@
           type="button"
           class="d-ui-outline"
           onclick={() => openSection("profile")}
-          >Открыть профиль <ActionIcon name="arrow" /></button
         >
+          Открыть профиль <ActionIcon name="arrow" />
+        </button>
       </div>
-    </div>{:else if current}
+    </div>
+  {:else if current}
     <div class="d-vx-meta">
       <span>Неделя с {shortDate(current.periodStart)}</span>
       <span>· следующее задание {shortDate(current.nextRotationAt)}</span>
-      {#if current.lastActivityAt}<span
-          >· последняя активность {shortDate(current.lastActivityAt)}</span
-        >{/if}
+      {#if current.lastActivityAt}
+        <span>· последняя активность {shortDate(current.lastActivityAt)}</span>
+      {/if}
     </div>
   {/if}
 </div>
 
 {#if ready && current}
-  {#if current.state === "offered" && current.task}<form
+  {#if current.state === "offered" && current.task}
+    <form
       class="d-ui-panel"
       aria-labelledby="weekly-task-title"
       onsubmit={(event) => {
@@ -126,22 +133,17 @@
       <p class="d-vx-text">{current.task.body}</p>
       <fieldset class="d-vx-radio-row">
         <legend class="d-vx-legend">Формат ответа</legend>
-        {#each Object.entries(submissionKindLabels) as [value, label]}<label
-            class="d-ui-answer"
-            style="margin-bottom: 0;"
-            ><input
-              type="radio"
-              name="task-kind"
-              {value}
-              bind:group={kind}
-            />{label}</label
-          >{/each}
+        {#each Object.entries(submissionKindLabels) as [value, label]}
+          <label class="d-ui-answer" style="margin-bottom: 0;">
+            <input type="radio" name="task-kind" {value} bind:group={kind} />
+            {label}
+          </label>
+        {/each}
       </fieldset>
-      <label for="task-answer" class="d-ui-label"
-        >{kind === "solution"
-          ? "Ваше решение"
-          : "Как бы вы решали задачу"}</label
-      ><textarea
+      <label for="task-answer" class="d-ui-label">
+        {kind === "solution" ? "Ваше решение" : "Как бы вы решали задачу"}
+      </label>
+      <textarea
         id="task-answer"
         required
         maxlength="8000"
@@ -155,15 +157,20 @@
       <button
         type="submit"
         disabled={busy || !answer.trim()}
-        class="d-ui-button">Отправить ответ <ActionIcon name="send" /></button
+        class="d-ui-button"
       >
-    </form>{:else if current.state === "answered"}<div class="d-ui-panel">
+        Отправить ответ <ActionIcon name="send" />
+      </button>
+    </form>
+  {:else if current.state === "answered"}
+    <div class="d-ui-panel">
       <div class="d-ui-success" role="status">
         Задание этой недели выполнено. Следующее появится {shortDate(
           current.nextRotationAt,
         )}.
       </div>
-      {#if current.submission}<h2 class="d-ui-panel-title">
+      {#if current.submission}
+        <h2 class="d-ui-panel-title">
           {current.submission.taskTitle}
         </h2>
         <p class="d-ui-muted">
@@ -171,19 +178,23 @@
             current.submission.kind
           ]} · {shortDate(current.submission.submittedAt)}
         </p>
-        <div class="d-vx-quote">{current.submission.answer}</div>{/if}
-    </div>{:else}<EmptyState
+        <div class="d-vx-quote">{current.submission.answer}</div>
+      {/if}
+    </div>
+  {:else}
+    <EmptyState
       icon="tasks"
       title="Активных заданий пока нет"
       description={`Для направления «${specializationName(profile.specialization)}» сейчас нет заданий. Загляните позже.`}
-    />{/if}
+    />
+  {/if}
 {/if}
 
-{#if ready}<div class="d-ui-panel">
+{#if ready}
+  <div class="d-ui-panel">
     <h2 class="d-ui-panel-title">История ответов</h2>
-    {#each history as item (item.id)}<div
-        style="border-top: 1px solid var(--border); padding: 16px 0;"
-      >
+    {#each history as item (item.id)}
+      <div style="border-top: 1px solid var(--border); padding: 16px 0;">
         <div class="d-ui-row">
           <div>
             <strong>{item.taskTitle}</strong>
@@ -193,23 +204,35 @@
               )}
             </div>
           </div>
-          {#if item.rating}<span
+          {#if item.rating}
+            <span
               class="d-vx-stars"
               aria-label={`Оценка компании: ${item.rating} из 5`}
-              >{stars(item.rating)}</span
-            >{:else}<span class="d-vx-badge d-vx-badge-muted">Ждёт оценки</span
-            >{/if}
+            >
+              {stars(item.rating)}
+            </span>
+          {:else}
+            <span class="d-vx-badge d-vx-badge-muted">Ждёт оценки</span>
+          {/if}
         </div>
-        {#if item.ratingComment}<p class="d-ui-muted">
+        {#if item.ratingComment}
+          <p class="d-ui-muted">
             Комментарий компании: {item.ratingComment}
-          </p>{/if}
+          </p>
+        {/if}
         <details class="d-vx-details">
           <summary class="d-vx-summary">Мой ответ</summary>
           <div class="d-vx-quote">{item.answer}</div>
         </details>
-      </div>{:else}{#if loaded}<EmptyState
+      </div>
+    {:else}
+      {#if loaded}
+        <EmptyState
           icon="tasks"
           title="История пока пуста"
           description="Ответ на задание недели появится здесь вместе с оценкой компании."
-        />{/if}{/each}
-  </div>{/if}
+        />
+      {/if}
+    {/each}
+  </div>
+{/if}

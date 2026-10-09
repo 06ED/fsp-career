@@ -24,8 +24,8 @@
   <h2 class="d-ui-panel-title">Профиль компании</h2>
   <div class="d-ui-grid">
     <div>
-      <label for="companyName" class="d-ui-label">Название компании</label
-      ><input
+      <label for="companyName" class="d-ui-label">Название компании</label>
+      <input
         id="companyName"
         required
         maxlength="200"
@@ -36,7 +36,8 @@
     <div>
       <label for="companyIndustry" class="d-ui-label"
         >Направление деятельности</label
-      ><input
+      >
+      <input
         id="companyIndustry"
         maxlength="100"
         placeholder="Финтех, e-commerce, госсектор…"
@@ -45,14 +46,16 @@
       />
     </div>
   </div>
-  <label for="website" class="d-ui-label">Сайт</label><input
+  <label for="website" class="d-ui-label">Сайт</label>
+  <input
     id="website"
     type="url"
     placeholder="https://"
     bind:value={company.website}
     class="d-ui-field"
-  /><label for="companyDescription" class="d-ui-label">О компании</label
-  ><textarea
+  />
+  <label for="companyDescription" class="d-ui-label">О компании</label>
+  <textarea
     id="companyDescription"
     maxlength="2000"
     bind:value={company.description}
@@ -67,8 +70,8 @@
   </p>
   <div class="d-ui-grid">
     <div>
-      <label for="contactEmail" class="d-ui-label">Email для кандидатов</label
-      ><input
+      <label for="contactEmail" class="d-ui-label">Email для кандидатов</label>
+      <input
         id="contactEmail"
         type="email"
         placeholder="hr@company.ru"
@@ -77,7 +80,8 @@
       />
     </div>
     <div>
-      <label for="contactPhone" class="d-ui-label">Телефон</label><input
+      <label for="contactPhone" class="d-ui-label">Телефон</label>
+      <input
         id="contactPhone"
         type="tel"
         placeholder="+7 900 000-00-00"
@@ -86,7 +90,8 @@
       />
     </div>
     <div>
-      <label for="contactTelegram" class="d-ui-label">Telegram</label><input
+      <label for="contactTelegram" class="d-ui-label">Telegram</label>
+      <input
         id="contactTelegram"
         placeholder="@company_hr"
         bind:value={company.contactTelegram}
@@ -96,7 +101,8 @@
     <div>
       <label for="contactNote" class="d-ui-label"
         >Комментарий к способу связи</label
-      ><input
+      >
+      <input
         id="contactNote"
         maxlength="300"
         placeholder="Пишите рекрутеру Анне, отвечаем в течение дня"
@@ -106,11 +112,11 @@
     </div>
   </div>
   <div class="d-ui-note">
-    Кандидат увидит: <strong
-      >{contactPreview || "контакты не указаны — добавьте хотя бы один"}</strong
-    >
+    Кандидат увидит: <strong>
+      {contactPreview || "контакты не указаны — добавьте хотя бы один"}
+    </strong>
   </div>
-  <button type="submit" disabled={busy} class="d-ui-button"
-    >Сохранить <ActionIcon name="save" /></button
-  >
+  <button type="submit" disabled={busy} class="d-ui-button">
+    Сохранить <ActionIcon name="save" />
+  </button>
 </form>

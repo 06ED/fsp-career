@@ -1,10 +1,13 @@
 // --- Adaptive assessment (survey → declared grade → adaptive test) ---
 export type GradeId = "junior" | "middle" | "senior";
+
 export type CatalogEntry = { id: string; label: string; description: string };
+
 export type AssessmentGrade = CatalogEntry & {
   thetaCut: number;
   scoreCut: number;
 };
+
 export type AssessmentVacancy = {
   id: string;
   title: string;
@@ -14,6 +17,7 @@ export type AssessmentVacancy = {
   grade: GradeId;
   text: string;
 };
+
 export type AssessmentCatalog = {
   specializations: CatalogEntry[];
   industries: CatalogEntry[];
@@ -28,6 +32,7 @@ export type AssessmentCatalog = {
   decisionMargin: number;
   familyCount: number;
 };
+
 export type AssessmentSurvey = {
   industry: string;
   specialization: string;
@@ -35,6 +40,7 @@ export type AssessmentSurvey = {
   teamRoles: string[];
   workFormat: string;
 };
+
 export type AssessmentItem = {
   topic: string;
   topicLabel: string;
@@ -45,12 +51,14 @@ export type AssessmentItem = {
   options: { id: string; label: string }[];
   unit?: string | null;
 };
+
 export type TopicQuota = {
   topic: string;
   label: string;
   weight: number;
   items: number;
 };
+
 export type AssessmentAttempt = {
   attemptId: string;
   specialization: string;
@@ -65,6 +73,7 @@ export type AssessmentAttempt = {
   item?: AssessmentItem | null;
   blueprint: TopicQuota[];
 };
+
 export type GradeOption = {
   grade: GradeId;
   allowed: boolean;
@@ -72,6 +81,7 @@ export type GradeOption = {
   message: string;
   availableAt?: string | null;
 };
+
 export type AssessmentResult = {
   attemptId: string;
   specialization: string;
@@ -97,6 +107,7 @@ export type AssessmentResult = {
   summary: string;
   nextOptions: GradeOption[];
 };
+
 export type AssessmentEligibility = {
   specialization: string;
   confirmedGrade?: GradeId | null;
@@ -106,15 +117,18 @@ export type AssessmentEligibility = {
   openAttemptId?: string | null;
   cooldownDays: number;
 };
+
 export type AnswerOutcome = {
   done: boolean;
   attempt?: AssessmentAttempt | null;
   result?: AssessmentResult | null;
 };
+
 export type CurrentAssessment = {
   attempt?: AssessmentAttempt | null;
   closed?: AssessmentResult | null;
 };
+
 export type DetectedSkill = {
   id: string;
   label: string;
@@ -122,6 +136,7 @@ export type DetectedSkill = {
   hits: number;
   matched: string[];
 };
+
 export type BlueprintPreview = {
   specialization: string;
   detectedSpecialization?: string | null;
@@ -135,6 +150,7 @@ export type BlueprintPreview = {
   poolSize: number;
   testLength: number;
 };
+
 export type StartAssessment = {
   survey: AssessmentSurvey;
   targetGrade: GradeId;

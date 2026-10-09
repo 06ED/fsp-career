@@ -8,6 +8,7 @@ export type Company = {
   contactTelegram: string;
   contactNote: string;
 };
+
 export type Need = {
   specialization: string;
   industry: string;
@@ -15,6 +16,7 @@ export type Need = {
   description: string;
   techStack: string[];
 };
+
 export {
   companyContactLine,
   stackSuggestions,

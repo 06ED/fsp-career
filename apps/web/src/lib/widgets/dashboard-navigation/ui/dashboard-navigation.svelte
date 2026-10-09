@@ -47,38 +47,38 @@
 </script>
 
 <aside class="d-ui-sidebar">
-  <a href="/" class="d-ui-brand"
-    ><img src="/fsp-mark.svg" alt="" class="d-ui-emblem" /> ФСП / КАРЬЕРА</a
-  >
+  <a href="/" class="d-ui-brand">
+    <img src="/fsp-mark.svg" alt="" class="d-ui-emblem" />
+    ФСП / КАРЬЕРА
+  </a>
   <nav class="d-ui-nav" aria-label="Разделы кабинета">
     {#each role === "candidate" ? candidateTabs : employerTabs as tab}
       <button
         class={`d-ui-nav-button ${section === tab.id ? "d-ui-nav-active" : ""}`}
         aria-current={section === tab.id ? "page" : undefined}
         onclick={() => openSection(tab.id)}
-        ><ActionIcon
-          name={tab.icon}
-          size={18}
-          placement="leading"
-        />{tab.label}</button
       >
+        <ActionIcon name={tab.icon} size={18} placement="leading" />{tab.label}
+      </button>
     {/each}
   </nav>
   <div class="d-ui-user">
     <div class="d-ui-account">
-      <span class="d-ui-avatar" aria-hidden="true"
-        >{identity.trim().charAt(0).toUpperCase() || "?"}</span
-      >
+      <span class="d-ui-avatar" aria-hidden="true">
+        {identity.trim().charAt(0).toUpperCase() || "?"}
+      </span>
       <div class="d-ui-account-details">
         <span class="d-ui-account-email" title={identity}>{identity}</span>
-        <span class="d-ui-role"
-          >{role === "candidate" ? "Специалист" : "Работодатель"}</span
-        >
+        <span class="d-ui-role">
+          {role === "candidate" ? "Специалист" : "Работодатель"}
+        </span>
       </div>
     </div>
-    <button class="d-ui-logout" disabled={loggingOut} onclick={signOut}
-      ><ActionIcon name="logout" placement="leading" />Выйти</button
-    >
-    {#if logoutError}<p role="alert" class="d-ui-error">{logoutError}</p>{/if}
+    <button class="d-ui-logout" disabled={loggingOut} onclick={signOut}>
+      <ActionIcon name="logout" placement="leading" />Выйти
+    </button>
+    {#if logoutError}
+      <p role="alert" class="d-ui-error">{logoutError}</p>
+    {/if}
   </div>
 </aside>

@@ -4,6 +4,7 @@
   gap: 8px;
   margin-bottom: 22px;
 }
+
 .d-a-step {
   font-size: 11px;
   letter-spacing: 0.5px;
@@ -13,20 +14,24 @@
   background-color: var(--field);
   color: var(--text-muted);
 }
+
 .d-a-step.d-a-step-active {
   background-color: var(--accent);
   color: var(--on-accent);
 }
+
 .d-a-step.d-a-step-done {
   background-color: var(--accent-soft);
   color: var(--accent);
 }
+
 .d-a-cards {
   display: grid;
   grid-template-columns: 1fr;
   gap: 12px;
   margin-bottom: 18px;
 }
+
 .d-a-card {
   text-align: left;
   border: 2px solid transparent;
@@ -39,27 +44,33 @@
   gap: 8px;
   min-height: 150px;
 }
+
 .d-a-card:hover {
   background-color: var(--field-hover);
 }
+
 .d-a-card.d-a-card-selected,
 .d-a-card.d-a-card-selected:hover {
   border-color: var(--accent);
   background-color: var(--accent-wash);
 }
+
 .d-a-card.d-a-card-disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
 .d-a-card-title {
   font-size: 20px;
   font-weight: 700;
 }
+
 .d-a-small {
   font-size: 12px;
   color: var(--text-muted);
   line-height: 1.5;
 }
+
 .d-a-code {
   background-color: var(--sidebar);
   color: var(--field);
@@ -73,6 +84,7 @@
   margin-block: 14px;
   max-width: 100%;
 }
+
 .d-a-prompt {
   font-size: 16px;
   line-height: 1.55;
@@ -81,6 +93,7 @@
   margin-bottom: 8px;
   white-space: pre-line;
 }
+
 .d-a-progress-track {
   height: 6px;
   border-radius: 3px;
@@ -88,19 +101,23 @@
   overflow: hidden;
   margin-block: 14px;
 }
+
 .d-a-progress-fill {
   height: 100%;
   background-color: var(--accent);
   transition: width 240ms ease;
 }
+
 .d-a-timer {
   font-size: 22px;
   letter-spacing: -0.02em;
   color: var(--text);
 }
+
 .d-a-timer.d-a-timer-low {
   color: var(--danger-strong);
 }
+
 .d-a-chip {
   display: inline-flex;
   align-items: center;
@@ -114,14 +131,17 @@
   margin-right: 6px;
   margin-bottom: 6px;
 }
+
 .d-a-chip-toggle {
   cursor: pointer;
   border: 1px solid transparent;
   background-color: var(--field);
 }
+
 .d-a-chip-toggle:hover {
   background-color: var(--field-hover);
 }
+
 .d-a-chip.d-a-chip-on,
 .d-a-chip-toggle.d-a-chip-on,
 .d-a-chip-toggle.d-a-chip-on:hover {
@@ -129,6 +149,7 @@
   color: var(--accent);
   border-color: var(--accent);
 }
+
 .d-a-bar-row {
   display: grid;
   grid-template-columns: minmax(0, 210px) 1fr 54px;
@@ -137,16 +158,19 @@
   font-size: 13px;
   margin-bottom: 8px;
 }
+
 .d-a-bar-track {
   height: 10px;
   border-radius: 5px;
   background-color: var(--field);
   overflow: hidden;
 }
+
 .d-a-bar-fill {
   height: 100%;
   background-color: var(--accent);
 }
+
 .d-a-ok,
 .d-a-fail {
   display: inline-block;
@@ -155,52 +179,63 @@
   padding-inline: 9px;
   border-radius: var(--radius-ui);
 }
+
 .d-a-ok {
   background-color: var(--success-soft);
   color: var(--success);
 }
+
 .d-a-fail {
   background-color: var(--danger-soft);
   color: var(--danger);
 }
+
 .d-a-big-grade {
   font-size: 40px;
   letter-spacing: -0.04em;
   line-height: 1;
   color: var(--accent);
 }
+
 .d-a-stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-block: 18px;
 }
+
 .d-a-stat {
   background-color: var(--background);
   border-radius: var(--radius-ui);
   padding: 14px;
 }
+
 .d-a-stat-value {
   font-size: 22px;
   margin-top: 6px;
 }
+
 .d-a-history-item {
   border-top: 1px solid var(--border);
   padding-block: 16px;
 }
+
 .d-a-details {
   font-size: 13px;
   color: var(--text-strong-muted);
   margin-top: 8px;
 }
+
 .d-a-sample {
   border-left: 3px solid var(--accent);
   padding-left: 14px;
   margin-bottom: 20px;
 }
+
 .d-a-number-input {
   max-width: 260px;
 }
+
 @media (min-width: 760px) {
   .d-a-cards {
     grid-template-columns: repeat(3, minmax(0, 1fr));

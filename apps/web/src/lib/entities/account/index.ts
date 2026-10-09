@@ -1,4 +1,5 @@
 export type Role = "candidate" | "employer";
+
 export type Section =
   | "overview"
   | "profile"
@@ -10,5 +11,7 @@ export type Section =
   | "vacancies"
   | "applications"
   | "tasks";
+
 export type Me = { role: Role | null; email: string; emailVerified: boolean };
+
 export { accountApi } from "./api/account";

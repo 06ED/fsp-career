@@ -3,6 +3,7 @@ package ru.fsp.career
 import ru.fsp.career.identity.domain.*
 import ru.fsp.career.identity.infrastructure.*
 import ru.fsp.career.shared.infrastructure.Database
+import ru.fsp.career.shared.domain.DomainError
 
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -94,6 +95,40 @@ class BrowserAuthTest {
                     AuthIdentities.deleteWhere { AuthIdentities.externalSubject eq "vk-$subject" }
                     AuthIdentities.deleteWhere { AuthIdentities.externalSubject eq subject }
                     Accounts.deleteWhere { Accounts.id eq account }
+                }
+            }
+        }
+    }
+
+    @Test fun explicitProviderLinkPreservesAccountAndRejectsConflictingOwners() = runBlocking {
+        val url = System.getenv("TEST_DATABASE_URL")
+        assumeTrue(!url.isNullOrBlank(), "TEST_DATABASE_URL not configured")
+        Database(url!!, System.getenv("TEST_DATABASE_USER") ?: "career", System.getenv("TEST_DATABASE_PASSWORD") ?: "career").use { db ->
+            val suffix = UUID.randomUUID().toString()
+            val issuer = "https://fsp.example/realms/fsp"
+            val email = "link-$suffix@example.com"
+            val local = db.registerLocal(email, "test-hash")
+            val other = db.registerLocal("other-$email", "test-hash")
+            val account = db.tx { createAccount("user:$local", "candidate").also { IdentityEntity[local].accountId = it } }
+            val otherAccount = db.tx { createAccount("user:$other", "candidate").also { IdentityEntity[other].accountId = it } }
+            try {
+                assertEquals(Providers(false, false), db.tx { linkedProviders(local) })
+                db.tx { linkProvider(local, "fsp", issuer, "fsp-$suffix", email, true, issuer) }
+                db.tx { linkProvider(local, "vk", "https://id.vk.ru", "vk-$suffix", "", false, issuer) }
+                assertEquals(Providers(true, true), db.tx { linkedProviders(local) })
+                db.tx { linkProvider(local, "fsp", issuer, "fsp-$suffix", email, true, issuer) }
+                assertFailsWith<DomainError> { db.tx { linkProvider(other, "fsp", issuer, "fsp-$suffix", email, true, issuer) } }
+                assertFailsWith<DomainError> { db.tx { linkProvider(local, "fsp", issuer, "other-fsp-$suffix", email, true, issuer) } }
+                assertEquals(Providers(false, false), db.tx { linkedProviders(other) })
+                val linked = db.tx { providerIdentity("fsp", issuer, "fsp-$suffix", email, true, issuer) }
+                assertEquals(db.session(db.issueSession(null, local))!!.identity!!.subject,
+                    db.session(db.issueSession(null, linked))!!.identity!!.subject)
+            } finally {
+                db.tx {
+                    AuthIdentities.deleteWhere { AuthIdentities.accountId eq account }
+                    AuthIdentities.deleteWhere { AuthIdentities.accountId eq otherAccount }
+                    Accounts.deleteWhere { Accounts.id eq account }
+                    Accounts.deleteWhere { Accounts.id eq otherAccount }
                 }
             }
         }

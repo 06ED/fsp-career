@@ -1,12 +1,11 @@
-import { api, apiBlob, save } from "$lib/shared/api";
-import type { CandidatePrivacy, FspStatus, Profile, ResumeDraft } from "..";
+import { api, save } from "$lib/shared/api";
+import type { CandidatePrivacy, Profile, ResumeDraft } from "..";
 export const candidateApi = {
   profile: () => api<Profile>("/api/candidates/me"),
   saveProfile: (profile: Profile) =>
     save<Profile>("/api/candidates/me", profile),
   revokeConsent: () =>
     api<Profile>("/api/candidates/me/consent", { method: "DELETE" }),
-  exportResume: () => apiBlob("/api/candidates/me/resume.pdf"),
   uploadResume: (file: File) => {
     const body = new FormData();
     body.append("file", file);
@@ -33,9 +32,4 @@ export const candidateApi = {
   privacy: () => api<CandidatePrivacy>("/api/candidates/me/privacy"),
   savePrivacy: (privacy: CandidatePrivacy) =>
     save<CandidatePrivacy>("/api/candidates/me/privacy", privacy),
-  fsp: () => api<FspStatus>("/api/candidates/me/fsp"),
-  linkFsp: (fspId: string) =>
-    save<FspStatus>("/api/candidates/me/fsp", { fspId }, "POST"),
-  unlinkFsp: () =>
-    api<FspStatus>("/api/candidates/me/fsp", { method: "DELETE" }),
 };

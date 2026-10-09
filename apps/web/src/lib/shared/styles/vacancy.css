@@ -4,7 +4,6 @@
   column-gap: 16px;
 }
 .d-vx-salary {
-  font-family: Play, sans-serif;
   font-size: 22px;
   letter-spacing: -0.02em;
   color: var(--text);
@@ -14,7 +13,6 @@
 .d-vx-salary-unit {
   font-size: 13px;
   color: var(--text-secondary);
-  font-family: Nunito, sans-serif;
 }
 .d-vx-meta {
   display: flex;
@@ -34,7 +32,6 @@
 }
 .d-vx-badge {
   display: inline-block;
-  font-family: Play, sans-serif;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;

@@ -50,15 +50,6 @@ export type VerifiedAchievement = {
   result?: string | null;
   resultLabel?: string | null;
 };
-export type FspStatus = {
-  linked: boolean;
-  fspId?: string | null;
-  linkedAt?: string | null;
-  registry: string;
-  achievements: VerifiedAchievement[];
-  totalPoints: number;
-  message: string;
-};
 export { industries, industryLabel } from "./model/industries";
 export { specializations } from "./model/specializations";
 export { candidateApi } from "./api/candidate";

@@ -7,6 +7,7 @@ info:
     with issuer KEYCLOAK_ISSUER and audience KEYCLOAK_AUDIENCE. Cookie-authenticated mutations
     require Origin matching FRONTEND_ORIGIN and X-CSRF-Token from /api/auth/session.
     Auth routes are public but login/register/logout also require the session's CSRF token.
+    Provider linking requires an authenticated session, exact Origin and a csrfToken form field.
     After the first login the user chooses
     an application role once (POST /api/me/role); role-specific routes return 403 until then
     or for the other role. Errors have the same JSON shape at every API endpoint.
@@ -59,13 +60,20 @@ components:
         password: {type: string, maxLength: 128, writeOnly: true, description: Registration requires at least 12 characters}
     BrowserSession:
       type: object
-      required: [authenticated, email, csrfToken, providers]
+      required: [authenticated, email, csrfToken, providers, linkedProviders]
       properties:
         authenticated: {type: boolean}
         email: {type: string, nullable: true}
         csrfToken: {type: string}
         providers:
           type: object
+          required: [fsp, vk]
+          properties:
+            fsp: {type: boolean}
+            vk: {type: boolean}
+        linkedProviders:
+          type: object
+          description: External identities attached to the current account
           required: [fsp, vk]
           properties:
             fsp: {type: boolean}
@@ -914,9 +922,31 @@ paths:
       responses:
         '302': {description: Redirect to the provider or to /app?authError=failed if already signed in}
         '404': {description: Provider credentials are not configured}
+  /api/auth/{provider}/link:
+    post:
+      summary: Attach FSP ID or VK ID to the current account through OAuth with PKCE
+      security:
+        - browserSession: []
+      description: Submit a native form with exact Origin and the session's csrfToken. The callback preserves the current account and rejects identities owned by another account. Linking never merges accounts by email.
+      parameters:
+        - {in: path, name: provider, required: true, schema: {type: string, enum: [fsp, vk]}}
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required: [csrfToken]
+              properties:
+                csrfToken: {type: string}
+      responses:
+        '302': {description: Redirect to the provider to verify ownership}
+        '401': {description: An authenticated browser session is required}
+        '403': {description: Invalid Origin or CSRF token}
+        '404': {description: Provider credentials are not configured}
   /api/auth/{provider}/callback:
     get:
-      summary: Consume browser-bound state and sign in through an external provider
+      summary: Consume browser-bound state and sign in or complete an explicit provider link
       security: []
       parameters:
         - {in: path, name: provider, required: true, schema: {type: string, enum: [fsp, vk]}}
@@ -925,7 +955,7 @@ paths:
         - {in: query, name: device_id, schema: {type: string}, description: Required for VK ID}
         - {in: query, name: error, schema: {type: string}}
       responses:
-        '302': {description: Redirect to configured frontend /app on success or /app?authError=failed on failure}
+        '302': {description: Redirect to /app after sign-in or /app?section=profile after linking; failures use authError or providerLinkError}
   /health:
     get:
       summary: Public process liveness check

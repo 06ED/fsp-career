@@ -3,6 +3,7 @@ package ru.fsp.career.identity.infrastructure
 import org.jetbrains.exposed.sql.*
 import ru.fsp.career.identity.domain.*
 import ru.fsp.career.shared.domain.bad
+import ru.fsp.career.shared.domain.conflict
 import ru.fsp.career.shared.infrastructure.Database
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
@@ -78,6 +79,24 @@ internal suspend fun Database.registerLocal(email: String, hash: String): UUID =
 } } catch (e: org.jetbrains.exposed.exceptions.ExposedSQLException) {
     if (e.sqlState != "23505") throw e
     bad("Invalid email or password")
+}
+internal fun Transaction.linkProvider(identity: UUID, provider: String, issuer: String, subject: String, email: String, verified: Boolean, legacyIssuer: String) {
+    require(provider in listOf("fsp", "vk"))
+    val account = IdentityEntity[identity].accountId ?: conflict("Choose a role before linking a provider")
+    // Serialize provider changes per account; the conditional update prevents taking another account's identity.
+    AccountEntity.find { Accounts.key eq account }.forUpdate().single()
+    val external = providerIdentity(provider, issuer, subject, email, verified, legacyIssuer)
+    val linked = AuthIdentities.selectAll().where { (AuthIdentities.accountId eq account) and (AuthIdentities.provider eq provider) }.singleOrNull()
+    if (linked != null && linked[AuthIdentities.key] != external) conflict("Another identity from this provider is already linked")
+    val updated = AuthIdentities.update({ (AuthIdentities.key eq external) and
+        (AuthIdentities.accountId.isNull() or (AuthIdentities.accountId eq account)) }) { it[accountId] = account }
+    if (updated != 1) conflict("This identity is already linked to another account")
+}
+internal fun Transaction.linkedProviders(identity: UUID): Providers {
+    val current = IdentityEntity[identity]
+    val account = current.accountId ?: return Providers(current.provider == "fsp", current.provider == "vk")
+    val providers = AuthIdentities.selectAll().where { AuthIdentities.accountId eq account }.map { it[AuthIdentities.provider] }
+    return Providers("fsp" in providers, "vk" in providers)
 }
 internal suspend fun Database.localPassword(email: String): Pair<UUID, String>? = tx {
     val id = IdentityEntity.find { (AuthIdentities.provider eq "local") and (AuthIdentities.email eq email) }.singleOrNull()?.id?.value

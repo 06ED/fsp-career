@@ -45,9 +45,6 @@
   <main>
     <section class="l-hero">
       <BlinkingSquares />
-      <div data-reveal class="l-eyebrow">
-        <span class="l-dot"></span> ФЕДЕРАЦИЯ СПОРТИВНОГО ПРОГРАММИРОВАНИЯ / КАРЬЕРА
-      </div>
       <h1 data-reveal class="l-hero-title">
         Твой уровень.<br /><span class="l-violet">Твои возможности.</span>
       </h1>
@@ -81,9 +78,6 @@
 
     <section id="how-it-works" class="l-section">
       <div class="l-section-inner">
-        <div class="l-eyebrow">
-          <span class="l-dot"></span> НОВЫЙ ПОДХОД К КАРЬЕРЕ
-        </div>
         <h2 class="l-section-heading">
           Не просто резюме.<br />Подтверждённый потенциал.
         </h2>

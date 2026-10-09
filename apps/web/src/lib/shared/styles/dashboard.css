@@ -19,7 +19,6 @@
   gap: 12px;
   align-items: center;
   margin-bottom: 0;
-  font-family: Play, sans-serif;
   font-size: 13px;
   color: var(--on-accent);
 }
@@ -128,15 +127,14 @@
 }
 .d-ui-kicker {
   font-size: 11px;
-  font-family: Play, sans-serif;
   color: var(--accent);
   letter-spacing: 1px;
 }
 .d-ui-title {
   font-size: 32px;
   letter-spacing: -0.04em;
-  line-height: 1.05;
-  font-weight: 600;
+  line-height: 1.12;
+  font-weight: 700;
   margin-top: 12px;
   margin-bottom: 9px;
 }
@@ -183,12 +181,10 @@
   border: 0;
 }
 .d-ui-stat-label {
-  font-family: Play, sans-serif;
   font-size: 11px;
   opacity: 0.75;
 }
 .d-ui-stat-number {
-  font-family: Play, sans-serif;
   font-size: 38px;
   letter-spacing: -0.04em;
   margin-top: 20px;
@@ -279,7 +275,6 @@
 }
 .d-ui-tag {
   display: inline-block;
-  font-family: Play, sans-serif;
   font-size: 11px;
   padding-block: 6px;
   padding-inline: 8px;
@@ -290,13 +285,11 @@
   margin-bottom: 7px;
 }
 .d-ui-score {
-  font-family: Play, sans-serif;
   font-size: 34px;
   letter-spacing: -0.04em;
   color: var(--accent);
 }
 .d-ui-status {
-  font-family: Play, sans-serif;
   font-size: 11px;
   text-transform: uppercase;
   color: var(--accent);

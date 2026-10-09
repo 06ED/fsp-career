@@ -58,6 +58,7 @@ class OAuthHttpTest {
             var nonce = ""
             var rejected = false
             var exchanges = 0
+            var revokeDuringExchange: String? = null
             val http = HttpClient(MockEngine { request ->
                 val params = request.body.toByteArray().decodeToString().parseUrlEncodedParameters()
                 assertEquals("POST", request.method.value)
@@ -66,6 +67,7 @@ class OAuthHttpTest {
                     respond("""{"user":{"user_id":"$subject"}}""", headers = headersOf(HttpHeaders.ContentType, "application/json"))
                 } else {
                     exchanges++
+                    revokeDuringExchange?.let { db.issueSession(it, null); revokeDuringExchange = null }
                     assertEquals("authorization_code", params["grant_type"])
                     assertEquals("test-code", params["code"])
                     assertEquals(43, params["code_verifier"]?.length)
@@ -133,6 +135,62 @@ class OAuthHttpTest {
                 val failed = browser.get(callback.replace(state, failedState)) { header(HttpHeaders.Cookie, failedCookie) }
                 assertEquals("http://localhost:5173/app?authError=failed", failed.headers[HttpHeaders.Location])
                 rejected = false
+                val csrf = session["csrfToken"]!!.jsonPrimitive.content
+                assertEquals(HttpStatusCode.OK, browser.post("/api/me/role") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, config.frontendOrigin)
+                    header("X-CSRF-Token", csrf); contentType(ContentType.Application.Json)
+                    setBody("""{"role":"candidate"}""")
+                }.status)
+                val meBefore = browser.get("/api/me") { header(HttpHeaders.Cookie, currentCookie) }.bodyAsText()
+                val otherProvider = if (provider == "fsp") "vk" else "fsp"
+                assertEquals(HttpStatusCode.Unauthorized, browser.post("/api/auth/$otherProvider/link") {
+                    header(HttpHeaders.Origin, config.frontendOrigin)
+                    contentType(ContentType.Application.FormUrlEncoded); setBody("csrfToken=$csrf")
+                }.status)
+                assertEquals(HttpStatusCode.Forbidden, browser.post("/api/auth/$otherProvider/link") {
+                    header(HttpHeaders.Cookie, currentCookie)
+                    contentType(ContentType.Application.FormUrlEncoded); setBody("csrfToken=$csrf")
+                }.status)
+                assertEquals(HttpStatusCode.Forbidden, browser.post("/api/auth/$otherProvider/link") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, config.frontendOrigin)
+                    contentType(ContentType.Application.FormUrlEncoded); setBody("csrfToken=wrong")
+                }.status)
+                val link = browser.post("/api/auth/$otherProvider/link") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, config.frontendOrigin)
+                    contentType(ContentType.Application.FormUrlEncoded); setBody("csrfToken=$csrf")
+                }
+                assertEquals(HttpStatusCode.Found, link.status)
+                val linkRedirect = Url(link.headers[HttpHeaders.Location]!!)
+                nonce = linkRedirect.parameters["nonce"].orEmpty()
+                val linkCallback = "/api/auth/$otherProvider/callback?code=test-code&state=${linkRedirect.parameters["state"]}" +
+                    if (otherProvider == "vk") "&device_id=device" else ""
+                val linked = browser.get(linkCallback) { header(HttpHeaders.Cookie, currentCookie) }
+                assertEquals("http://localhost:5173/app?section=profile", linked.headers[HttpHeaders.Location])
+                val linkedCookie = linked.headers[HttpHeaders.SetCookie]!!.substringBefore(';')
+                val linkedSession = Json.parseToJsonElement(browser.get("/api/auth/session") {
+                    header(HttpHeaders.Cookie, linkedCookie)
+                }.bodyAsText()).jsonObject
+                assertEquals(session["email"], linkedSession["email"])
+                assertTrue(linkedSession["linkedProviders"]!!.jsonObject["fsp"]!!.jsonPrimitive.boolean)
+                assertTrue(linkedSession["linkedProviders"]!!.jsonObject["vk"]!!.jsonPrimitive.boolean)
+                assertEquals(meBefore, browser.get("/api/me") { header(HttpHeaders.Cookie, linkedCookie) }.bodyAsText())
+                val beforeReplay = exchanges
+                assertEquals("http://localhost:5173/app?authError=failed", browser.get(linkCallback) {
+                    header(HttpHeaders.Cookie, currentCookie)
+                }.headers[HttpHeaders.Location])
+                assertEquals(beforeReplay, exchanges)
+                val revokedLink = browser.post("/api/auth/$otherProvider/link") {
+                    header(HttpHeaders.Cookie, linkedCookie); header(HttpHeaders.Origin, config.frontendOrigin)
+                    contentType(ContentType.Application.FormUrlEncoded)
+                    setBody("csrfToken=${linkedSession["csrfToken"]!!.jsonPrimitive.content}")
+                }
+                val revokedRedirect = Url(revokedLink.headers[HttpHeaders.Location]!!)
+                nonce = revokedRedirect.parameters["nonce"].orEmpty()
+                revokeDuringExchange = Json.parseToJsonElement(linkedCookie.substringAfter('=').decodeURLQueryComponent()).jsonObject["value"]!!.jsonPrimitive.content
+                val revokedCallback = linkCallback.replace(linkRedirect.parameters["state"]!!, revokedRedirect.parameters["state"]!!)
+                val revoked = browser.get(revokedCallback) { header(HttpHeaders.Cookie, linkedCookie) }
+                assertEquals("http://localhost:5173/app?authError=failed", revoked.headers[HttpHeaders.Location])
+                assertNull(revoked.headers[HttpHeaders.SetCookie])
                 exchanges = 0
             }
         }

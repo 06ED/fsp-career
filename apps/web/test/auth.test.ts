@@ -1,5 +1,11 @@
 import { afterAll, expect, test } from "bun:test";
-import { auth, authRequest, initAuth, signIn } from "../src/lib/shared/auth";
+import {
+  auth,
+  authRequest,
+  initAuth,
+  signIn,
+  providerUrl,
+} from "../src/lib/shared/auth";
 import { save } from "../src/lib/shared/api/client";
 
 const originalFetch = globalThis.fetch;
@@ -25,6 +31,7 @@ test("cookie login rotates CSRF; mutations use it; expired sessions can reconnec
       email: path === "/api/auth/login" ? "user@example.com" : null,
       csrfToken: path === "/api/auth/login" ? "rotated" : "anonymous",
       providers: { fsp: true, vk: true },
+      linkedProviders: { fsp: path === "/api/auth/login", vk: false },
     });
   }) as typeof fetch;
 
@@ -37,6 +44,9 @@ test("cookie login rotates CSRF; mutations use it; expired sessions can reconnec
   await signIn("user@example.com", "long safe password");
   expect(auth.authenticated).toBe(true);
   expect(auth.email).toBe("user@example.com");
+  expect(auth.linkedProviders).toEqual({ fsp: true, vk: false });
+  expect(providerUrl("fsp")).toEndWith("/api/auth/fsp/start");
+  expect(providerUrl("vk", "link")).toEndWith("/api/auth/vk/link");
   const login = requests.find((r) => r.path === "/api/auth/login")!;
   expect(new Headers(login.options.headers).get("X-CSRF-Token")).toBe(
     "anonymous",

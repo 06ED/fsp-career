@@ -15,6 +15,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.origin
 import io.ktor.server.plugins.ratelimit.*
+import io.ktor.server.plugins.doublereceive.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -37,6 +38,7 @@ import java.util.concurrent.TimeUnit
 @Serializable data class BrowserCookie(val value: String)
 private val oauthAttempt = AttributeKey<OAuthAttempt>("oauthAttempt")
 private val oauthState = AttributeKey<String>("oauthState")
+private val oauthIdentity = AttributeKey<UUID>("oauthIdentity")
 internal class OAuthLoginFailed : RuntimeException()
 internal fun ApplicationCall.requireCsrf(origin: String, session: BrowserSession?) {
     if (!csrfValid(request.headers[HttpHeaders.Origin], origin, request.headers["X-CSRF-Token"], session))
@@ -78,7 +80,7 @@ internal fun AuthenticationConfig.externalOAuth(config: AuthConfig, http: HttpCl
                     nonceManager = object : NonceManager {
                         override suspend fun newNonce(): String {
                             // Ktor retries invalid_grant; a failed callback must not start another challenge.
-                            if (!call.request.path().endsWith("/start")) throw OAuthLoginFailed()
+                            if (!call.request.path().endsWith("/start") && !call.request.path().endsWith("/link")) throw OAuthLoginFailed()
                             return call.attributes[oauthState]
                         }
                         override suspend fun verifyNonce(nonce: String) = equal(nonce, call.attributes[oauthState])
@@ -112,7 +114,8 @@ internal fun Route.browserAuthRoutes(keys: JwkProvider? = null) {
         JwkProviderBuilder(URI(config.jwksUrl).toURL()).cached(10, 24, TimeUnit.HOURS).rateLimited(10, 1, TimeUnit.MINUTES).build()
     }
     fun ApplicationCall.cookie() = sessions.get<BrowserCookie>()?.value
-    fun response(session: BrowserSession) = SessionResponse(session.identity != null, session.identity?.email, session.csrf, Providers(config.fsp != null, config.vk != null))
+    suspend fun response(session: BrowserSession) = SessionResponse(session.identity != null, session.identity?.email, session.csrf,
+        Providers(config.fsp != null, config.vk != null), session.identity?.let { identities.linkedProviders(it.id) } ?: Providers(false, false))
     suspend fun ApplicationCall.sessionResponse(): SessionResponse {
         val cookie = cookie() ?: identities.issueSession(null, null).also { sessions.set(BrowserCookie(it)) }
         val session = identities.session(cookie) ?: identities.issueSession(cookie, null).also { sessions.set(BrowserCookie(it)) }.let { identities.session(it)!! }
@@ -140,35 +143,48 @@ internal fun Route.browserAuthRoutes(keys: JwkProvider? = null) {
         for ((provider, cfg) in listOf("fsp" to config.fsp, "vk" to config.vk)) {
             if (cfg == null) {
                 get("/$provider/start") { throw ApiError(HttpStatusCode.NotFound, "Provider disabled") }
+                post("/$provider/link") { throw ApiError(HttpStatusCode.NotFound, "Provider disabled") }
                 get("/$provider/callback") { call.respondRedirect("${config.frontendOrigin}/app?authError=failed") }
                 continue
             }
             route("/$provider") {
+                install(DoubleReceive)
                 install(createRouteScopedPlugin("PrepareOAuth-$provider") {
                     onCall { call ->
                         call.response.headers.append(HttpHeaders.CacheControl, "no-store")
                         call.response.headers.append("Referrer-Policy", "no-referrer")
                         val state: String
                         val attempt: OAuthAttempt
-                        if (call.request.path().endsWith("/start")) {
+                        if (call.request.path().endsWith("/start") || call.request.path().endsWith("/link")) {
                             if (!call.request.queryParameters.isEmpty()) throw OAuthLoginFailed()
                             val previous = call.cookie()
                             val cookie = previous?.takeIf { identities.session(it) != null }
                                 ?: identities.issueSession(previous, null).also { call.sessions.set(BrowserCookie(it)) }
-                            if (identities.session(cookie)?.identity != null) throw OAuthLoginFailed()
+                            val session = identities.session(cookie)
+                            if (call.request.path().endsWith("/link")) {
+                                if (session?.identity == null) throw ApiError(HttpStatusCode.Unauthorized, "Authentication required")
+                                val token = call.receiveParameters()["csrfToken"]
+                                if (!csrfValid(call.request.headers[HttpHeaders.Origin], config.frontendOrigin, token, session))
+                                    throw ApiError(HttpStatusCode.Forbidden, "Invalid origin or CSRF token")
+                            } else if (session?.identity != null) throw OAuthLoginFailed()
                             state = opaque(); attempt = OAuthAttempt(opaque(), opaque())
                             identities.saveState(state, cookie, provider, attempt)
                         } else {
                             state = call.request.queryParameters["state"].orEmpty()
                             attempt = identities.consumeState(state, call.cookie(), provider) ?: throw OAuthLoginFailed()
+                            val session = identities.session(call.cookie()) ?: throw OAuthLoginFailed()
+                            session.identity?.id?.let { call.attributes.put(oauthIdentity, it) }
                             val code = call.request.queryParameters["code"]
                             if (code.isNullOrBlank() || code.length > 2048 || call.request.queryParameters["error"] != null ||
-                                identities.session(call.cookie())?.identity != null || (provider == "vk" && call.request.queryParameters["device_id"]?.length !in 1..256)) throw OAuthLoginFailed()
+                                (provider == "vk" && call.request.queryParameters["device_id"]?.length !in 1..256)) throw OAuthLoginFailed()
                         }
                         call.attributes.put(oauthState, state); call.attributes.put(oauthAttempt, attempt)
                     }
                 })
-                authenticate(provider) { get("/start") { throw OAuthLoginFailed() } }
+                authenticate(provider) {
+                    get("/start") { throw OAuthLoginFailed() }
+                    post("/link") { throw OAuthLoginFailed() }
+                }
                 authenticate(provider, strategy = AuthenticationStrategy.Optional) {
                     get("/callback") {
                         try {
@@ -184,11 +200,18 @@ internal fun Route.browserAuthRoutes(keys: JwkProvider? = null) {
                                 require(info["user_id"]?.jsonPrimitive?.contentOrNull?.isNotBlank() == true && token.extraParameters["user_id"] == info["user_id"]?.jsonPrimitive?.content)
                                 Triple(info["user_id"]!!.jsonPrimitive.content, "", false)
                             }
-                            val identity = service.external(provider, if (provider == "fsp") config.issuer else "https://id.vk.ru", subject, email, verified, config.legacyIssuer)
+                            // State is bound to an immutable session: anonymous means sign-in, authenticated means linking.
+                            val linkTo = call.attributes.getOrNull(oauthIdentity)
+                            val session = identities.session(call.cookie()) ?: throw OAuthLoginFailed()
+                            if (session.identity?.id != linkTo) throw OAuthLoginFailed()
+                            val identity = service.external(provider, if (provider == "fsp") config.issuer else "https://id.vk.ru", subject, email, verified, config.legacyIssuer, linkTo)
                             call.rotate(identity)
-                            call.respondRedirect("${config.frontendOrigin}/app")
+                            call.respondRedirect("${config.frontendOrigin}/app" + if (linkTo != null) "?section=profile" else "")
                         } catch (e: CancellationException) { throw e }
-                        catch (_: Exception) { call.respondRedirect("${config.frontendOrigin}/app?authError=failed") }
+                        catch (_: Exception) {
+                            val query = if (identities.session(call.cookie())?.identity != null) "section=profile&providerLinkError=failed" else "authError=failed"
+                            call.respondRedirect("${config.frontendOrigin}/app?$query")
+                        }
                     }
                 }
             }

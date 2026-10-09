@@ -20,6 +20,7 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-cors-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-sessions-jvm:$ktorVersion")
+    implementation("io.ktor:ktor-server-double-receive-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-rate-limit-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-forwarded-header-jvm:$ktorVersion")
     implementation("io.ktor:ktor-client-cio-jvm:$ktorVersion")

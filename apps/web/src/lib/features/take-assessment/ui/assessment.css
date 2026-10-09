@@ -5,7 +5,6 @@
   margin-bottom: 22px;
 }
 .d-a-step {
-  font-family: Play, sans-serif;
   font-size: 11px;
   letter-spacing: 0.5px;
   padding-block: 7px;
@@ -53,7 +52,6 @@
   cursor: not-allowed;
 }
 .d-a-card-title {
-  font-family: Play, sans-serif;
   font-size: 20px;
   font-weight: 700;
 }
@@ -96,7 +94,6 @@
   transition: width 240ms ease;
 }
 .d-a-timer {
-  font-family: Play, sans-serif;
   font-size: 22px;
   letter-spacing: -0.02em;
   color: var(--text);
@@ -153,7 +150,6 @@
 .d-a-ok,
 .d-a-fail {
   display: inline-block;
-  font-family: Play, sans-serif;
   font-size: 11px;
   padding-block: 5px;
   padding-inline: 9px;
@@ -168,7 +164,6 @@
   color: var(--danger);
 }
 .d-a-big-grade {
-  font-family: Play, sans-serif;
   font-size: 40px;
   letter-spacing: -0.04em;
   line-height: 1;
@@ -186,7 +181,6 @@
   padding: 14px;
 }
 .d-a-stat-value {
-  font-family: Play, sans-serif;
   font-size: 22px;
   margin-top: 6px;
 }

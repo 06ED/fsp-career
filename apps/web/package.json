@@ -14,12 +14,14 @@
   "dependencies": {
     "@jis3r/icons": "^2.9.0",
     "@lucide/svelte": "^1.52.0",
-    "gsap": "^3.14.2"
+    "gsap": "^3.14.2",
+    "pdfmake": "^0.3.11"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.7",
     "@sveltejs/kit": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^6.0.0",
+    "@types/pdfmake": "^0.3.3",
     "prettier": "^3.0.0",
     "prettier-plugin-svelte": "^3.0.0",
     "svelte": "^5.0.0",

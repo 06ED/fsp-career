@@ -20,6 +20,7 @@
   import {
     CandidateProfile,
     CandidateSettings,
+    downloadResumePdf,
   } from "$lib/features/edit-candidate-profile";
   import { CandidateAssessment } from "$lib/features/take-assessment";
   import { EmployerCompany } from "$lib/features/edit-company";
@@ -91,11 +92,18 @@
 
   onMount(() => {
     const url = new URL(window.location.href);
+    if (url.searchParams.get("section") === "profile") section = "profile";
     desiredRole =
       url.searchParams.get("role") === "employer" ? "employer" : "candidate";
     if (url.searchParams.has("authError")) {
       error = "Не удалось войти через внешний сервис. Попробуйте ещё раз.";
       url.searchParams.delete("authError");
+      window.history.replaceState(null, "", url);
+    }
+    if (url.searchParams.has("providerLinkError")) {
+      error =
+        "Не удалось привязать аккаунт. Возможно, он уже связан с другим профилем. Попробуйте ещё раз.";
+      url.searchParams.delete("providerLinkError");
       window.history.replaceState(null, "", url);
     }
     connect();
@@ -239,15 +247,8 @@
   }
   async function downloadResume() {
     await action(async () => {
-      const pdf = await candidateApi.exportResume();
-      const url = URL.createObjectURL(pdf);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "fsp-resume.pdf";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+      const savedProfile = await candidateApi.profile();
+      await downloadResumePdf(savedProfile);
     }, "Резюме готово к скачиванию.");
   }
   async function revokeConsent() {
@@ -417,7 +418,6 @@
         />
         <CandidateSettings
           processingConsent={profile.processingConsent}
-          email={profile.email}
           {busy}
           run={action}
         />

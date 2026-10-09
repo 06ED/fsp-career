@@ -14,6 +14,10 @@ internal class AuthService(private val identities: IdentityRepository, private v
         val valid = passwords.verify(input.password, credentials?.second ?: passwords.dummyHash)
         return credentials?.first?.takeIf { valid }
     }
-    suspend fun external(provider: String, issuer: String, subject: String, email: String, verified: Boolean, legacyIssuer: String) =
-        identities.external(provider, issuer, subject, email, verified, legacyIssuer)
+    suspend fun external(provider: String, issuer: String, subject: String, email: String, verified: Boolean, legacyIssuer: String,
+        linkTo: UUID? = null): UUID {
+        if (linkTo == null) return identities.external(provider, issuer, subject, email, verified, legacyIssuer)
+        identities.linkExternal(linkTo, provider, issuer, subject, email, verified, legacyIssuer)
+        return linkTo
+    }
 }

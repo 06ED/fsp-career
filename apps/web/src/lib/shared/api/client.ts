@@ -18,10 +18,6 @@ export async function api<T>(
     : ((await response.json()) as T);
 }
 
-export async function apiBlob(path: string): Promise<Blob> {
-  return (await request(path)).blob();
-}
-
 export function save<T>(
   path: string,
   data: unknown,

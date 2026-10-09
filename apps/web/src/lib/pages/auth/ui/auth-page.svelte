@@ -189,7 +189,6 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    font-family: Play, sans-serif;
     font-size: 14px;
     font-weight: 700;
   }
@@ -204,9 +203,7 @@
   .auth-kicker {
     margin: 0 0 12px;
     color: var(--accent);
-    font:
-      10px Play,
-      sans-serif;
+    font-size: 10px;
     letter-spacing: 0.1em;
   }
   h1 {

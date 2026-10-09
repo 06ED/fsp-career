@@ -6,6 +6,7 @@ type Session = {
   email: string | null;
   csrfToken: string;
   providers: { fsp: boolean; vk: boolean };
+  linkedProviders: { fsp: boolean; vk: boolean };
 };
 
 export const auth: Session = {
@@ -13,6 +14,7 @@ export const auth: Session = {
   email: null,
   csrfToken: "",
   providers: { fsp: false, vk: false },
+  linkedProviders: { fsp: false, vk: false },
 };
 let initialization: Promise<boolean> | undefined;
 
@@ -83,6 +85,9 @@ export async function logout(): Promise<void> {
   window.location.assign("/");
 }
 
-export function providerUrl(provider: "fsp" | "vk"): string {
-  return `${apiOrigin}/api/auth/${provider}/start`;
+export function providerUrl(
+  provider: "fsp" | "vk",
+  action: "start" | "link" = "start",
+): string {
+  return `${apiOrigin}/api/auth/${provider}/${action}`;
 }

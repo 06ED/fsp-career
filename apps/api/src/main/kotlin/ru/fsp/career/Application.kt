@@ -73,7 +73,8 @@ internal fun Application.careerModule(
     install(createApplicationPlugin("BrowserCsrf") {
         onCall { call ->
             if (call.request.path().startsWith("/api/") && call.request.path() !in listOf(
-                    "/api/auth/login", "/api/auth/register", "/api/auth/logout"
+                    "/api/auth/login", "/api/auth/register", "/api/auth/logout",
+                    "/api/auth/fsp/link", "/api/auth/vk/link" // Native OAuth forms validate Origin + their CSRF field in PrepareOAuth.
                 ) &&
                 call.request.httpMethod !in listOf(HttpMethod.Get, HttpMethod.Head, HttpMethod.Options)
             ) {

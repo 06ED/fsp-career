@@ -1,42 +1,23 @@
 @font-face {
-  font-family: "Nunito";
-  src: url("/fonts/Nunito-Variable.ttf") format("truetype");
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-Variable.ttf") format("truetype");
   font-style: normal;
-  font-weight: 200 900;
+  font-weight: 100 900;
   font-display: swap;
 }
 @font-face {
-  font-family: "Nunito";
-  src: url("/fonts/Nunito-Italic-Variable.ttf") format("truetype");
+  font-family: "Montserrat";
+  src: url("/fonts/Montserrat-Italic-Variable.ttf") format("truetype");
   font-style: italic;
-  font-weight: 200 900;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Play";
-  src: url("/fonts/Play-Regular.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "Play";
-  src: url("/fonts/Play-Bold.ttf") format("truetype");
-  font-style: normal;
-  font-weight: 700;
+  font-weight: 100 900;
   font-display: swap;
 }
 :root {
-  --radius-ui: 8px;
-  font-family: "Nunito", Arial, sans-serif;
+  --radius-ui: 12px;
+  font-family: "Montserrat", Arial, sans-serif;
   color: var(--text);
   background: var(--background);
   font-synthesis: none;
-}
-h1,
-h2,
-h3 {
-  font-family: "Play", sans-serif;
 }
 * {
   box-sizing: border-box;

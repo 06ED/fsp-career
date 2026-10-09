@@ -143,7 +143,7 @@ jobs:
     timeout-minutes: 10
     environment:
       name: homelab
-      url: https://fsp-career.homelab.lan
+      url: https://brokenbrain.online
     env:
       GITOPS_REPOSITORY: git@gitlab.com:georgiy.gusev/homelab.git
       GITOPS_BRANCH: main

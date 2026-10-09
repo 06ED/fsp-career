@@ -43,7 +43,7 @@ In another terminal run `cd apps/web && bun install --frozen-lockfile && bun run
 
 ## Server deployment
 
-Every push to `main` now runs GitHub-hosted CI checks, publishes web/API/Keycloak images to GHCR, and commits their digests to the homelab GitOps repository. Flux deploys the release to `https://fsp-career.homelab.lan`; PostgreSQL stays on `goodman`, while web, API, Keycloak and Mailpit run in Kubernetes behind Envoy Gateway. See [homelab delivery and operations](docs/homelab.md) for secrets, runtime configuration and rollback.
+Every push to `main` now runs GitHub-hosted CI checks, publishes web/API/Keycloak images to GHCR, and commits their digests to the homelab GitOps repository. Flux deploys the release to `https://brokenbrain.online`; PostgreSQL stays on `goodman`, while web, API, Keycloak and Mailpit run in Kubernetes behind Envoy Gateway. See [homelab delivery and operations](docs/homelab.md) for secrets, runtime configuration and rollback.
 
 The previous standalone deployment is still available manually with `bash infra/deploy/deploy.sh`. That script builds the images, then starts `compose.yaml` + `compose.prod.yaml` as the `fsp-career` project. Traefik (configured by labels in `compose.prod.yaml`) obtains Let's Encrypt HTTPS for `PUBLIC_HOST` (`brokenbrain.online`) and serves the web app at `/`, the API at `/api` (OpenAPI at `/openapi.yaml`) and Keycloak at `/auth`. Because the realm import only applies to an empty database, the script also sets the `fsp-web` client's redirect URIs and web origins on each manual deploy.
 

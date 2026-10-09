@@ -1,9 +1,11 @@
 # Homelab GitOps deployment
 
-The active deployment is `https://fsp-career.homelab.lan` in the `fsp-career`
+The active deployment is `https://brokenbrain.online` in the `fsp-career`
 namespace of the single-node `homelab` K3s cluster. Envoy Gateway terminates
-HTTPS using the existing homelab CA certificate; external-dns maintains the
-OpenWrt DNS entry. Clients use the homelab CA and LAN/VPN DNS.
+HTTPS using a cert-manager Let's Encrypt certificate. The public apex A record
+points to the homelab WAN IP, and external-dns maintains OpenWrt split-horizon
+DNS so LAN/VPN clients reach Envoy directly. The previous
+`fsp-career.homelab.lan` address redirects to the public origin.
 
 ## Delivery
 
@@ -19,8 +21,8 @@ OpenWrt DNS entry. Clients use the homelab CA and LAN/VPN DNS.
    `georgiy.gusev/homelab` on GitLab. `GITOPS_SSH_KEY` is a dedicated writable
    GitLab deploy key stored in this repository's Actions secrets. The GitLab
    SSH host key is pinned in the workflow.
-4. Flux reconciles `fsp-career-data`, then `fsp-career-identity`, then
-   `fsp-career`. The job reports promotion to Git, while Flux health checks
+4. Flux reconciles `fsp-career-data`, then `fsp-career-identity`,
+   `fsp-career-identity-config`, and finally `fsp-career`. The job reports promotion to Git, while Flux health checks
    determine whether the cluster rollout succeeds.
 
 There are no cluster credentials in CI. `workflow_dispatch` republishes and
@@ -42,21 +44,23 @@ are SOPS-encrypted in the homelab repository. Initial credentials are also
 stored root-only in `/etc/homelab/fsp-career.json` on goodman. The deployment
 starts with empty databases and does not seed demo accounts.
 
-Keycloak imports the realm only when it is absent. Its homelab import sets
+Keycloak imports the realm only when it is absent. Its import sets
 the public issuer/callbacks and reads `FSP_CLIENT_SECRET` from its environment.
-For an existing realm, change clients/SMTP through Keycloak's admin API or
-console; changing an import file does not overwrite existing users/settings.
+An idempotent GitOps Job configures the browser/server client callbacks in an
+existing realm without replacing users or client secrets. Use the admin API or
+console for other realm/SMTP changes; changing an import file does not overwrite
+existing users/settings.
 Password reset is disabled while verification emails use the shared test
 inbox. VK ID remains disabled until its credentials are configured.
 
 ## Operations and rollback
 
 ```sh
-kubectl -n flux-system get kustomization fsp-career-data fsp-career-identity fsp-career
+kubectl -n flux-system get kustomization fsp-career-data fsp-career-identity fsp-career-identity-config fsp-career
 kubectl -n fsp-career get pods
 kubectl -n fsp-career logs deployment/fsp-career-api
 kubectl -n fsp-career logs deployment/fsp-career-keycloak
-curl --cacert docs/certs/homelab-root-ca.crt https://fsp-career.homelab.lan/health
+curl https://brokenbrain.online/health
 ```
 
 For rollback, revert the relevant `apps/fsp-career: promote ...` commit in

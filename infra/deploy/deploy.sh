@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds and (re)starts the production stack on this host from the current checkout.
-# The self-hosted GitHub Actions runner calls it on every push to main; it also works by hand.
+# Legacy standalone deployment, run manually; GitHub Actions now promotes homelab GitOps images.
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."

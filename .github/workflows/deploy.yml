@@ -1,21 +1,196 @@
-name: Deploy
+name: CI/CD
 
 on:
   push:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
-# Deploys never overlap; a newer push waits for the running rollout instead of interrupting it.
+# Serialize releases so an older build cannot overwrite a newer GitOps promotion.
 concurrency:
-  group: production
+  group: fsp-career-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
-  deploy:
-    # The runner lives on the production server itself, so the job builds and restarts the stack locally.
-    runs-on: self-hosted
-    timeout-minutes: 45
+  web:
+    name: Web checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/web
     steps:
       - uses: actions/checkout@v5
-      - name: Build and restart the stack
-        run: bash infra/deploy/deploy.sh
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - run: bun install --frozen-lockfile
+      - run: bun test
+      - run: bun run check
+      - run: bun run lint
+      - run: bun run build
+        env:
+          VITE_API_URL: ""
+
+  api:
+    name: API and PostgreSQL tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_DB: career_test
+          POSTGRES_USER: career
+          POSTGRES_PASSWORD: career
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U career -d career_test"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.1.0"
+      - name: Run unit, architecture and database integration tests
+        working-directory: apps/api
+        run: gradle --no-daemon --console=plain test
+        env:
+          TEST_DATABASE_URL: jdbc:postgresql://localhost:5432/career_test
+          TEST_DATABASE_USER: career
+          TEST_DATABASE_PASSWORD: career
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: api-test-reports
+          path: apps/api/build/reports/tests/test
+
+  gitops-checks:
+    name: GitOps promotion checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - run: python3 -m pip install 'PyYAML==6.0.3'
+      - run: python3 -m unittest discover -s infra/deploy/tests -v
+
+  publish:
+    name: Publish ${{ matrix.image }}
+    needs: [web, api, gitops-checks]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: api
+            context: apps/api
+          - image: web
+            context: apps/web
+          - image: keycloak
+            context: infra/keycloak
+    steps:
+      - uses: actions/checkout@v5
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish an immutable release
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          push: true
+          platforms: linux/amd64
+          tags: ghcr.io/06ed/fsp-career-${{ matrix.image }}:sha-${{ github.sha }}
+          build-args: VITE_API_URL=
+          labels: |
+            org.opencontainers.image.source=https://github.com/06ED/fsp-career
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=fsp-career-${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=fsp-career-${{ matrix.image }}
+      - name: Record the registry digest
+        env:
+          IMAGE: ${{ matrix.image }}
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p digests
+          printf '%s\n' "$DIGEST" > "digests/$IMAGE.digest"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-digest-${{ matrix.image }}
+          path: digests/*.digest
+          retention-days: 30
+
+  promote:
+    name: Promote release to homelab GitOps
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment:
+      name: homelab
+      url: https://fsp-career.homelab.lan
+    env:
+      GITOPS_REPOSITORY: git@gitlab.com:georgiy.gusev/homelab.git
+      GITOPS_BRANCH: main
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: image-digest-*
+          path: digests
+          merge-multiple: true
+      - run: python3 -m pip install 'PyYAML==6.0.3'
+      - name: Configure the GitOps deploy key
+        env:
+          GITOPS_SSH_KEY: ${{ secrets.GITOPS_SSH_KEY }}
+        run: |
+          test -n "$GITOPS_SSH_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$GITOPS_SSH_KEY" > "$HOME/.ssh/gitops"
+          chmod 600 "$HOME/.ssh/gitops"
+          printf '%s\n' 'gitlab.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAfuCHKVTjquxvt6CM6tdG4SLp1Btn/nOeHHE5UOzRdf' > "$HOME/.ssh/known_hosts"
+          printf '%s\n' "GIT_SSH_COMMAND=ssh -i $HOME/.ssh/gitops -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes" >> "$GITHUB_ENV"
+      - name: Commit all three image digests together
+        env:
+          RELEASE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          git clone --branch "$GITOPS_BRANCH" --single-branch "$GITOPS_REPOSITORY" gitops
+          for attempt in 1 2 3 4 5; do
+            git -C gitops fetch origin "$GITOPS_BRANCH"
+            git -C gitops reset --hard "origin/$GITOPS_BRANCH"
+            python3 infra/deploy/update_gitops.py gitops digests "$RELEASE_SHA"
+            git -C gitops add clusters/homelab/apps/fsp-career/prod/app/kustomization.yaml \
+              clusters/homelab/apps/fsp-career/prod/identity/kustomization.yaml
+            if git -C gitops diff --cached --quiet; then
+              printf '%s\n' 'Release already promoted.'
+              exit 0
+            fi
+            git -C gitops -c user.name='fsp-career CI' -c user.email='fsp-career-ci@users.noreply.github.com' \
+              commit -m "apps/fsp-career: promote ${RELEASE_SHA:0:12}"
+            if git -C gitops push origin "HEAD:$GITOPS_BRANCH"; then
+              printf 'Promoted %s to homelab; Flux reconciles the rollout.\n' "$RELEASE_SHA" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            sleep "$((attempt * 2))"
+          done
+          printf '%s\n' 'GitOps push failed after five attempts.' >&2
+          exit 1
+      - name: Remove the temporary deploy key
+        if: always()
+        run: rm -f "$HOME/.ssh/gitops"

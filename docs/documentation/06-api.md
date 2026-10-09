@@ -30,7 +30,8 @@
 | `PUT` | `/api/candidates/me/privacy` | Replace own privacy settings (candidate role, processing consent required) | 400, 401, 403 |
 | `POST` | `/api/candidates/me/resume-confirm` | Explicitly review/edit draft fields and save profile; verified email and publication consent stay unchanged | 400, 401, 403, 404 |
 | `POST` | `/api/candidates/me/resume-upload` | Extract review-only suggestions from text-based PDF (candidate role, processing consent required) | 400, 401, 403 |
-| `GET` | `/api/candidates/me/resume.pdf` | Download own standardized branded PDF resume (candidate role) | 400, 401, 403 |
+
+Скачиваемое PDF-резюме формируется в браузере из сохранённого профиля, с Montserrat и цветами текущей темы. Сервер обрабатывает загрузку PDF и подтверждение распознанных данных.
 
 ## Тестирование
 

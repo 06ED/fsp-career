@@ -17,12 +17,6 @@ import java.io.ByteArrayOutputStream
 internal fun Route.resumeRoutes(audience: String) {
     val service: ResumeService by application.dependencies
 
-    get("/candidates/me/resume.pdf") {
-        val bytes = service.export(call.role(audience, "candidate"))
-        call.response.header(HttpHeaders.ContentDisposition, "attachment; filename=\"fsp-resume.pdf\"")
-        call.respondBytes(bytes, ContentType.Application.Pdf)
-    }
-
     post("/candidates/me/resume-upload") {
         val sub = call.role(audience, "candidate")
         service.requireUploadConsent(sub)

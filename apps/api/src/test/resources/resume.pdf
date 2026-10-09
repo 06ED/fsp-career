@@ -1,0 +1,36 @@
+%PDF-1.5
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>
+endobj
+4 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+5 0 obj
+<< /Length 98 >>
+stream
+BT
+/F1 12 Tf
+40 780 Td
+(Ada Example) Tj
+0 -20 Td
+(ada@example.org) Tj
+0 -20 Td
+(Kotlin SQL) Tj
+ET
+endstream
+endobj
+6 0 obj
+<< /Type /XRef /Size 7 /Root 1 0 R /W [1 2 2] /Filter /ASCIIHexDecode /Length 72 >>
+stream
+000000ffff010009000001003a000001007300000100f1000001013700000101ca0000>
+endstream
+endobj
+startxref
+458
+%%EOF

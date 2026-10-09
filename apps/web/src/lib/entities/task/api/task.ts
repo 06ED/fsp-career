@@ -7,6 +7,7 @@ import type {
   ShortTaskInput,
   SubmissionKind,
 } from "..";
+
 const errors: Record<string, string> = {
   "Task is already": "Статус задания уже изменён — обновите список.",
   "Grant processing consent before short tasks":
@@ -20,6 +21,7 @@ const errors: Record<string, string> = {
   "Task not found": "Задание не найдено.",
   "Submission not found": "Ответ не найден.",
 };
+
 async function ru<T>(request: Promise<T>): Promise<T> {
   try {
     return await request;
@@ -28,9 +30,11 @@ async function ru<T>(request: Promise<T>): Promise<T> {
     throw new Error(
       Object.entries(errors).find(([prefix]) => text.startsWith(prefix))?.[1] ??
         text,
+      { cause: e },
     );
   }
 }
+
 export const taskApi = {
   current: () => ru(api<CurrentShortTask>("/api/candidates/me/tasks/current")),
   submit: (taskId: string, kind: SubmissionKind, answer: string) =>

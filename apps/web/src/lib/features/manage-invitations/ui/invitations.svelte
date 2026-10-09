@@ -1,10 +1,7 @@
 <script lang="ts">
   import { ActionIcon, EmptyState } from "$lib/shared/ui";
   import { invitationStatusLabels } from "$lib/entities/invitation";
-  import type {
-    Invitation,
-    InvitationStatusAction,
-  } from "$lib/entities/invitation";
+  import type { Invitation, InvitationStatusAction } from "$lib/entities/invitation";
   import type { Role } from "$lib/entities/account";
   let {
     invitations,
@@ -15,10 +12,7 @@
     invitations: Invitation[];
     role: Role;
     busy: boolean;
-    updateInvitation: (
-      invitation: Invitation,
-      status: InvitationStatusAction,
-    ) => Promise<void>;
+    updateInvitation: (invitation: Invitation, status: InvitationStatusAction) => Promise<void>;
   } = $props();
   const contactsOf = (invitation: Invitation) =>
     [
@@ -91,9 +85,7 @@
           </button>
         {/if}
       </div>
-      <p class="d-ui-muted">
-        Приняв приглашение, вы откроете компании свои email и телефон.
-      </p>
+      <p class="d-ui-muted">Приняв приглашение, вы откроете компании свои email и телефон.</p>
     {/if}
     {#if role === "employer"}
       {#if contactsOf(invitation).length}
@@ -101,9 +93,7 @@
           Контакты кандидата: {contactsOf(invitation).join(" · ")}
         </div>
       {:else}
-        <p class="d-ui-muted">
-          Контакты кандидата откроются, когда он примет приглашение.
-        </p>
+        <p class="d-ui-muted">Контакты кандидата откроются, когда он примет приглашение.</p>
       {/if}
     {/if}
   </article>

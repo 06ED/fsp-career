@@ -4,8 +4,6 @@ import ru.fsp.career.profiles.domain.*
 import ru.fsp.career.shared.domain.*
 
 internal class ResumeService(private val profiles: ProfileRepository, private val documents: ResumeDocuments) {
-    suspend fun export(subject: String) = documents.export(profiles.candidate(subject))
-
     suspend fun requireUploadConsent(subject: String) {
         if (!profiles.candidate(subject).processingConsent) forbidden("Grant processing consent before uploading a resume")
     }

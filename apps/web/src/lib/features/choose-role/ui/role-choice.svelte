@@ -35,8 +35,8 @@
 <div class="d-ui-panel">
   <h2 class="d-ui-panel-title">Кто вы на платформе?</h2>
   <p class="d-ui-muted">
-    Роль выбирается один раз для этого аккаунта: профиль, тесты и приглашения
-    привязаны к ней. Для второй роли используйте отдельный аккаунт.
+    Роль выбирается один раз для этого аккаунта: профиль, тесты и приглашения привязаны к ней. Для
+    второй роли используйте отдельный аккаунт.
   </p>
 </div>
 <div class="d-ui-grid">
@@ -49,9 +49,7 @@
         class={option.role === suggested ? "d-ui-button" : "d-ui-outline"}
         onclick={() => chooseRole(option.role)}
       >
-        Продолжить как {option.role === "candidate"
-          ? "специалист"
-          : "работодатель"}
+        Продолжить как {option.role === "candidate" ? "специалист" : "работодатель"}
         <ActionIcon name={option.icon} />
       </button>
     </div>

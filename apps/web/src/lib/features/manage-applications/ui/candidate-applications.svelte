@@ -10,10 +10,7 @@
     specializationName,
     workFormatName,
   } from "$lib/entities/vacancy";
-  import type {
-    ApplicationStatus,
-    CandidateApplication,
-  } from "$lib/entities/vacancy";
+  import type { ApplicationStatus, CandidateApplication } from "$lib/entities/vacancy";
   import type { Section } from "$lib/entities/account";
   import type { RunAction } from "$lib/shared/api";
 
@@ -33,8 +30,7 @@
   const hints: Record<ApplicationStatus, string> = {
     sent: "Компания ещё не открывала отклик.",
     viewed: "Компания посмотрела отклик и ваш профиль.",
-    accepted:
-      "Компания приняла отклик и свяжется с вами по контактам из профиля.",
+    accepted: "Компания приняла отклик и свяжется с вами по контактам из профиля.",
     rejected: "Компания выбрала другого кандидата.",
   };
 
@@ -67,24 +63,15 @@
     <div>
       <h2 class="d-ui-panel-title">Статусы откликов</h2>
       <p class="d-ui-muted" style="margin-top: 0;">
-        Отправлен → Просмотрен → Принят или Отказ. Компания видит ваши контакты
-        только по тем вакансиям, на которые вы откликнулись сами.
+        Отправлен → Просмотрен → Принят или Отказ. Компания видит ваши контакты только по тем
+        вакансиям, на которые вы откликнулись сами.
       </p>
     </div>
     <div class="d-ui-inline">
-      <button
-        type="button"
-        disabled={busy}
-        class="d-ui-outline"
-        onclick={() => load()}
-      >
+      <button type="button" disabled={busy} class="d-ui-outline" onclick={() => load()}>
         Обновить <ActionIcon name="refresh" />
       </button>
-      <button
-        type="button"
-        class="d-ui-button"
-        onclick={() => openSection("vacancies")}
-      >
+      <button type="button" class="d-ui-button" onclick={() => openSection("vacancies")}>
         Найти вакансии <ActionIcon name="vacancies" />
       </button>
     </div>
@@ -115,22 +102,19 @@
       </span>
     </div>
     <div>
-      <span class="d-ui-tag"
-        >{specializationName(application.specialization)}</span
-      >
+      <span class="d-ui-tag">{specializationName(application.specialization)}</span>
       <span class="d-ui-tag">{gradeName(application.grade)}</span>
       <span class="d-ui-tag d-vx-tag-muted">
-        {workFormatName(application.workFormat)}{application.city
-          ? ` · ${application.city}`
-          : ""}
+        {workFormatName(application.workFormat)}{application.city ? ` · ${application.city}` : ""}
       </span>
       {#if application.vacancyStatus === "closed"}
         <span class="d-ui-tag d-vx-tag-muted">Вакансия закрыта</span>
       {/if}
     </div>
     <p class="d-ui-muted">
-      {hints[application.status]} Отклик от {shortDate(application.createdAt)},
-      статус обновлён {shortDate(application.updatedAt)}.
+      {hints[application.status]} Отклик от {shortDate(application.createdAt)}, статус обновлён {shortDate(
+        application.updatedAt,
+      )}.
     </p>
     {#if application.coverNote}
       <div class="d-vx-quote">

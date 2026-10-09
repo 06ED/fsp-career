@@ -14,6 +14,7 @@ import os
 import secrets
 import subprocess
 import uuid
+from pathlib import Path
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -42,8 +43,6 @@ def http(url: str, method: str = "GET", body=None, bearer=None, expected=200, fo
         status, data, location = error.code, error.read(), None
     if status != expected:
         raise AssertionError(f"{method} {url.split('?')[0]} returned {status}, expected {expected}: {data[:300]!r}")
-    if data.startswith(b"%PDF-"):
-        return data
     return json.loads(data) if data else location
 
 
@@ -176,8 +175,7 @@ def main():
                    techStack=["Kotlin", "SQL"], experience="Синтетический профиль")
     saved = api("/api/candidates/me", candidate, "PUT", profile)
     assert saved["email"] == profile["email"] and saved["grade"] is None
-    resume = api("/api/candidates/me/resume.pdf", candidate)
-    assert resume.startswith(b"%PDF-") and len(resume) > 1000
+    resume = (Path(__file__).resolve().parents[1] / "apps/api/src/test/resources/resume.pdf").read_bytes()
     draft = upload_resume(candidate, resume)
     assert draft["draftId"] and api("/api/candidates/me", candidate)["fullName"] == profile["fullName"]
     reviewed = api("/api/candidates/me/resume-confirm", candidate, "POST", {
@@ -237,7 +235,7 @@ def main():
     audience_mapper = next(item for item in mappers if item["name"] == "fsp-api-audience")
     admin("/clients/" + created_client + "/protocol-mappers/models/" + audience_mapper["id"], "DELETE", expected=204)
     api("/api/candidates/me", token(client_id, candidate_name), expected=401)
-    print("PASS: real Keycloak JWT, bad-signature/audience rejection, role boundaries, consent, survey + adaptive assessment, retake rule, matching, reviewed PDF import/export, invitation contact gate, erasure")
+    print("PASS: real Keycloak JWT, bad-signature/audience rejection, role boundaries, consent, survey + adaptive assessment, retake rule, matching, reviewed PDF import, invitation contact gate, erasure")
     print("NOTE: accounts are synthetic admin-created/verified; browser self-registration and psychometric quality are not tested")
 
 

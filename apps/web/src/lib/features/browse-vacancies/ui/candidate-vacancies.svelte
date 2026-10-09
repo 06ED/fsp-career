@@ -86,23 +86,17 @@
 >
   <div class="d-ui-row">
     <div>
-      <h2 id="vacancy-filters-title" class="d-ui-panel-title">
-        Открытые вакансии
-      </h2>
+      <h2 id="vacancy-filters-title" class="d-ui-panel-title">Открытые вакансии</h2>
       <p class="d-ui-muted" style="margin-top: 0;">
-        Условия видны сразу: зарплатная вилка в рублях, формат и компания.
-        Сначала показаны вакансии, подходящие вашей подтверждённой категории.
+        Условия видны сразу: зарплатная вилка в рублях, формат и компания. Сначала показаны
+        вакансии, подходящие вашей подтверждённой категории.
       </p>
     </div>
   </div>
   <div class="d-vx-filters">
     <div>
       <label for="vf-spec" class="d-ui-label">Специализация</label>
-      <select
-        id="vf-spec"
-        bind:value={filters.specialization}
-        class="d-ui-field"
-      >
+      <select id="vf-spec" bind:value={filters.specialization} class="d-ui-field">
         <option value="">Любая</option>
         {#each specializations as item}
           <option value={item.value}>{item.label}</option>
@@ -188,16 +182,12 @@
         class="d-ui-outline"
         onclick={() =>
           openSection(
-            !profile.processingConsent ||
-              !profile.fullName ||
-              !profile.specialization
+            !profile.processingConsent || !profile.fullName || !profile.specialization
               ? "profile"
               : "assessment",
           )}
       >
-        {!profile.processingConsent ||
-        !profile.fullName ||
-        !profile.specialization
+        {!profile.processingConsent || !profile.fullName || !profile.specialization
           ? "Открыть профиль"
           : "Перейти к оценке"}
         <ActionIcon name="arrow" />
@@ -232,18 +222,14 @@
           Отклик: {applicationStatusLabels[vacancy.myApplicationStatus]}
         </span>
       {:else if vacancy.categoryMatch}
-        <span class="d-vx-badge d-vx-badge-success"
-          >Подходит вашей категории</span
-        >
+        <span class="d-vx-badge d-vx-badge-success">Подходит вашей категории</span>
       {/if}
     </div>
     <div>
       <span class="d-ui-tag">{specializationName(vacancy.specialization)}</span>
       <span class="d-ui-tag">{gradeName(vacancy.grade)}</span>
       <span class="d-ui-tag d-vx-tag-muted">
-        {workFormatName(vacancy.workFormat)}{vacancy.city
-          ? ` · ${vacancy.city}`
-          : ""}
+        {workFormatName(vacancy.workFormat)}{vacancy.city ? ` · ${vacancy.city}` : ""}
       </span>
     </div>
     {#if vacancy.techStack.length}
@@ -251,9 +237,7 @@
         {#each vacancy.techStack as skill}
           <span
             class={`d-ui-tag ${vacancy.stackOverlap.includes(skill) ? "d-vx-tag-match" : "d-vx-tag-muted"}`}
-            title={vacancy.stackOverlap.includes(skill)
-              ? "Есть в вашем профиле"
-              : undefined}
+            title={vacancy.stackOverlap.includes(skill) ? "Есть в вашем профиле" : undefined}
           >
             {skill}
           </span>
@@ -294,9 +278,8 @@
             class="d-ui-textarea"
           ></textarea>
           <p class="d-ui-muted" style="margin-top: 0;">
-            После отклика компания увидит ваши контакты (email и телефон),
-            подтверждённую категорию и профиль. Пока решения нет, отклик можно
-            отозвать.
+            После отклика компания увидит ваши контакты (email и телефон), подтверждённую категорию
+            и профиль. Пока решения нет, отклик можно отозвать.
           </p>
           <div class="d-ui-inline">
             <button type="submit" disabled={busy} class="d-ui-button">
@@ -328,11 +311,7 @@
         </button>
       {/if}
     {:else}
-      <button
-        type="button"
-        class="d-ui-outline"
-        onclick={() => openSection("applications")}
-      >
+      <button type="button" class="d-ui-outline" onclick={() => openSection("applications")}>
         Мои отклики <ActionIcon name="applications" />
       </button>
     {/if}

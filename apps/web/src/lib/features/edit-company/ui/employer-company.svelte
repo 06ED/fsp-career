@@ -34,9 +34,7 @@
       />
     </div>
     <div>
-      <label for="companyIndustry" class="d-ui-label"
-        >Направление деятельности</label
-      >
+      <label for="companyIndustry" class="d-ui-label">Направление деятельности</label>
       <input
         id="companyIndustry"
         maxlength="100"
@@ -64,9 +62,8 @@
 
   <h3 class="d-ui-panel-title">Контактные данные</h3>
   <p class="d-ui-muted">
-    Из них по умолчанию собирается способ связи в каждом приглашении: кандидат
-    видит название компании, условия и как с вами связаться ещё до начала
-    общения.
+    Из них по умолчанию собирается способ связи в каждом приглашении: кандидат видит название
+    компании, условия и как с вами связаться ещё до начала общения.
   </p>
   <div class="d-ui-grid">
     <div>
@@ -99,9 +96,7 @@
       />
     </div>
     <div>
-      <label for="contactNote" class="d-ui-label"
-        >Комментарий к способу связи</label
-      >
+      <label for="contactNote" class="d-ui-label">Комментарий к способу связи</label>
       <input
         id="contactNote"
         maxlength="300"

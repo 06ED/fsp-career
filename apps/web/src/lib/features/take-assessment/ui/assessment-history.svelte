@@ -1,20 +1,9 @@
 <script lang="ts">
   import { EmptyState } from "$lib/shared/ui";
-  import {
-    entryLabel,
-    formatDate,
-    formatNumber,
-    gradeLabel,
-  } from "$lib/entities/assessment";
-  import type {
-    AssessmentCatalog,
-    AssessmentResult,
-  } from "$lib/entities/assessment";
+  import { entryLabel, formatDate, formatNumber, gradeLabel } from "$lib/entities/assessment";
+  import type { AssessmentCatalog, AssessmentResult } from "$lib/entities/assessment";
 
-  let {
-    history,
-    catalog,
-  }: { history: AssessmentResult[]; catalog: AssessmentCatalog | null } =
+  let { history, catalog }: { history: AssessmentResult[]; catalog: AssessmentCatalog | null } =
     $props();
 </script>
 
@@ -29,10 +18,7 @@
           </strong>
           {#if attempt.targetGrade}
             · тест на {gradeLabel(attempt.targetGrade)}
-            <span
-              class={attempt.passed ? "d-a-ok" : "d-a-fail"}
-              style="margin-left: 6px;"
-            >
+            <span class={attempt.passed ? "d-a-ok" : "d-a-fail"} style="margin-left: 6px;">
               {attempt.passed
                 ? "подтверждён"
                 : attempt.expired
@@ -52,8 +38,7 @@
           <div class="d-ui-status">грейд после теста</div>
           <strong style="font-size: 18px;">{gradeLabel(attempt.grade)}</strong>
           <div class="d-a-small">
-            {attempt.score} / 100{attempt.theta !== null &&
-            attempt.theta !== undefined
+            {attempt.score} / 100{attempt.theta !== null && attempt.theta !== undefined
               ? ` · θ ${formatNumber(attempt.theta)} ± ${formatNumber(attempt.thetaSe)}`
               : ""}
           </div>
@@ -63,15 +48,13 @@
         <summary>Подробнее</summary>
         <p>{attempt.summary}</p>
         <p>
-          Верных ответов: {attempt.correct} из {attempt.answered} (план — {attempt.total}).
-          Грейд до теста: {gradeLabel(attempt.previousGrade)}.
+          Верных ответов: {attempt.correct} из {attempt.answered} (план — {attempt.total}). Грейд до
+          теста: {gradeLabel(attempt.previousGrade)}.
         </p>
         {#if attempt.survey}
           <p>
-            Опрос: отрасль — {entryLabel(
-              catalog?.industries,
-              attempt.survey.industry,
-            )}; опыт — {attempt.survey.experienceYears} лет; формат — {entryLabel(
+            Опрос: отрасль — {entryLabel(catalog?.industries, attempt.survey.industry)}; опыт — {attempt
+              .survey.experienceYears} лет; формат — {entryLabel(
               catalog?.workFormats,
               attempt.survey.workFormat,
             )}{attempt.survey.teamRoles.length

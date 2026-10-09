@@ -14,11 +14,7 @@
     workFormatName,
     workFormats,
   } from "$lib/entities/vacancy";
-  import type {
-    Applicant,
-    EmployerVacancy,
-    VacancyInput,
-  } from "$lib/entities/vacancy";
+  import type { Applicant, EmployerVacancy, VacancyInput } from "$lib/entities/vacancy";
   import type { RunAction } from "$lib/shared/api";
 
   let { busy, run }: { busy: boolean; run: RunAction } = $props();
@@ -111,9 +107,7 @@
         if (selected?.id === vacancy.id)
           selected = vacancies.find((v) => v.id === vacancy.id) ?? null;
       },
-      reopen
-        ? "Вакансия снова открыта."
-        : "Вакансия закрыта. Отклики сохранены.",
+      reopen ? "Вакансия снова открыта." : "Вакансия закрыта. Отклики сохранены.",
     );
   }
   // Opening the applications marks new ones as "viewed": the candidate then sees that
@@ -124,9 +118,7 @@
       let result = await vacancyApi.applicants(vacancy.id);
       const fresh = result.applications.filter((a) => a.status === "sent");
       if (fresh.length) {
-        await Promise.all(
-          fresh.map((a) => vacancyApi.setApplicationStatus(a.id, "viewed")),
-        );
+        await Promise.all(fresh.map((a) => vacancyApi.setApplicationStatus(a.id, "viewed")));
         result = await vacancyApi.applicants(vacancy.id);
         vacancies = await vacancyApi.employerVacancies();
       }
@@ -161,17 +153,12 @@
     <div>
       <h2 class="d-ui-panel-title">Вакансии компании</h2>
       <p class="d-ui-muted" style="margin-top: 0;">
-        Классический путь в дополнение к подбору: опубликуйте вакансию с
-        обязательной вилкой «от–до» в рублях, кандидаты откликнутся сами. По
-        отклику вы видите контакты, подтверждённую категорию и балл оценки.
+        Классический путь в дополнение к подбору: опубликуйте вакансию с обязательной вилкой «от–до»
+        в рублях, кандидаты откликнутся сами. По отклику вы видите контакты, подтверждённую
+        категорию и балл оценки.
       </p>
     </div>
-    <button
-      type="button"
-      disabled={busy}
-      class="d-ui-button"
-      onclick={() => startEdit(null)}
-    >
+    <button type="button" disabled={busy} class="d-ui-button" onclick={() => startEdit(null)}>
       Новая вакансия <ActionIcon name="add" />
     </button>
   </div>
@@ -191,11 +178,7 @@
       <h2 id="vacancy-form-title" class="d-ui-panel-title">
         {editing.id ? "Редактирование вакансии" : "Новая вакансия"}
       </h2>
-      <button
-        type="button"
-        class="d-ui-outline"
-        onclick={() => (editing = null)}
-      >
+      <button type="button" class="d-ui-outline" onclick={() => (editing = null)}>
         Закрыть <ActionIcon name="close" />
       </button>
     </div>
@@ -211,12 +194,7 @@
     <div class="d-vx-filters">
       <div>
         <label for="vac-spec" class="d-ui-label">Специализация</label>
-        <select
-          id="vac-spec"
-          required
-          bind:value={editing.draft.specialization}
-          class="d-ui-field"
-        >
+        <select id="vac-spec" required bind:value={editing.draft.specialization} class="d-ui-field">
           <option value="">Выберите направление</option>
           {#each specializations as item}
             <option value={item.value}>{item.label}</option>
@@ -225,12 +203,7 @@
       </div>
       <div>
         <label for="vac-grade" class="d-ui-label">Требуемый грейд</label>
-        <select
-          id="vac-grade"
-          required
-          bind:value={editing.draft.grade}
-          class="d-ui-field"
-        >
+        <select id="vac-grade" required bind:value={editing.draft.grade} class="d-ui-field">
           {#each grades as item}
             <option value={item.value}>{item.label}</option>
           {/each}
@@ -238,12 +211,7 @@
       </div>
       <div>
         <label for="vac-format" class="d-ui-label">Формат работы</label>
-        <select
-          id="vac-format"
-          required
-          bind:value={editing.draft.workFormat}
-          class="d-ui-field"
-        >
+        <select id="vac-format" required bind:value={editing.draft.workFormat} class="d-ui-field">
           {#each workFormats as item}
             <option value={item.value}>{item.label}</option>
           {/each}
@@ -297,8 +265,7 @@
       class={salaryInvalid ? "d-ui-error" : "d-ui-muted"}
       style="margin-top: 0;"
     >
-      Вилка обязательна: кандидат видит условия до начала общения. «До» не может
-      быть меньше «от».
+      Вилка обязательна: кандидат видит условия до начала общения. «До» не может быть меньше «от».
     </p>
     <label for="vac-stack" class="d-ui-label">Стек · через запятую</label>
     <input
@@ -307,9 +274,7 @@
       bind:value={stackText}
       class="d-ui-field"
     />
-    <label for="vac-description" class="d-ui-label"
-      >Задачи, команда и условия</label
-    >
+    <label for="vac-description" class="d-ui-label">Задачи, команда и условия</label>
     <textarea
       id="vac-description"
       required
@@ -330,26 +295,17 @@
     <div class="d-ui-row">
       <div>
         <div class="d-ui-kicker">ОТКЛИКИ НА ВАКАНСИЮ</div>
-        <h2
-          id="applicants-title"
-          class="d-ui-panel-title"
-          style="margin-top: 10px;"
-        >
+        <h2 id="applicants-title" class="d-ui-panel-title" style="margin-top: 10px;">
           {selected.title}
         </h2>
       </div>
-      <button
-        type="button"
-        class="d-ui-outline"
-        onclick={() => (selected = null)}
-      >
+      <button type="button" class="d-ui-outline" onclick={() => (selected = null)}>
         Закрыть <ActionIcon name="close" />
       </button>
     </div>
     <p class="d-ui-muted" style="margin-top: 0;">
-      Сначала — кандидаты, чья подтверждённая тестом категория соответствует
-      вакансии, затем по грейду и баллу оценки. Контакты открыты, потому что
-      кандидат откликнулся сам.
+      Сначала — кандидаты, чья подтверждённая тестом категория соответствует вакансии, затем по
+      грейду и баллу оценки. Контакты открыты, потому что кандидат откликнулся сам.
     </p>
     {#each applicants as applicant (applicant.id)}
       <article
@@ -363,11 +319,7 @@
                 ? `ПОДТВЕРЖДЁННАЯ КАТЕГОРИЯ / ${specializationName(applicant.specialization)} · ${gradeName(applicant.assessedGrade)}`.toUpperCase()
                 : "КАТЕГОРИЯ НЕ ПОДТВЕРЖДЕНА"}
             </div>
-            <h3
-              id={"applicant-" + applicant.id}
-              class="d-ui-panel-title"
-              style="margin-top: 10px;"
-            >
+            <h3 id={"applicant-" + applicant.id} class="d-ui-panel-title" style="margin-top: 10px;">
               {applicant.fullName}
             </h3>
           </div>
@@ -396,9 +348,7 @@
             {#each applicant.techStack as skill}
               <span
                 class={`d-ui-tag ${
-                  applicant.stackOverlap.some(
-                    (item) => item.toLowerCase() === skill.toLowerCase(),
-                  )
+                  applicant.stackOverlap.some((item) => item.toLowerCase() === skill.toLowerCase())
                     ? "d-vx-tag-match"
                     : "d-vx-tag-muted"
                 }`}
@@ -413,10 +363,7 @@
           <strong>Контакты кандидата</strong>
           {#if applicant.contactEmail}
             <div>
-              Email: <a
-                class="d-vx-contact-link"
-                href={"mailto:" + applicant.contactEmail}
-              >
+              Email: <a class="d-vx-contact-link" href={"mailto:" + applicant.contactEmail}>
                 {applicant.contactEmail}
               </a>
             </div>
@@ -444,9 +391,7 @@
           </details>
         {/if}
         <p class="d-ui-muted" style="margin-top: 0;">
-          Отклик от {shortDate(
-            applicant.createdAt,
-          )}{applicant.lastTaskActivityAt
+          Отклик от {shortDate(applicant.createdAt)}{applicant.lastTaskActivityAt
             ? ` · последнее регулярное задание ${shortDate(applicant.lastTaskActivityAt)}`
             : ""}
         </p>
@@ -510,19 +455,16 @@
     </div>
     <div>
       <span class="d-ui-tag d-vx-tag-muted">
-        {workFormatName(vacancy.workFormat)}{vacancy.city
-          ? ` · ${vacancy.city}`
-          : ""}
+        {workFormatName(vacancy.workFormat)}{vacancy.city ? ` · ${vacancy.city}` : ""}
       </span>
       {#each vacancy.techStack as skill}
         <span class="d-ui-tag">{skill}</span>
       {/each}
     </div>
     <p class="d-ui-muted">
-      Откликов: {vacancy.applications.total} · новых: {vacancy.applications
-        .sent} · просмотрено: {vacancy.applications.viewed} · принято: {vacancy
-        .applications.accepted} · отказ: {vacancy.applications.rejected}.
-      Обновлена
+      Откликов: {vacancy.applications.total} · новых: {vacancy.applications.sent} · просмотрено: {vacancy
+        .applications.viewed} · принято: {vacancy.applications.accepted} · отказ: {vacancy
+        .applications.rejected}. Обновлена
       {shortDate(vacancy.updatedAt)}.
     </p>
     <div class="d-ui-inline">
@@ -532,16 +474,9 @@
         class="d-ui-button"
         onclick={() => openApplicants(vacancy)}
       >
-        Отклики ({vacancy.applications.total}) <ActionIcon
-          name="applications"
-        />
+        Отклики ({vacancy.applications.total}) <ActionIcon name="applications" />
       </button>
-      <button
-        type="button"
-        disabled={busy}
-        class="d-ui-outline"
-        onclick={() => startEdit(vacancy)}
-      >
+      <button type="button" disabled={busy} class="d-ui-outline" onclick={() => startEdit(vacancy)}>
         Редактировать <ActionIcon name="edit" />
       </button>
       <button

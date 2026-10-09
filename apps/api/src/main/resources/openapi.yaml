@@ -1013,22 +1013,6 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '500': {$ref: '#/components/responses/InternalError'}
-  /api/candidates/me/resume.pdf:
-    get:
-      summary: Download own standardized branded PDF resume (candidate role)
-      description: Requires processing consent and nonblank fullName; generated on demand without persisting PDF. Unicode font is bundled.
-      responses:
-        '200':
-          description: Downloadable PDF resume
-          headers:
-            Content-Disposition: {schema: {type: string}, description: 'attachment; filename="fsp-resume.pdf"'}
-          content:
-            application/pdf:
-              schema: {type: string, format: binary}
-        '400': {$ref: '#/components/responses/BadRequest'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '500': {$ref: '#/components/responses/InternalError'}
   /api/candidates/me/resume-upload:
     post:
       summary: Extract review-only suggestions from text-based PDF (candidate role, processing consent required)

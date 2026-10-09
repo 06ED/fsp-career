@@ -55,15 +55,17 @@ const vacancyErrors: [string, string][] = [
   ["Vacancy not found", "Вакансия не найдена."],
   ["Application not found", "Отклик не найден."],
 ];
+
 async function ru<T>(request: Promise<T>): Promise<T> {
   try {
     return await request;
   } catch (e) {
     const text = e instanceof Error ? e.message : String(e);
     const known = vacancyErrors.find(([prefix]) => text.startsWith(prefix));
-    throw new Error(known ? known[1] : text);
+    throw new Error(known ? known[1] : text, { cause: e });
   }
 }
+
 function vacancyQuery(filters: VacancyFilters): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters))

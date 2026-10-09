@@ -3,12 +3,7 @@
   import { ActionIcon, EmptyState } from "$lib/shared/ui";
   import { taskApi } from "$lib/entities/task";
   import { specializations } from "$lib/entities/candidate";
-  import {
-    gradeName,
-    grades,
-    shortDate,
-    specializationName,
-  } from "$lib/entities/vacancy";
+  import { gradeName, grades, shortDate, specializationName } from "$lib/entities/vacancy";
   import { submissionKindLabels } from "$lib/entities/task";
   import type {
     EmployerShortTask,
@@ -56,9 +51,7 @@
         await taskApi.setTaskActive(task.id, !task.active);
         tasks = await taskApi.employerTasks();
       },
-      task.active
-        ? "Задание снято с ротации. Ответы сохранены."
-        : "Задание снова в ротации.",
+      task.active ? "Задание снято с ротации. Ответы сохранены." : "Задание снова в ротации.",
     );
   }
   async function openSubmissions(task: EmployerShortTask) {
@@ -102,11 +95,10 @@
     <div>
       <h2 class="d-ui-panel-title">Регулярные короткие задания</h2>
       <p class="d-ui-muted" style="margin-top: 0;">
-        Раз в неделю платформа предлагает каждому кандидату направления одно
-        активное задание — разным кандидатам достаются разные задачи. Кандидат
-        присылает решение или подход; вы оцениваете ответ от 1 до 5. Это свежий
-        сигнал о кандидате рядом с результатом оценки. Контакты в ответах не
-        раскрываются.
+        Раз в неделю платформа предлагает каждому кандидату направления одно активное задание —
+        разным кандидатам достаются разные задачи. Кандидат присылает решение или подход; вы
+        оцениваете ответ от 1 до 5. Это свежий сигнал о кандидате рядом с результатом оценки.
+        Контакты в ответах не раскрываются.
       </p>
     </div>
     <button
@@ -151,12 +143,7 @@
     <div class="d-ui-grid">
       <div>
         <label for="task-spec" class="d-ui-label">Специализация</label>
-        <select
-          id="task-spec"
-          required
-          bind:value={draft.specialization}
-          class="d-ui-field"
-        >
+        <select id="task-spec" required bind:value={draft.specialization} class="d-ui-field">
           <option value="">Выберите направление</option>
           {#each specializations as item}
             <option value={item.value}>{item.label}</option>
@@ -194,19 +181,11 @@
     <div class="d-ui-row">
       <div>
         <div class="d-ui-kicker">ОТВЕТЫ НА ЗАДАНИЕ</div>
-        <h2
-          id="task-answers-title"
-          class="d-ui-panel-title"
-          style="margin-top: 10px;"
-        >
+        <h2 id="task-answers-title" class="d-ui-panel-title" style="margin-top: 10px;">
           {selected.title}
         </h2>
       </div>
-      <button
-        type="button"
-        class="d-ui-outline"
-        onclick={() => (selected = null)}
-      >
+      <button type="button" class="d-ui-outline" onclick={() => (selected = null)}>
         Закрыть <ActionIcon name="close" />
       </button>
     </div>
@@ -220,17 +199,13 @@
             ? `ПОДТВЕРЖДЁННАЯ КАТЕГОРИЯ / ${specializationName(item.specialization)} · ${gradeName(item.assessedGrade)}${item.score != null ? ` · ${item.score}/100` : ""}`.toUpperCase()
             : `${specializationName(item.specialization).toUpperCase()} · КАТЕГОРИЯ НЕ ПОДТВЕРЖДЕНА`}
         </div>
-        <h3
-          id={"answer-" + item.id}
-          class="d-ui-panel-title"
-          style="margin-top: 10px;"
-        >
+        <h3 id={"answer-" + item.id} class="d-ui-panel-title" style="margin-top: 10px;">
           {item.candidateName}
         </h3>
         <p class="d-ui-muted" style="margin-top: 0;">
-          {submissionKindLabels[item.kind]} · {shortDate(
-            item.submittedAt,
-          )}{item.ratedAt ? ` · оценено ${shortDate(item.ratedAt)}` : ""}
+          {submissionKindLabels[item.kind]} · {shortDate(item.submittedAt)}{item.ratedAt
+            ? ` · оценено ${shortDate(item.ratedAt)}`
+            : ""}
         </p>
         <div class="d-vx-quote">{item.answer}</div>
         {#if ratings[item.id]}
@@ -264,11 +239,7 @@
               bind:value={ratings[item.id].comment}
               class="d-ui-field"
             />
-            <button
-              type="submit"
-              disabled={busy || !ratings[item.id].rating}
-              class="d-ui-outline"
-            >
+            <button type="submit" disabled={busy || !ratings[item.id].rating} class="d-ui-outline">
               {item.rating ? "Изменить оценку" : "Сохранить оценку"}
               <ActionIcon name="star" />
             </button>
@@ -294,17 +265,11 @@
             ? gradeName(task.grade).toUpperCase()
             : "ЛЮБОЙ ГРЕЙД"}
         </div>
-        <h2
-          id={"task-" + task.id}
-          class="d-ui-panel-title"
-          style="margin-top: 10px;"
-        >
+        <h2 id={"task-" + task.id} class="d-ui-panel-title" style="margin-top: 10px;">
           {task.title}
         </h2>
       </div>
-      <span
-        class={`d-vx-badge ${task.active ? "d-vx-badge-success" : "d-vx-badge-muted"}`}
-      >
+      <span class={`d-vx-badge ${task.active ? "d-vx-badge-success" : "d-vx-badge-muted"}`}>
         {task.active ? "В ротации" : "Снято"}
       </span>
     </div>
@@ -313,9 +278,7 @@
       <p class="d-vx-text">{task.body}</p>
     </details>
     <p class="d-ui-muted">
-      Ответов: {task.submissions} · без оценки: {task.unrated} · создано {shortDate(
-        task.createdAt,
-      )}
+      Ответов: {task.submissions} · без оценки: {task.unrated} · создано {shortDate(task.createdAt)}
     </p>
     <div class="d-ui-inline">
       <button

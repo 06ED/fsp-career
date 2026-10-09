@@ -4,6 +4,7 @@ import ru.fsp.career.identity.infrastructure.*
 import ru.fsp.career.shared.infrastructure.Database
 
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
@@ -79,6 +80,37 @@ class AuthHttpTest {
                     contentType(ContentType.Application.Json)
                     setBody("""{"email":"$email","processingConsent":true}""")
                 }.status)
+                assertEquals(HttpStatusCode.NotFound, client.get("/api/candidates/me/resume.pdf") {
+                    header(HttpHeaders.Cookie, currentCookie)
+                }.status)
+                val pdf = requireNotNull(javaClass.getResourceAsStream("/resume.pdf")).use { it.readBytes() }
+                val uploaded = client.post("/api/candidates/me/resume-upload") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
+                    header("X-CSRF-Token", currentCsrf)
+                    setBody(MultiPartFormDataContent(formData {
+                        append("file", pdf, Headers.build {
+                            append(HttpHeaders.ContentType, "application/pdf")
+                            append(HttpHeaders.ContentDisposition, "filename=\"resume.pdf\"")
+                        })
+                    }))
+                }
+                assertEquals(HttpStatusCode.Created, uploaded.status)
+                val draft = Json.parseToJsonElement(uploaded.bodyAsText()).jsonObject
+                assertEquals("ada@example.org", draft["parsedFields"]!!.jsonObject["email"]!!.jsonPrimitive.content)
+                val unchanged = Json.parseToJsonElement(client.get("/api/candidates/me") {
+                    header(HttpHeaders.Cookie, currentCookie)
+                }.bodyAsText()).jsonObject
+                assertEquals("Local candidate", unchanged["fullName"]!!.jsonPrimitive.content)
+                val confirmed = client.post("/api/candidates/me/resume-confirm") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
+                    header("X-CSRF-Token", currentCsrf); contentType(ContentType.Application.Json)
+                    setBody("""{"draftId":"${draft["draftId"]!!.jsonPrimitive.content}","fullName":"Reviewed candidate","techStack":["Kotlin","SQL"]}""")
+                }
+                assertEquals(HttpStatusCode.OK, confirmed.status)
+                val reviewed = Json.parseToJsonElement(confirmed.bodyAsText()).jsonObject
+                assertEquals("Reviewed candidate", reviewed["fullName"]!!.jsonPrimitive.content)
+                assertEquals("", reviewed["email"]!!.jsonPrimitive.content)
+                assertFalse(reviewed["consentPublication"]!!.jsonPrimitive.boolean)
                 val logout = client.post("/api/auth/logout") {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
                     header("X-CSRF-Token", currentCsrf)

@@ -19,15 +19,15 @@ test("desktop dashboard owns the viewport while short screens keep document scro
   ).toContain("min-height: 100vh");
   const dashboard = readFileSync(
     new URL(
-      "../src/lib/pages/dashboard/ui/dashboard-page.svelte",
+      "../src/routes/app/+layout.svelte",
       import.meta.url,
     ),
     "utf8",
   );
   expect(dashboard).toContain(
-    '<main bind:this={mainElement} class="d-ui-main">',
+    '<main bind:this={mainElement} class="d-ui-main" id="dashboard-main">',
   );
   expect(dashboard).toMatch(
-    /if \(section !== id\) \{[\s\S]*?await tick\(\);\s*if \(mainElement\) mainElement\.scrollTop = 0;\s*window\.scrollTo\(0, 0\);/,
+    /afterNavigate\([\s\S]*?if \(from\?\.url\?\.pathname !== to\?\.url\?\.pathname\)[\s\S]*?mainElement\.scrollTop = 0/,
   );
 });

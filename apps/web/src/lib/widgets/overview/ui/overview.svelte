@@ -1,47 +1,47 @@
 <script lang="ts">
   import { ActionIcon } from "$lib/shared/ui";
-  import type { Role, Section } from "$lib/entities/account";
+  import type { Role } from "$lib/entities/account";
   import type { Profile } from "$lib/entities/candidate";
   import type { Company, Need } from "$lib/entities/company";
   import type { Invitation } from "$lib/entities/invitation";
   import { routeProgress } from "../model/route";
+
   let {
     role,
     profile,
     company,
     need,
     invitations,
-    openSection,
   }: {
     role: Role;
     profile: Profile;
     company: Company;
     need: Need;
     invitations: Invitation[];
-    openSection: (id: Section) => Promise<void>;
   } = $props();
 
   const steps = [
     {
       description: "Заполните профиль и дайте согласие на публикацию.",
-      section: "profile",
+      href: "/app/profile",
     },
     {
       description: "Выберите специализацию и предполагаемый грейд.",
-      section: "profile",
+      href: "/app/profile",
     },
     {
       description: "Пройдите оценку: категория определяется проверкой навыков.",
-      section: "assessment",
+      href: "/app/assessment",
     },
     {
       description: "Рассмотрите приглашения.",
-      section: "invitations",
+      href: "/app/invitations",
     },
   ] satisfies {
     description: string;
-    section: Section;
+    href: string;
   }[];
+
   const statusLabels = {
     done: "Пройдено",
     current: "Текущий шаг",
@@ -70,18 +70,18 @@
   <section class="d-ui-panel" aria-labelledby="route-title">
     <h2 id="route-title" class="d-ui-panel-title">Ваш маршрут</h2>
     <ol class="route-steps" role="list">
-      {#each steps as step, index}
+      {#each steps as step, index (step)}
         {@const status = progress[index]}
         <li
           class="route-step"
           data-status={status}
           aria-current={status === "current" ? "step" : undefined}
         >
-          <button
-            type="button"
+          <a
+            href={step.href}
+            data-interactive
             class="route-action"
             aria-label={`${String(index + 1).padStart(2, "0")}. ${step.description} ${statusLabels[status]}`}
-            onclick={() => openSection(step.section)}
           >
             <span class="route-marker" aria-hidden="true">
               {#if status === "done"}
@@ -93,7 +93,7 @@
             <span class="route-description">
               {step.description}<ActionIcon name="arrow" size={15} />
             </span>
-          </button>
+          </a>
         </li>
       {/each}
     </ol>
@@ -124,12 +124,12 @@
       объяснением совпадения. Контакты откроются только если кандидат примет приглашение.
     </p>
     <div class="d-ui-inline">
-      <button class="d-ui-button" onclick={() => openSection("needs")}>
+      <a href="/app/needs" data-interactive class="d-ui-button">
         Описать потребность <ActionIcon name="need" />
-      </button>
-      <button class="d-ui-outline" onclick={() => openSection("matches")}>
+      </a>
+      <a href="/app/matches" data-interactive class="d-ui-outline">
         Смотреть подборку <ActionIcon name="matches" />
-      </button>
+      </a>
     </div>
   </div>
 {/if}

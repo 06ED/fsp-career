@@ -1,20 +1,21 @@
 <script lang="ts">
   import { ActionIcon } from "$lib/shared/ui";
   import { logout } from "$lib/shared/auth";
-  import type { Role, Section } from "$lib/entities/account";
+  import { page } from "$app/state";
+  import { dashboardNavigation } from "$lib/entities/account";
+  import type { Role } from "$lib/entities/account";
+
   let {
     role,
-    section,
     identity,
-    openSection,
   }: {
     role: Role;
-    section: Section;
     identity: string;
-    openSection: (id: Section) => Promise<void>;
   } = $props();
+
   let logoutError = $state("");
   let loggingOut = $state(false);
+
   async function signOut() {
     loggingOut = true;
     logoutError = "";
@@ -26,24 +27,7 @@
       loggingOut = false;
     }
   }
-  const candidateTabs = [
-    { id: "overview", label: "Обзор", icon: "overview" },
-    { id: "profile", label: "Мой профиль", icon: "profile" },
-    { id: "assessment", label: "Оценка навыков", icon: "assessment" },
-    { id: "invitations", label: "Приглашения", icon: "invitations" },
-    { id: "vacancies", label: "Вакансии", icon: "vacancies" },
-    { id: "applications", label: "Мои отклики", icon: "applications" },
-    { id: "tasks", label: "Задания", icon: "tasks" },
-  ] as const;
-  const employerTabs = [
-    { id: "overview", label: "Обзор", icon: "overview" },
-    { id: "company", label: "Компания", icon: "company" },
-    { id: "needs", label: "Потребность", icon: "need" },
-    { id: "matches", label: "Подбор кандидатов", icon: "matches" },
-    { id: "invitations", label: "Приглашения", icon: "invitations" },
-    { id: "vacancies", label: "Вакансии", icon: "vacancies" },
-    { id: "tasks", label: "Задания", icon: "tasks" },
-  ] as const;
+
 </script>
 
 <aside class="d-ui-sidebar">
@@ -52,14 +36,15 @@
     ФСП / КАРЬЕРА
   </a>
   <nav class="d-ui-nav" aria-label="Разделы кабинета">
-    {#each role === "candidate" ? candidateTabs : employerTabs as tab}
-      <button
-        class={`d-ui-nav-button ${section === tab.id ? "d-ui-nav-active" : ""}`}
-        aria-current={section === tab.id ? "page" : undefined}
-        onclick={() => openSection(tab.id)}
+    {#each dashboardNavigation(role) as tab (tab.href)}
+      <a
+        href={tab.href}
+        data-interactive
+        class={`d-ui-nav-button ${page.url.pathname === tab.href ? "d-ui-nav-active" : ""}`}
+        aria-current={page.url.pathname === tab.href ? "page" : undefined}
       >
         <ActionIcon name={tab.icon} size={18} placement="leading" />{tab.label}
-      </button>
+      </a>
     {/each}
   </nav>
   <div class="d-ui-user">

@@ -10,19 +10,16 @@
     SubmissionKind,
   } from "$lib/entities/task";
   import type { Profile } from "$lib/entities/candidate";
-  import type { Section } from "$lib/entities/account";
   import type { RunAction } from "$lib/shared/api";
 
   let {
     profile,
     busy,
     run,
-    openSection,
   }: {
     profile: Profile;
     busy: boolean;
     run: RunAction;
-    openSection: (id: Section) => Promise<void>;
   } = $props();
 
   let current = $state<CurrentShortTask | null>(null);
@@ -71,9 +68,9 @@
     <div class="d-ui-note">
       Чтобы получать задания, сохраните профиль со специализацией и согласием на обработку данных.
       <div class="d-ui-inline" style="margin-top: 12px;">
-        <button type="button" class="d-ui-outline" onclick={() => openSection("profile")}>
+        <a href="/app/profile" data-interactive class="d-ui-outline">
           Открыть профиль <ActionIcon name="arrow" />
-        </button>
+        </a>
       </div>
     </div>
   {:else if current}
@@ -113,7 +110,7 @@
       <p class="d-vx-text">{current.task.body}</p>
       <fieldset class="d-vx-radio-row">
         <legend class="d-vx-legend">Формат ответа</legend>
-        {#each Object.entries(submissionKindLabels) as [value, label]}
+        {#each Object.entries(submissionKindLabels) as [value, label] (value)}
           <label class="d-ui-answer" style="margin-bottom: 0;">
             <input type="radio" name="task-kind" {value} bind:group={kind} />
             {label}

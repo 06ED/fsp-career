@@ -46,7 +46,7 @@
       <label for="needSpec" class="d-ui-label">Специализация</label>
       <select id="needSpec" required bind:value={need.specialization} class="d-ui-field">
         <option value="">Выберите направление</option>
-        {#each specializations as item}
+        {#each specializations as item (item.value)}
           <option value={item.value}>{item.label}</option>
         {/each}
       </select>
@@ -67,7 +67,7 @@
   <label for="needIndustry" class="d-ui-label">Отрасль</label>
   <select id="needIndustry" bind:value={need.industry} class="d-ui-field">
     <option value="">Не важно</option>
-    {#each industries as item}
+    {#each industries as item (item.id)}
       <option value={item.id}>
         {item.label}
       </option>
@@ -88,7 +88,7 @@
   />
   {#if need.techStack?.length}
     <div style="margin-top: -8px; margin-bottom: 10px;">
-      {#each need.techStack as skill}
+      {#each need.techStack as skill (skill)}
         <button
           type="button"
           class="d-mx-badge d-mx-badge-ok"
@@ -104,7 +104,7 @@
   {#if suggestions.length}
     <div style="margin-bottom: 16px;">
       <span class="d-ui-muted">Часто ищут:</span>
-      {#each suggestions as skill}
+      {#each suggestions as skill (skill)}
         <button
           type="button"
           class="d-mx-badge d-mx-badge-muted"

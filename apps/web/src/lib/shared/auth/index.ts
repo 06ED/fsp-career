@@ -21,13 +21,14 @@ let initialization: Promise<boolean> | undefined;
 export async function authRequest(
   path: string,
   options: RequestInit = {},
+  fetcher: typeof fetch = fetch,
 ): Promise<Response> {
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData))
     headers.set("Content-Type", "application/json");
   if (!["GET", "HEAD", "OPTIONS"].includes(options.method ?? "GET"))
     headers.set("X-CSRF-Token", auth.csrfToken);
-  const response = await fetch(`${apiOrigin}${path}`, {
+  const response = await fetcher(`${apiOrigin}${path}`, {
     ...options,
     headers,
     credentials: "include",
@@ -45,9 +46,9 @@ export async function authRequest(
   return response;
 }
 
-export function initAuth(): Promise<boolean> {
+export function initAuth(fetcher: typeof fetch = fetch): Promise<boolean> {
   if (!initialization) {
-    initialization = authRequest("/api/auth/session")
+    initialization = authRequest("/api/auth/session", {}, fetcher)
       .then((response) => response.json())
       .then((session: Session) => {
         Object.assign(auth, session);
@@ -90,4 +91,19 @@ export function providerUrl(
   action: "start" | "link" = "start",
 ): string {
   return `${apiOrigin}/api/auth/${provider}/${action}`;
+}
+
+export function appReturnPath(value: string | null): string | null {
+  if (!value) return null;
+  try {
+    const url = new URL(value, "http://localhost");
+    if (
+      url.origin !== "http://localhost" ||
+      (url.pathname !== "/app" && !url.pathname.startsWith("/app/"))
+    )
+      return null;
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return null;
+  }
 }

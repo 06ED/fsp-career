@@ -35,6 +35,8 @@
   gap: 5px;
 }
 .d-ui-nav-button {
+  display: flex;
+  align-items: center;
   text-align: left;
   border: 0;
   background-color: transparent;
@@ -222,6 +224,7 @@
 .d-ui-button,
 .d-ui-outline,
 .d-ui-danger {
+  display: inline-block;
   border: 0;
   padding-block: 13px;
   padding-inline: 19px;

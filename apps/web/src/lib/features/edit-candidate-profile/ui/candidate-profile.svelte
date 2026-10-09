@@ -76,7 +76,7 @@
       <label for="spec" class="d-ui-label">Специализация</label>
       <select id="spec" required bind:value={profile.specialization} class="d-ui-field">
         <option value="">Выберите направление</option>
-        {#each specializations as item}
+        {#each specializations as item (item.value)}
           <option value={item.value}>{item.label}</option>
         {/each}
       </select>
@@ -85,7 +85,7 @@
       <label for="industry" class="d-ui-label">Отрасль / интерес</label>
       <select id="industry" bind:value={profile.industry} class="d-ui-field">
         <option value="">Не указана</option>
-        {#each industries as item}
+        {#each industries as item (item.id)}
           <option value={item.id}>
             {item.label}
           </option>
@@ -150,7 +150,7 @@
   <label for="experience" class="d-ui-label">Опыт и достижения</label>
   <textarea id="experience" bind:value={profile.experience} class="d-ui-textarea"></textarea>
   <h3 class="d-ui-panel-title">Опыт работы</h3>
-  {#each profile.cvHistory as entry, index}
+  {#each profile.cvHistory as entry, index (entry)}
     <div class="d-ui-panel">
       <div class="d-ui-grid">
         <div>

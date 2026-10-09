@@ -1,1 +1,1 @@
-export { default as DashboardPage } from "./ui/dashboard-page.svelte";
+export { createDashboard, getDashboard, setDashboard } from "./model/dashboard.svelte";

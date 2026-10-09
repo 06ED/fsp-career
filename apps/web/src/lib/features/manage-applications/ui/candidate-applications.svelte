@@ -11,17 +11,14 @@
     workFormatName,
   } from "$lib/entities/vacancy";
   import type { ApplicationStatus, CandidateApplication } from "$lib/entities/vacancy";
-  import type { Section } from "$lib/entities/account";
   import type { RunAction } from "$lib/shared/api";
 
   let {
     busy,
     run,
-    openSection,
   }: {
     busy: boolean;
     run: RunAction;
-    openSection: (id: Section) => Promise<void>;
   } = $props();
 
   let applications = $state<CandidateApplication[]>([]);
@@ -71,9 +68,9 @@
       <button type="button" disabled={busy} class="d-ui-outline" onclick={() => load()}>
         Обновить <ActionIcon name="refresh" />
       </button>
-      <button type="button" class="d-ui-button" onclick={() => openSection("vacancies")}>
+      <a href="/app/vacancies" data-interactive class="d-ui-button">
         Найти вакансии <ActionIcon name="vacancies" />
-      </button>
+      </a>
     </div>
   </div>
 </div>
@@ -140,9 +137,9 @@
       description="Вы ещё не откликались на вакансии. Можно дождаться приглашения или найти вакансию самостоятельно."
     >
       {#snippet action()}
-        <button class="d-ui-button" onclick={() => openSection("vacancies")}>
+        <a href="/app/vacancies" data-interactive class="d-ui-button">
           Найти вакансии <ActionIcon name="vacancies" />
-        </button>
+        </a>
       {/snippet}
     </EmptyState>
   {/if}

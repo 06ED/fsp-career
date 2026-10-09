@@ -216,7 +216,7 @@
     {#if eligibility}
       <span class="d-ui-label">Куда можно пройти тест сейчас</span>
       <div>
-        {#each eligibility.options as option}
+        {#each eligibility.options as option (option.grade)}
           <span class={`d-a-chip ${option.allowed ? "d-a-chip-on" : ""}`} title={option.message}>
             {gradeLabel(option.grade)}: {option.allowed
               ? "можно сейчас"

@@ -19,14 +19,12 @@
     busy,
     run,
     sendInvitation,
-    openNeeds,
   }: {
     need: Need;
     company: Company;
     busy: boolean;
     run: RunAction;
     sendInvitation: (candidateId: string, offer: Offer) => Promise<boolean>;
-    openNeeds: () => void;
   } = $props();
 
   type Mode = "need" | "bank";
@@ -214,9 +212,9 @@
         Сначала опишите потребность: специализацию, грейд, стек и задачи команды — на её основе
         формируется подборка.
       </div>
-      <button class="d-ui-button" onclick={openNeeds}>
+      <a href="/app/needs" data-interactive class="d-ui-button">
         Описать потребность <ActionIcon name="need" />
-      </button>
+      </a>
     {:else}
       <p class="d-mx-summary-line" style="margin-top: 18px;">
         <strong>
@@ -226,14 +224,14 @@
         {need.industry ? ` · ${industryLabel(need.industry)}` : ""}{need.techStack?.length
           ? ` · стек: ${need.techStack.join(", ")}`
           : ""}
-        <button
-          type="button"
+        <a
+          href="/app/needs"
+          data-interactive
           class="d-ui-outline"
           style="padding: 6px 10px; margin-left: 8px;"
-          onclick={openNeeds}
         >
           Изменить
-        </button>
+        </a>
       </p>
       <form
         class="d-mx-need-toolbar"
@@ -284,7 +282,7 @@
           <label for="bankSpec" class="d-ui-label">Специализация</label>
           <select id="bankSpec" bind:value={bankSpec} class="d-ui-field">
             <option value="">Все</option>
-            {#each specializations as item}
+            {#each specializations as item (item.value)}
               <option value={item.value}>{item.label}</option>
             {/each}
           </select>
@@ -337,7 +335,7 @@
     </div>
     {#if showFormula}
       <ul class="d-mx-formula" style="margin-top: 12px;">
-        {#each current.formula as line}
+        {#each current.formula as line (line)}
           <li>{line}</li>
         {/each}
       </ul>
@@ -464,7 +462,7 @@
             Приглашение: {invitationStatusLabels[match.invitationStatus] ?? match.invitationStatus}
           </span>
         {/if}
-        {#each match.achievements.slice(0, 3) as achievement}
+        {#each match.achievements.slice(0, 3) as achievement (achievement)}
           <span class="d-mx-badge d-mx-badge-fsp" title={achievement.discipline ?? ""}>
             ФСП: {achievementLabel(achievement)}
           </span>
@@ -474,7 +472,7 @@
             ещё {match.achievements.length - 3}
           </span>
         {/if}
-        {#each match.flags as flag}
+        {#each match.flags as flag (flag)}
           <span class={`d-mx-badge ${flagClass(flag)}`}>
             {flag}
           </span>
@@ -487,7 +485,7 @@
         <FactorBreakdown factors={match.factors} />
       </details>
       <div style="margin-top: 8px;">
-        {#each match.techStack as skill}
+        {#each match.techStack as skill, skillIndex (skillIndex)}
           <span class="d-ui-tag">{skill}</span>
         {/each}
       </div>

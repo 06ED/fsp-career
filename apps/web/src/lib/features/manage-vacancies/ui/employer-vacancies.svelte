@@ -196,7 +196,7 @@
         <label for="vac-spec" class="d-ui-label">Специализация</label>
         <select id="vac-spec" required bind:value={editing.draft.specialization} class="d-ui-field">
           <option value="">Выберите направление</option>
-          {#each specializations as item}
+          {#each specializations as item (item.value)}
             <option value={item.value}>{item.label}</option>
           {/each}
         </select>
@@ -204,7 +204,7 @@
       <div>
         <label for="vac-grade" class="d-ui-label">Требуемый грейд</label>
         <select id="vac-grade" required bind:value={editing.draft.grade} class="d-ui-field">
-          {#each grades as item}
+          {#each grades as item (item.value)}
             <option value={item.value}>{item.label}</option>
           {/each}
         </select>
@@ -212,7 +212,7 @@
       <div>
         <label for="vac-format" class="d-ui-label">Формат работы</label>
         <select id="vac-format" required bind:value={editing.draft.workFormat} class="d-ui-field">
-          {#each workFormats as item}
+          {#each workFormats as item (item.value)}
             <option value={item.value}>{item.label}</option>
           {/each}
         </select>
@@ -345,7 +345,7 @@
         </p>
         {#if applicant.techStack.length}
           <div aria-label="Стек кандидата">
-            {#each applicant.techStack as skill}
+            {#each applicant.techStack as skill, index (index)}
               <span
                 class={`d-ui-tag ${
                   applicant.stackOverlap.some((item) => item.toLowerCase() === skill.toLowerCase())
@@ -457,7 +457,7 @@
       <span class="d-ui-tag d-vx-tag-muted">
         {workFormatName(vacancy.workFormat)}{vacancy.city ? ` · ${vacancy.city}` : ""}
       </span>
-      {#each vacancy.techStack as skill}
+      {#each vacancy.techStack as skill (skill)}
         <span class="d-ui-tag">{skill}</span>
       {/each}
     </div>

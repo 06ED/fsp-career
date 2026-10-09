@@ -40,7 +40,7 @@
   </p>
 </div>
 <div class="d-ui-grid">
-  {#each options as option}
+  {#each options as option (option.role)}
     <div class="d-ui-panel">
       <h2 class="d-ui-panel-title">{option.title}</h2>
       <p class="d-ui-muted">{option.text}</p>

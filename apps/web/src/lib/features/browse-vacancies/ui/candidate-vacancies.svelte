@@ -13,7 +13,6 @@
     workFormats,
   } from "$lib/entities/vacancy";
   import type { Profile } from "$lib/entities/candidate";
-  import type { Section } from "$lib/entities/account";
   import type { VacancyCard, VacancyFilters } from "$lib/entities/vacancy";
   import type { RunAction } from "$lib/shared/api";
 
@@ -21,12 +20,10 @@
     profile,
     busy,
     run,
-    openSection,
   }: {
     profile: Profile;
     busy: boolean;
     run: RunAction;
-    openSection: (id: Section) => Promise<void>;
   } = $props();
 
   const emptyFilters = (): VacancyFilters => ({
@@ -98,7 +95,7 @@
       <label for="vf-spec" class="d-ui-label">Специализация</label>
       <select id="vf-spec" bind:value={filters.specialization} class="d-ui-field">
         <option value="">Любая</option>
-        {#each specializations as item}
+        {#each specializations as item (item.value)}
           <option value={item.value}>{item.label}</option>
         {/each}
       </select>
@@ -107,7 +104,7 @@
       <label for="vf-grade" class="d-ui-label">Грейд</label>
       <select id="vf-grade" bind:value={filters.grade} class="d-ui-field">
         <option value="">Любой</option>
-        {#each grades as item}
+        {#each grades as item (item.value)}
           <option value={item.value}>{item.label}</option>
         {/each}
       </select>
@@ -116,7 +113,7 @@
       <label for="vf-format" class="d-ui-label">Формат работы</label>
       <select id="vf-format" bind:value={filters.workFormat} class="d-ui-field">
         <option value="">Любой</option>
-        {#each workFormats as item}
+        {#each workFormats as item (item.value)}
           <option value={item.value}>{item.label}</option>
         {/each}
       </select>
@@ -177,21 +174,18 @@
   <div class="d-ui-note">
     {blocker}
     <div class="d-ui-inline" style="margin-top: 12px;">
-      <button
-        type="button"
+      <a
+        data-interactive
         class="d-ui-outline"
-        onclick={() =>
-          openSection(
-            !profile.processingConsent || !profile.fullName || !profile.specialization
-              ? "profile"
-              : "assessment",
-          )}
+        href={!profile.processingConsent || !profile.fullName || !profile.specialization
+          ? "/app/profile"
+          : "/app/assessment"}
       >
         {!profile.processingConsent || !profile.fullName || !profile.specialization
           ? "Открыть профиль"
           : "Перейти к оценке"}
         <ActionIcon name="arrow" />
-      </button>
+      </a>
     </div>
   </div>
 {/if}
@@ -234,7 +228,7 @@
     </div>
     {#if vacancy.techStack.length}
       <div aria-label="Стек вакансии">
-        {#each vacancy.techStack as skill}
+        {#each vacancy.techStack as skill (skill)}
           <span
             class={`d-ui-tag ${vacancy.stackOverlap.includes(skill) ? "d-vx-tag-match" : "d-vx-tag-muted"}`}
             title={vacancy.stackOverlap.includes(skill) ? "Есть в вашем профиле" : undefined}
@@ -311,9 +305,9 @@
         </button>
       {/if}
     {:else}
-      <button type="button" class="d-ui-outline" onclick={() => openSection("applications")}>
+      <a href="/app/applications" data-interactive class="d-ui-outline">
         Мои отклики <ActionIcon name="applications" />
-      </button>
+      </a>
     {/if}
   </article>
 {:else}

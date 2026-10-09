@@ -1,18 +1,12 @@
 import { auth, authRequest } from "../auth";
 
-async function request(
-  path: string,
-  options: RequestInit = {},
-): Promise<Response> {
-  if (!auth.authenticated) throw new Error("Необходимо войти в аккаунт.");
-  return authRequest(path, options);
-}
-
 export async function api<T>(
   path: string,
   options: RequestInit = {},
+  fetcher: typeof fetch = fetch,
 ): Promise<T> {
-  const response = await request(path, options);
+  if (!auth.authenticated) throw new Error("Необходимо войти в аккаунт.");
+  const response = await authRequest(path, options, fetcher);
   return response.status === 204
     ? (undefined as T)
     : ((await response.json()) as T);

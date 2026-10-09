@@ -145,7 +145,7 @@
         <label for="task-spec" class="d-ui-label">Специализация</label>
         <select id="task-spec" required bind:value={draft.specialization} class="d-ui-field">
           <option value="">Выберите направление</option>
-          {#each specializations as item}
+          {#each specializations as item (item.value)}
             <option value={item.value}>{item.label}</option>
           {/each}
         </select>
@@ -154,7 +154,7 @@
         <label for="task-grade" class="d-ui-label">Грейд</label>
         <select id="task-grade" bind:value={draft.grade} class="d-ui-field">
           <option value={null}>Любой грейд</option>
-          {#each grades as item}
+          {#each grades as item (item.value)}
             <option value={item.value}>{item.label}</option>
           {/each}
         </select>
@@ -217,7 +217,7 @@
           >
             <fieldset class="d-vx-radio-row">
               <legend class="d-vx-legend">Оценка ответа</legend>
-              {#each [1, 2, 3, 4, 5] as value}
+              {#each [1, 2, 3, 4, 5] as value (value)}
                 <label class="d-ui-answer" style="margin-bottom: 0;">
                   <input
                     type="radio"

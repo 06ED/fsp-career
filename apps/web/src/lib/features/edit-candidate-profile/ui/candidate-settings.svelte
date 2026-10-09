@@ -94,7 +94,7 @@
 <div class="d-ui-panel">
   <h2 class="d-ui-panel-title">Связанные аккаунты</h2>
   <div class="d-ui-inline">
-    {#each providers as provider}
+    {#each providers as provider (provider.id)}
       {@const linked = auth.linkedProviders[provider.id]}
       {@const enabled = auth.providers[provider.id]}
       <form method="POST" action={providerUrl(provider.id, "link")}>

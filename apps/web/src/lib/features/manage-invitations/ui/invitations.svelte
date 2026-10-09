@@ -21,7 +21,7 @@
     ].filter(Boolean);
 </script>
 
-{#each invitations as invitation}
+{#each invitations as invitation (invitation.id)}
   <article class="d-ui-panel">
     <div class="d-ui-row">
       <div>

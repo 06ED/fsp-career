@@ -2,13 +2,14 @@
   import { onMount } from "svelte";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
-  import { auth, initAuth, signIn, providerUrl } from "$lib/shared/auth";
+  import { auth, initAuth, signIn, providerUrl, appReturnPath } from "$lib/shared/auth";
   import { ActionIcon } from "$lib/shared/ui";
 
   const registering = $derived(page.url.searchParams.get("mode") === "register");
   const role = $derived(
     page.url.searchParams.get("role") === "employer" ? "employer" : "candidate",
   );
+  const destination = $derived(appReturnPath(page.url.searchParams.get("next")) ?? `/app?role=${role}`);
   let ready = $state(false);
   let busy = $state(false);
   let error = $state("");
@@ -28,7 +29,7 @@
     try {
       await initAuth();
       providers = { ...auth.providers };
-      if (auth.authenticated) await goto(`/app?role=${role}`, { replaceState: true });
+      if (auth.authenticated) await goto(destination, { replaceState: true });
       ready = true;
     } catch (e) {
       error = e instanceof Error ? e.message : "Не удалось подключить авторизацию.";
@@ -42,7 +43,7 @@
     try {
       await signIn(email, password, registering);
       password = "";
-      await goto(`/app?role=${role}`, { replaceState: true });
+      await goto(destination, { replaceState: true });
     } catch (e) {
       error = e instanceof Error ? e.message : "Не удалось войти в аккаунт.";
     } finally {
@@ -154,7 +155,7 @@
       {registering ? "Уже есть аккаунт?" : "Нет аккаунта?"}
       <a
         data-interactive
-        href={`/login?role=${role}${registering ? "" : "&mode=register"}`}
+        href={`/login?role=${role}${registering ? "" : "&mode=register"}&next=${encodeURIComponent(destination)}`}
         onclick={() => {
           error = "";
           password = "";

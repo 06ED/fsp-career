@@ -70,7 +70,7 @@
 
 <div class="d-ui-panel">
   <div class="d-a-steps">
-    {#each stepTitles as title, index}
+    {#each stepTitles as title, index (title)}
       <span
         class={`d-a-step ${index + 1 === step ? "d-a-step-active" : ""} ${index + 1 < step ? "d-a-step-done" : ""}`}
       >
@@ -90,7 +90,7 @@
         <label for="survey-spec" class="d-ui-label">Специализация</label>
         <select id="survey-spec" bind:value={survey.specialization} class="d-ui-field">
           <option value="">Выберите направление</option>
-          {#each catalog.specializations as spec}
+          {#each catalog.specializations as spec (spec.id)}
             <option value={spec.id}>{spec.label}</option>
           {/each}
         </select>
@@ -99,7 +99,7 @@
         <label for="survey-industry" class="d-ui-label">Отрасль</label>
         <select id="survey-industry" bind:value={survey.industry} class="d-ui-field">
           <option value="">Выберите отрасль</option>
-          {#each catalog.industries as industry}
+          {#each catalog.industries as industry (industry.id)}
             <option value={industry.id}>{industry.label}</option>
           {/each}
         </select>
@@ -118,7 +118,7 @@
       <div>
         <span class="d-ui-label">Формат работы</span>
         <div class="d-ui-inline" style="margin-bottom: 18px;">
-          {#each catalog.workFormats as format}
+          {#each catalog.workFormats as format (format.id)}
             <label
               class={`d-a-chip d-a-chip-toggle ${survey.workFormat === format.id ? "d-a-chip-on" : ""}`}
             >
@@ -137,7 +137,7 @@
     </div>
     <span class="d-ui-label">Роли в команде, которые вы выполняли</span>
     <div style="margin-bottom: 18px;">
-      {#each catalog.teamRoles as role}
+      {#each catalog.teamRoles as role (role.id)}
         <label
           class={`d-a-chip d-a-chip-toggle ${survey.teamRoles.includes(role.id) ? "d-a-chip-on" : ""}`}
         >
@@ -164,7 +164,7 @@
       ниже; уверенный результат открывает тест на уровень выше. Подтверждённый грейд не понижается.
     </p>
     <div class="d-a-cards">
-      {#each catalog.grades as g}
+      {#each catalog.grades as g (g.id)}
         {@const o = option(g.id)}
         <button
           type="button"
@@ -208,7 +208,7 @@
         — темы по профилю специализации
       </span>
     </label>
-    {#each vacancies as vacancy}
+    {#each vacancies as vacancy (vacancy.id)}
       <label class="d-ui-answer">
         <input type="radio" name="vacancy" value={vacancy.id} bind:group={vacancyId} />
         <span>

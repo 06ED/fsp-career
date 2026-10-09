@@ -86,7 +86,7 @@
         : "Нет истории ФСП — это не снижает категорию кандидата."}
     </p>
   {:else}
-    {#each card.achievements as achievement}
+    {#each card.achievements as achievement (achievement)}
       <div class="d-mx-achievement">
         <div>
           <strong>{achievementLabel(achievement)}</strong>
@@ -101,7 +101,7 @@
   {#if card.techStack}
     <h3 class="d-ui-panel-title">Стек (заявлен кандидатом)</h3>
     <div>
-      {#each card.techStack as skill}
+      {#each card.techStack as skill, index (index)}
         <span class="d-ui-tag">{skill}</span>
       {/each}
     </div>
@@ -117,7 +117,7 @@
   {/if}
   {#if card.cvHistory?.length}
     <h3 class="d-ui-panel-title">История работы</h3>
-    {#each card.cvHistory as entry}
+    {#each card.cvHistory as entry (entry)}
       <div class="d-mx-factor" style="margin-bottom: 8px;">
         <strong>{entry.role}</strong>
         · {entry.company}
@@ -133,7 +133,7 @@
   {#if card.softSkills?.length}
     <h3 class="d-ui-panel-title">Гибкие навыки</h3>
     <div>
-      {#each card.softSkills as skill}
+      {#each card.softSkills as skill, index (index)}
         <span class="d-ui-tag">{skill}</span>
       {/each}
     </div>

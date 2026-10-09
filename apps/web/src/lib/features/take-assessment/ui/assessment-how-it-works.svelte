@@ -43,7 +43,7 @@
     <div>
       <label for="blueprint-source" class="d-ui-label">Вакансия</label>
       <select id="blueprint-source" bind:value={source} class="d-ui-field">
-        {#each catalog.vacancies as vacancy}
+        {#each catalog.vacancies as vacancy (vacancy.id)}
           <option value={vacancy.id}>{vacancy.title}</option>
         {/each}
         <option value="custom">Свой текст вакансии…</option>
@@ -92,7 +92,7 @@
         : ""}.
     </p>
     <div style="margin-bottom: 10px;">
-      {#each preview.skills as skill}
+      {#each preview.skills as skill (skill.id)}
         <span class="d-a-chip" title={`Совпадения: ${skill.matched.join(", ")}`}>
           {skill.label}
           <strong>×{skill.hits}</strong>
@@ -119,7 +119,7 @@
       {preview.testLength} заданий из пула в {preview.poolSize} семейств; сложность подбирается адаптивно
       под ответы.
     </p>
-    {#each preview.topics as topic}
+    {#each preview.topics as topic (topic.topic)}
       <div class="d-a-bar-row">
         <span>{topic.label}</span>
         <div class="d-a-bar-track">
@@ -142,7 +142,7 @@
       Сгенерированы только что; при повторном построении получатся другие экземпляры той же
       сложности. Ответы в браузер не передаются — их знает только сервер.
     </p>
-    {#each preview.sampleItems as item, index}
+    {#each preview.sampleItems as item, index (item)}
       <div class="d-a-sample">
         <span class="d-ui-tag">{item.topicLabel}</span>
         <p class="d-a-prompt">{index + 1}. {item.prompt}</p>
@@ -151,7 +151,7 @@
         {/if}
         {#if item.format === "choice"}
           <ul style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
-            {#each item.options as option}
+            {#each item.options as option (option.id)}
               <li>{option.label}</li>
             {/each}
           </ul>

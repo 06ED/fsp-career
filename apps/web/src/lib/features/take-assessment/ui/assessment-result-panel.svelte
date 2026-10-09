@@ -62,7 +62,7 @@
     учитывается не только число верных ответов, но и то, какие именно задания решены.
   </p>
   <div class="d-ui-inline">
-    {#each next as option}
+    {#each next as option (option.grade)}
       <button class="d-ui-button" disabled={busy} onclick={() => onRetake(option.grade)}>
         {option.reason === "lower-after-fail"
           ? `Пройти тест на ${gradeLabel(option.grade)} сейчас`

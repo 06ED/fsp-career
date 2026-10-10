@@ -11,9 +11,13 @@ internal data class BrowserPrincipal(val identity: BrowserIdentity)
 
 /** Account ownership and the stored application role are enforced by the identity store. */
 @Suppress("UNUSED_PARAMETER")
-fun ApplicationCall.role(audience: String, requiredRole: String): String =
-    principal<BrowserPrincipal>()?.identity?.subject ?: principal<JWTPrincipal>()?.payload?.subject
+fun ApplicationCall.role(audience: String, requiredRole: String): String {
+    val identity = principal<BrowserPrincipal>()?.identity
+    if (identity?.provider == "local" && !identity.verified)
+        throw ApiError(HttpStatusCode.Forbidden, "Verify your email before using the account")
+    return identity?.subject ?: principal<JWTPrincipal>()?.payload?.subject
         ?: throw ApiError(HttpStatusCode.Unauthorized, "Authentication required")
+}
 
 fun ApplicationCall.authEmail(): String = principal<BrowserPrincipal>()?.identity?.email
     ?: principal<JWTPrincipal>()?.payload?.getClaim("email")?.asString().orEmpty()

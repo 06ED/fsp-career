@@ -14,6 +14,8 @@ internal class ExposedAccountRepository(private val db: Database) : AccountRepos
 internal class ExposedIdentityRepository(private val db: Database) : IdentityRepository {
     override suspend fun registerLocal(email: String, hash: String) = db.registerLocal(email, hash)
     override suspend fun localPassword(email: String) = db.localPassword(email)
+    override suspend fun requestVerification(identity: UUID) = db.requestVerification(identity)
+    override suspend fun verifyEmail(token: String) = db.verifyEmail(token)
     override suspend fun external(provider: String, issuer: String, subject: String, email: String, verified: Boolean, legacyIssuer: String) =
         db.tx { providerIdentity(provider, issuer, subject, email, verified, legacyIssuer) }
     override suspend fun linkExternal(identity: UUID, provider: String, issuer: String, subject: String, email: String, verified: Boolean, legacyIssuer: String) {

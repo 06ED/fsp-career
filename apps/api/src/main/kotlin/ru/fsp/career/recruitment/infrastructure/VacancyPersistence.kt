@@ -255,8 +255,8 @@ internal fun Transaction.applicantCategories(profiles: Collection<ResultRow>): M
     if (profiles.isEmpty()) return emptyMap()
     val specializations = profiles.associate { it[CandidateProfiles.accountId] to it[CandidateProfiles.specialization] }
     return AssessmentAttempts.selectAll().where {
-        (AssessmentAttempts.candidateId inList specializations.keys) and AssessmentAttempts.submittedAt.isNotNull()
-    }.filter { it[AssessmentAttempts.specialization] == specializations[it[AssessmentAttempts.candidateId]] }
+        (AssessmentAttempts.candidateId inList specializations.keys) and AssessmentAttempts.submittedAt.isNotNull() and AssessmentAttempts.grade.isNotNull()
+    }.filter { it[AssessmentAttempts.specialization] == specializations[it[AssessmentAttempts.candidateId]] && it[AssessmentAttempts.passed] != false }
         .groupBy { it[AssessmentAttempts.candidateId] }
         .mapValues { (_, attempts) ->
             attempts.maxWith(compareBy<ResultRow> { gradeRank(it[AssessmentAttempts.grade]!!) }

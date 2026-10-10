@@ -5,6 +5,8 @@ import {
   initAuth,
   signIn,
   providerUrl,
+  resendVerification,
+  verifyEmail,
 } from "../src/lib/shared/auth";
 import { save } from "../src/lib/shared/api/client";
 
@@ -32,6 +34,7 @@ test("cookie login rotates CSRF; mutations use it; expired sessions can reconnec
       csrfToken: path === "/api/auth/login" ? "rotated" : "anonymous",
       providers: { fsp: true, vk: true },
       linkedProviders: { fsp: path === "/api/auth/login", vk: false },
+      emailVerificationRequired: path === "/api/auth/login",
     });
   }) as typeof fetch;
 
@@ -44,6 +47,7 @@ test("cookie login rotates CSRF; mutations use it; expired sessions can reconnec
   await signIn("user@example.com", "long safe password");
   expect(auth.authenticated).toBe(true);
   expect(auth.email).toBe("user@example.com");
+  expect(auth.emailVerificationRequired).toBe(true);
   expect(auth.linkedProviders).toEqual({ fsp: true, vk: false });
   expect(providerUrl("fsp")).toEndWith("/api/auth/fsp/start");
   expect(providerUrl("vk", "link")).toEndWith("/api/auth/vk/link");
@@ -65,6 +69,17 @@ test("cookie login rotates CSRF; mutations use it; expired sessions can reconnec
   expect(new Headers(mutation.options.headers).has("Authorization")).toBe(
     false,
   );
+  await resendVerification();
+  expect(requests.at(-1)!.path).toBe("/api/auth/verification-email");
+  expect(
+    new Headers(requests.at(-1)!.options.headers).get("X-CSRF-Token"),
+  ).toBe("rotated");
+  await verifyEmail("single-use-token");
+  expect(requests.at(-1)!.path).toBe("/api/auth/verify-email");
+  expect(JSON.parse(requests.at(-1)!.options.body as string)).toEqual({
+    token: "single-use-token",
+  });
+  expect(auth.emailVerificationRequired).toBe(false);
   expect(requests.every((r) => r.options.credentials === "include")).toBe(true);
   await expect(authRequest("/expired")).rejects.toThrow("Session expired");
   expect(auth.authenticated).toBe(false);

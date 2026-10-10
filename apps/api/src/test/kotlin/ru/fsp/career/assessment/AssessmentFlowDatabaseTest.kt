@@ -69,7 +69,9 @@ class AssessmentFlowDatabaseTest {
             runBlocking {
                 val candidate = db.tx { newCandidate() }
                 try {
-                    val plan = planStart(StartAssessmentRequest(survey, "senior", vacancyId = "fintech-backend"))
+                    assertFailsWith<DomainError> { planStart(StartAssessmentRequest(survey, "senior", vacancyId = "fintech-backend")) }
+                    assertFailsWith<DomainError> { planStart(StartAssessmentRequest(survey, "senior", vacancyText = "Kotlin SQL backend")) }
+                    val plan = planStart(StartAssessmentRequest(survey, "senior"))
                     assertFailsWith<DomainError> { db.tx { startAttempt(candidate, plan, nowUtc()) } }
                     db.tx { CandidateProfiles.update({ CandidateProfiles.accountId eq candidate }) { it[processingConsent] = true } }
 
@@ -77,7 +79,7 @@ class AssessmentFlowDatabaseTest {
                     assertEquals(0, started.position)
                     assertNotNull(started.item)
                     assertEquals(12, started.blueprint.sumOf { it.items })
-                    assertEquals("Backend-разработчик (Kotlin) — платёжный сервис", started.vacancyTitle)
+                    assertNull(started.vacancyTitle)
                     db.tx {
                         val p = profile(candidate)
                         assertEquals("backend", p.specialization); assertEquals("fintech", p.industry); assertEquals("senior", p.desiredGrade)
@@ -88,7 +90,11 @@ class AssessmentFlowDatabaseTest {
 
                     val failed = db.finish(candidate, attemptId, correctly = false)
                     assertEquals(false, failed.passed)
-                    assertEquals("junior", failed.grade, "first failed attempt floors at junior")
+                    assertNull(failed.grade, "a failed first attempt cannot confirm any grade")
+                    db.tx {
+                        assertNull(profile(candidate).grade)
+                        assertNull(eligibility(candidate, "backend", nowUtc()).confirmedGrade)
+                    }
                     assertTrue(failed.score < 20)
                     assertEquals(listOf("middle"), failed.nextOptions.filter { it.allowed }.map { it.grade })
 
@@ -103,7 +109,7 @@ class AssessmentFlowDatabaseTest {
                     assertEquals(true, passed.passed)
                     assertEquals(true, passed.confident)
                     assertEquals("middle", passed.grade)
-                    assertEquals("junior", passed.previousGrade)
+                    assertNull(passed.previousGrade)
                     // senior was failed in the window, so the confident pass does not reopen it immediately
                     assertTrue(passed.nextOptions.none { it.allowed })
 
@@ -113,9 +119,13 @@ class AssessmentFlowDatabaseTest {
                         assertEquals(listOf("middle", "senior"), history.map { it.targetGrade })
                         assertEquals(12, history.first().answered)
                         assertEquals(survey, history.first().survey)
-                        // all-correct middle attempt: every topic with ≥ 2 items is confirmed for matching
-                        val skills = confirmedSkills(listOf(candidate)).getValue(candidate)
-                        assertTrue(skills.isNotEmpty() && skills.all { s -> ConfirmedSkills.canonical.values.any { s in it } }, skills.toString())
+                        // Confirmation uses cumulative topic evidence, including the earlier failed attempt.
+                        val answers = (AssessmentItems innerJoin AssessmentAttempts).selectAll()
+                            .where { AssessmentAttempts.candidateId eq candidate }.map {
+                                ItemBank.family(it[AssessmentItems.familyId])!!.topic to it[AssessmentItems.correct]!!
+                            }
+                        val expectedSkills = ConfirmedSkills.skills(ConfirmedSkills.topics(answers))
+                        assertEquals(expectedSkills, confirmedSkills(listOf(candidate))[candidate].orEmpty())
                         val eligibility = eligibility(candidate, "backend", nowUtc())
                         assertEquals("middle", eligibility.confirmedGrade)
                         assertTrue(eligibility.options.none { it.allowed })
@@ -129,6 +139,7 @@ class AssessmentFlowDatabaseTest {
                     assertNotNull(closed)
                     assertEquals(true, closed.expired)
                     assertEquals(false, closed.passed)
+                    assertNull(closed.grade)
                     assertTrue(closed.score < 15, "abandoned attempt scores as all-wrong: ${closed.score}")
                     db.tx { assertNull(currentAttempt(candidate)) }
                 } finally {

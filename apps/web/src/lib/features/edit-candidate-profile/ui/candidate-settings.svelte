@@ -1,8 +1,8 @@
 <script lang="ts">
   import { ActionIcon } from "$lib/shared/ui";
-  import { candidateApi } from "$lib/entities/candidate";
+  import { achievementLabel, candidateApi } from "$lib/entities/candidate";
   import { auth, providerUrl } from "$lib/shared/auth";
-  import type { CandidatePrivacy } from "$lib/entities/candidate";
+  import type { CandidatePrivacy, FspStatus } from "$lib/entities/candidate";
   import type { RunAction } from "$lib/shared/api";
   let {
     processingConsent,
@@ -24,6 +24,9 @@
   });
   let privacyReady = $state(false);
   let loadError = $state("");
+  let fsp = $state<FspStatus | null>(null);
+  let fspId = $state("");
+  let fspError = $state("");
   const providers = [
     { id: "fsp", label: "ФСП ID", icon: "/fsp-mark.svg" },
     { id: "vk", label: "VK ID", icon: "/vk-mark.svg" },
@@ -85,9 +88,36 @@
     }, "Настройки приватности сохранены.");
   }
 
+  async function loadFsp() {
+    fspError = "";
+    try {
+      fsp = await candidateApi.fsp();
+      fspId = fsp.fspId ?? "";
+    } catch (error) {
+      fspError = error instanceof Error ? error.message : "Не удалось загрузить достижения ФСП.";
+    }
+  }
+
+  async function importFsp() {
+    await run(async () => {
+      fsp = await candidateApi.importFsp(fspId.trim());
+      fspId = fsp.fspId ?? "";
+    }, "Достижения ФСП импортированы.");
+  }
+
+  async function unlinkFsp() {
+    await run(async () => {
+      fsp = await candidateApi.unlinkFsp();
+      fspId = "";
+    }, "Реестр отвязан, импортированные достижения удалены. Вход через ФСП ID сохранён.");
+  }
+
   // Load once consent exists (also right after the candidate first saves the profile with consent).
   $effect(() => {
-    if (processingConsent) load();
+    if (processingConsent) {
+      load();
+      loadFsp();
+    }
   });
 </script>
 
@@ -115,6 +145,58 @@
 </div>
 
 {#if processingConsent}
+  <form
+    class="d-ui-panel"
+    onsubmit={(event) => {
+      event.preventDefault();
+      importFsp();
+    }}
+  >
+    <h2 class="d-ui-panel-title">Достижения из реестра ФСП</h2>
+    <p class="d-ui-muted">
+      Привязка входа и импорт достижений — разные действия. Демо-реестр проверяет, что его участник
+      использует вашу подтверждённую почту. Достижения влияют на подбор, но не на грейд.
+    </p>
+    {#if fspError}
+      <p role="alert" class="d-ui-error">{fspError}</p>
+      <button type="button" class="d-ui-outline" onclick={loadFsp}>Повторить загрузку</button>
+    {/if}
+    {#if fsp}
+      <p role="status" class="d-ui-muted">{fsp.message}</p>
+      <label for="fsp-registry-id" class="d-ui-label">
+        ID участника в демонстрационном реестре
+      </label>
+      <input
+        id="fsp-registry-id"
+        class="d-ui-field"
+        required
+        pattern={"[Ff][Ss][Pp]-[0-9]{6}"}
+        maxlength="10"
+        placeholder="FSP-100001"
+        bind:value={fspId}
+      />
+      <div class="d-ui-inline">
+        <button class="d-ui-button" type="submit" disabled={busy}>
+          {fsp.linked ? "Обновить достижения" : "Импортировать достижения"}
+        </button>
+        {#if fsp.linked}<button
+            class="d-ui-outline"
+            type="button"
+            disabled={busy}
+            onclick={unlinkFsp}
+          >
+            Отвязать реестр
+          </button>{/if}
+      </div>
+      {#if fsp.achievements.length}
+        <ul>
+          {#each fsp.achievements as achievement (achievement.title + ":" + achievement.issuer)}<li>
+              {achievementLabel(achievement)} · {achievement.points} баллов
+            </li>{/each}
+        </ul>
+      {/if}
+    {/if}
+  </form>
   <form
     class="d-ui-panel"
     onsubmit={(event) => {

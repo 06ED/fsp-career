@@ -74,7 +74,7 @@ class Report(private val r: Map<String, Any?>) {
         appendLine("- Адаптивный тест: ${Cat.TEST_LENGTH} заданий, ${Cat.EXPIRY_MINUTES} минут. Старт в якоре заявленного грейда (junior ${num(Grade.JUNIOR.anchor)}, middle ${num(Grade.MIDDLE.anchor)}, senior ${num(Grade.SENIOR.anchor)}); следующее семейство — максимум информации Фишера при текущей оценке в пределах квот тематического blueprint, среди почти равных (≥ ${(Cat.SIMILAR_INFORMATION * 100).toInt()} % от лучшей информации) — наименее показанное (контроль экспозиции).")
         appendLine("- Оценка уровня: EAP с популяционным априорным N(0, 1) — заявленный грейд влияет только на маршрут теста, но не на итоговую оценку. Балл 0–100 = 100·Φ(θ̂).")
         appendLine("- Пороги грейдов на шкале θ: Middle ≥ ${num(Grade.MIDDLE.cut, 1)}, Senior ≥ ${num(Grade.SENIOR.cut, 1)} (≈ ${Grading.score(Grade.MIDDLE.cut)} и ${Grading.score(Grade.SENIOR.cut)} баллов); входной уровень Junior — ${num(Grade.JUNIOR.cut, 1)}. Заявленный грейд подтверждён, если θ̂ − k·SE ≥ порога, k = ${num(Grading.K)} (≈ «апостериорная вероятность уровня не ниже порога ≥ Φ(k)», при k = 0 — не меньше 50 %). «Уверенно» — θ̂ − k↑·SE ≥ порога следующего грейда, k↑ = ${num(Grading.K_UPGRADE)}: это открывает немедленный тест на грейд выше.")
-        appendLine("- Грейд не понижается: подтверждённый грейд = max(прежний, заявленный при успехе); первая неудача даёт Junior по умолчанию. Пересдачи — раз в ${RetakePolicy.COOLDOWN_DAYS} дней; сразу можно только (а) после неудачи — тест на уровень ниже, (б) после уверенного успеха — тест на уровень выше (если он не был провален в окне). Брошенная попытка закрывается как неудачная.")
+        appendLine("- Грейд не понижается: подтверждённый грейд = max(прежний, заявленный при успехе); без успешного теста грейд не подтверждён. Пересдачи — раз в ${RetakePolicy.COOLDOWN_DAYS} дней; сразу можно только (а) после неудачи — тест на уровень ниже, (б) после уверенного успеха — тест на уровень выше (если он не был провален в окне). Брошенная попытка закрывается как неудачная.")
         appendLine()
         appendLine("**Модель симуляции.**")
         appendLine()
@@ -87,8 +87,8 @@ class Report(private val r: Map<String, Any?>) {
     }
 
     private fun confusion(title: String, matrix: Any?) = buildString {
-        appendLine("| $title | → Junior | → Middle | → Senior |")
-        appendLine("|---|---|---|---|")
+        appendLine("| $title | → Junior | → Middle | → Senior | → Не подтверждён |")
+        appendLine("|---|---|---|---|---|")
         matrix.l().forEachIndexed { i, row -> appendLine("| эталон ${Grade.entries[i].label} | " + row.l().joinToString(" | ") + " |") }
     }
 

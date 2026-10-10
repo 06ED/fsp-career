@@ -72,7 +72,7 @@ class IrtTest {
         val upgrade = Grading.decide(Grade.MIDDLE, Estimate(0.85, 0.4), k = 0.0, kUpgrade = 0.0)
         assertTrue(upgrade.passed && upgrade.confident, "θ̂ above the next cut unlocks the upgrade attempt")
         assertFalse(Grading.decide(Grade.SENIOR, Estimate(3.0, 0.2)).confident, "no grade above senior")
-        assertEquals(Grade.JUNIOR, Grading.confirmedAfter(null, Grade.SENIOR, passed = false))
+        assertNull(Grading.confirmedAfter(null, Grade.SENIOR, passed = false))
         assertEquals(Grade.MIDDLE, Grading.confirmedAfter(Grade.MIDDLE, Grade.SENIOR, passed = false), "never lowered")
         assertEquals(Grade.SENIOR, Grading.confirmedAfter(Grade.MIDDLE, Grade.SENIOR, passed = true))
         assertEquals(Grade.SENIOR, Grading.confirmedAfter(Grade.SENIOR, Grade.MIDDLE, passed = true))

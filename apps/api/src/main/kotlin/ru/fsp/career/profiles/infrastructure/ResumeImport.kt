@@ -3,6 +3,7 @@ package ru.fsp.career.profiles.infrastructure
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.text.PDFTextStripper
 import ru.fsp.career.profiles.domain.ResumeFields
+import ru.fsp.career.profiles.domain.employerText
 import ru.fsp.career.shared.domain.*
 
 internal const val MAX_PDF_BYTES = 5 * 1024 * 1024
@@ -21,5 +22,7 @@ internal fun extractResume(pdf: ByteArray): ResumeFields {
     val phone = Regex("(?:\\+?7|8)[\\s()\\-]*\\d[\\d\\s()\\-]{8,16}").find(text)?.value.orEmpty()
     val knownSkills = listOf("Kotlin","Java","Python","JavaScript","TypeScript","React","SQL","PostgreSQL","Docker","Kubernetes","Figma","Swift","Go","AWS")
     val stack = knownSkills.filter { Regex("(?i)(?<![\\p{L}\\p{N}])${Regex.escape(it)}(?![\\p{L}\\p{N}])").containsMatchIn(text) }
-    return ResumeFields(fullName = lines.firstOrNull()?.take(200).orEmpty(), email = email, phone = phone.take(50), experience = text.take(2000), techStack = stack)
+    val name = lines.firstOrNull()?.take(200).orEmpty()
+    val experience = employerText(lines.drop(1).joinToString("\n"), email, phone, name).take(2000)
+    return ResumeFields(fullName = name, email = email, phone = phone.take(50), experience = experience, techStack = stack)
 }

@@ -76,6 +76,7 @@ data class MatchNeed(
 data class MatchResponse(
     /** need | bank */
     val mode: String,
+    val nextOffset: Int? = null,
     val need: MatchNeed? = null,
     val total: Int,
     val categories: List<MatchCategory>,

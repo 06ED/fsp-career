@@ -51,7 +51,7 @@ class MatchingIntegrationTest {
                 try {
                     db.tx {
                         CandidateProfiles.update({ CandidateProfiles.accountId eq candidate }) {
-                            it[fullName] = "Иван Петров (тест)"
+                            it[fullName] = "Иван Петров (тест) ivan.petrov@demo.fsp.local"
                             it[email] = "ivan.petrov@demo.fsp.local"
                             it[phone] = "+70000000000"
                             it[processingConsent] = true
@@ -72,6 +72,7 @@ class MatchingIntegrationTest {
                         // Unlinked: the candidate is still discoverable, with an explicit «no FSP history».
                         val before = publishedCandidates().single { it.accountId == candidate }
                         assertTrue(before.achievements.isEmpty() && !before.signals.fspLinked)
+                        assertFalse(before.signals.displayName.contains("ivan.petrov@"))
 
                         importFsp(candidate, record, registry)
                         val linkStatus = fspStatus(candidate, registry)
@@ -126,7 +127,7 @@ class MatchingIntegrationTest {
                         InvitationsTable.update({ InvitationsTable.id eq invitationId }) { it[status] = "accepted" }
                         val accepted = invitationsFor("employer", employer).single()
                         assertEquals("ivan.petrov@demo.fsp.local", accepted.contactEmail)
-                        assertEquals("Иван Петров (тест)", accepted.candidateName)
+                        assertEquals("Иван Петров (тест) ivan.petrov@demo.fsp.local", accepted.candidateName)
                         assertEquals("Telegram: @test_hr", invitationsFor("candidate", candidate).single().contactMethod)
                     }
                 } finally {

@@ -26,7 +26,7 @@
   <div class="d-ui-row" style="margin-top: 14px;">
     <div>
       <div class="d-a-small">Подтверждённый грейд</div>
-      <div class="d-a-big-grade">{gradeLabel(result.grade)}</div>
+      <div class="d-a-big-grade">{result.grade ? gradeLabel(result.grade) : "Не подтверждён"}</div>
     </div>
     <span class={result.passed ? "d-a-ok" : "d-a-fail"}>
       {result.passed

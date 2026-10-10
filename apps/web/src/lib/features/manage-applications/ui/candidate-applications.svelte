@@ -89,7 +89,7 @@
         </h2>
         <div class="d-vx-salary">
           {salaryRange(application.salaryMinRub, application.salaryMaxRub)}
-          <span class="d-vx-salary-unit">в месяц</span>
+          <span class="d-vx-salary-unit">в месяц, до вычета НДФЛ</span>
         </div>
       </div>
       <span

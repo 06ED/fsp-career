@@ -8,7 +8,13 @@
   import { companyContactLine, splitTags } from "$lib/entities/company";
   import { invitationStatusLabels } from "$lib/entities/invitation";
   import { fitLabels, gradeLabel } from "../model/matching";
-  import type { CandidateCard, Match, MatchCategory, MatchResponse } from "../model/types";
+  import type {
+    CandidateCard,
+    Match,
+    MatchCategory,
+    MatchQuery,
+    MatchResponse,
+  } from "../model/types";
   import type { Company, Need } from "$lib/entities/company";
   import type { Offer } from "$lib/entities/invitation";
   import type { RunAction } from "$lib/shared/api";
@@ -33,6 +39,8 @@
   // Each mode keeps its own fetched selection: switching modes or refining never loses it.
   let needResult = $state<MatchResponse | null>(null);
   let bankResult = $state<MatchResponse | null>(null);
+  let needQuery: MatchQuery = {};
+  let bankLoadedQuery: MatchQuery = {};
   // Server-side refinement (new request).
   let refineQuery = $state("");
   let allowLowerGrade = $state(false);
@@ -95,22 +103,26 @@
   async function loadNeed() {
     if (!need.specialization) return;
     await run(async () => {
-      needResult = await matchApi.matches({
+      const query = {
         q: refineQuery.trim(),
         allowLowerGrade,
-      });
+      };
+      needResult = await matchApi.matches(query);
+      needQuery = query;
     }, "");
   }
 
   async function loadBank() {
     await run(async () => {
-      bankResult = await matchApi.bank({
+      const query = {
         specialization: bankSpec,
         grade: bankGrade,
         techStack: splitTags(bankStack),
         verifiedAchievements: bankFsp,
         q: bankQuery.trim(),
-      });
+      };
+      bankResult = await matchApi.bank(query);
+      bankLoadedQuery = query;
     }, "");
   }
 
@@ -118,6 +130,23 @@
     mode = next;
     if (next === "need" && !needResult) loadNeed();
     if (next === "bank" && !bankResult) loadBank();
+  }
+
+  async function loadMore() {
+    const selection = current;
+    const selectedMode = mode;
+    if (selection?.nextOffset == null) return;
+    const query = {
+      ...(selectedMode === "need" ? needQuery : bankLoadedQuery),
+      offset: selection.nextOffset,
+    };
+    await run(async () => {
+      const next = await (selectedMode === "need" ? matchApi.matches(query) : matchApi.bank(query));
+      const ids = new Set(selection.matches.map((match) => match.candidateId));
+      selection.matches.push(...next.matches.filter((match) => !ids.has(match.candidateId)));
+      selection.nextOffset = next.nextOffset;
+      selection.total = next.total;
+    }, "");
   }
 
   function openCategory(category: MatchCategory) {
@@ -380,7 +409,7 @@
   <div class="d-ui-panel">
     <div class="d-mx-toolbar">
       <div>
-        <label for="search" class="d-ui-label">Уточнить внутри подборки (без нового запроса)</label>
+        <label for="search" class="d-ui-label">Уточнить среди загруженных кандидатов</label>
         <input
           id="search"
           placeholder="Имя, стек, событие ФСП, отрасль…"
@@ -430,6 +459,14 @@
           : ""} — исходная подборка сохранена.
       </span>
     </div>
+    {#if current.nextOffset != null}
+      <p class="d-ui-muted">
+        Локальные уточнения применяются к загруженным кандидатам. Поиск выше — по всей базе.
+      </p>
+      <button type="button" class="d-ui-outline" disabled={busy} onclick={loadMore}>
+        Загрузить следующих кандидатов <ActionIcon name="arrow" />
+      </button>
+    {/if}
   </div>
 
   {#each visible as match, index (match.candidateId)}
@@ -579,7 +616,7 @@
       ></textarea>
       <div class="d-ui-grid">
         <div>
-          <label for="salaryMin" class="d-ui-label">Зарплата от, ₽</label>
+          <label for="salaryMin" class="d-ui-label">Зарплата от, ₽/месяц до вычета НДФЛ</label>
           <input
             id="salaryMin"
             required
@@ -590,7 +627,7 @@
           />
         </div>
         <div>
-          <label for="salaryMax" class="d-ui-label">Зарплата до, ₽</label>
+          <label for="salaryMax" class="d-ui-label">Зарплата до, ₽/месяц до вычета НДФЛ</label>
           <input
             id="salaryMax"
             required

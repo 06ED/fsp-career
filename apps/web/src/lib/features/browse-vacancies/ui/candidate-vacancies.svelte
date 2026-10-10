@@ -119,7 +119,7 @@
       </select>
     </div>
     <div>
-      <label for="vf-salary" class="d-ui-label">Зарплата от, ₽ в месяц</label>
+      <label for="vf-salary" class="d-ui-label">Зарплата от, ₽/месяц до вычета НДФЛ</label>
       <input
         id="vf-salary"
         type="number"
@@ -206,7 +206,7 @@
         </h2>
         <div class="d-vx-salary">
           {salaryRange(vacancy.salaryMinRub, vacancy.salaryMaxRub)}
-          <span class="d-vx-salary-unit">в месяц</span>
+          <span class="d-vx-salary-unit">в месяц, до вычета НДФЛ</span>
         </div>
       </div>
       {#if vacancy.myApplicationStatus}

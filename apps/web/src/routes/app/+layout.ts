@@ -4,7 +4,7 @@ import {
   dashboardNavigation,
   dashboardSections,
 } from "$lib/entities/account";
-import { initAuth } from "$lib/shared/auth";
+import { auth, initAuth } from "$lib/shared/auth";
 import type { LayoutLoad } from "./$types";
 import type { Role } from "$lib/entities/account";
 
@@ -32,6 +32,11 @@ export const load: LayoutLoad = async ({ url, fetch }) => {
     if (url.searchParams.has("authError")) query.set("authError", "failed");
     redirect(307, `/login?${query}`);
   }
+  if (auth.emailVerificationRequired)
+    redirect(
+      307,
+      `/login?next=${encodeURIComponent(url.pathname + url.search)}`,
+    );
 
   const account = await accountApi.me(fetch);
   if (!account.role && url.pathname !== "/app/role")

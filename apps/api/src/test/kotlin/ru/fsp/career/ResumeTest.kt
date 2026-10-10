@@ -19,11 +19,18 @@ class ResumeTest {
         val parsed = extractResume(pdf)
         assertEquals("ada@example.org",parsed.email)
         assertEquals(listOf("Kotlin","SQL"),parsed.techStack)
-        assertTrue(parsed.experience.contains("Ada Example"))
+        assertTrue(!parsed.experience.contains("Ada Example"))
+        assertTrue(!parsed.experience.contains(parsed.email))
         assertEquals(false, CandidateProfile().processingConsent)
     }
     @Test fun validatesCvHistoryAndSkillLimits() {
         assertFailsWith<DomainError> { validateCareerFields("",listOf(""), emptyList(),emptyList(), emptyList()) }
         assertFailsWith<DomainError> { validateCareerFields("",emptyList(), emptyList(),emptyList(), listOf(CvEntry(company="",role="dev"))) }
+    }
+    @Test fun hidesContactsAndPrivateNamesInExistingFreeText() {
+        val text = "Ada Example: ada@example.org, +7 (999) 123-45-67, https://t.me/ada, @ada_dev. Kotlin SQL 2020-2024"
+        val visible = employerText(text, hiddenName = "Ada Example")
+        assertTrue(listOf("Ada", "Example", "ada@example.org", "999", "t.me", "@ada_dev").none { it in visible })
+        assertTrue("Kotlin SQL 2020-2024" in visible)
     }
 }

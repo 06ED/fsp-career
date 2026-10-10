@@ -44,7 +44,7 @@
           invitation.salaryMaxRub,
         ).toLocaleString("ru-RU")} ₽
       </strong>
-      / месяц
+      / месяц, до вычета НДФЛ
     </p>
     {#if invitation.contactMethod}
       <p class="d-ui-muted">

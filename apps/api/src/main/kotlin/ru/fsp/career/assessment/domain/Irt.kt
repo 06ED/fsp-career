@@ -163,12 +163,7 @@ object Grading {
         return Decision(estimate, score(estimate.theta), passed, confident)
     }
 
-    /**
-     * Confirmed grade after an attempt never decreases: max(previous confirmed grade in the
-     * specialization, target if passed). Without any previous confirmation the floor is Junior —
-     * the DB schema requires a grade for every completed attempt, and matching treats Junior with a
-     * low score as "not yet confirmed above entry level".
-     */
-    fun confirmedAfter(previous: Grade?, target: Grade, passed: Boolean): Grade =
-        Grade.max(previous, if (passed) target else null) ?: Grade.JUNIOR
+    /** A failure preserves a previous confirmation, but cannot create one. */
+    fun confirmedAfter(previous: Grade?, target: Grade, passed: Boolean): Grade? =
+        Grade.max(previous, if (passed) target else null)
 }

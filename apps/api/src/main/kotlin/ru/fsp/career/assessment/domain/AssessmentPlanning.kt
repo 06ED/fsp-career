@@ -75,8 +75,9 @@ internal fun planStart(request: StartAssessmentRequest): StartPlan {
         s.teamRoles.any { !AssessmentCatalog.has(AssessmentCatalog.teamRoles, it) }) bad("Invalid teamRoles")
     if (!AssessmentCatalog.has(AssessmentCatalog.workFormats, s.workFormat)) bad("Unknown workFormat")
     val target = Grade.of(request.targetGrade) ?: bad("targetGrade must be junior, middle or senior")
-    val (vacancy, text) = vacancyText(request.vacancyId, request.vacancyText, specialization)
-    return StartPlan(s.copy(specialization = specialization), target, Blueprints.blueprintFor(specialization, text), vacancy)
+    if (request.vacancyId != null || request.vacancyText != null)
+        bad("Qualification tests are category-based; vacancy tasks are separate")
+    return StartPlan(s.copy(specialization = specialization), target, Blueprints.blueprintFor(specialization, null), null)
 }
 internal sealed interface StartOutcome {
     class Started(val attempt: AssessmentAttemptView) : StartOutcome

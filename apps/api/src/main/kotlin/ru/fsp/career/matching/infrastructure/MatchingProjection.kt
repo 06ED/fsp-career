@@ -56,9 +56,11 @@ internal fun Transaction.poolCandidates(rows: List<ResultRow>): List<PoolCandida
     return rows.map { row ->
         val id = row[CandidateProfiles.accountId]
         val privacy = row[CandidateProfiles.privacy]
+        fun visible(text: String) = employerText(text, row[CandidateProfiles.email], row[CandidateProfiles.phone],
+            row[CandidateProfiles.fullName].takeUnless { privacy.fullName }.orEmpty())
         val own = attempts[id].orEmpty()
         // Same rule as Transaction.profile(): highest grade in the CURRENT specialization, then highest score.
-        val best = own.filter { it[AssessmentAttempts.specialization] == row[CandidateProfiles.specialization] }
+        val best = own.filter { it[AssessmentAttempts.specialization] == row[CandidateProfiles.specialization] && it[AssessmentAttempts.grade] != null && it[AssessmentAttempts.passed] != false }
             .maxWithOrNull(compareBy<ResultRow> { gradeRank(it[AssessmentAttempts.grade]!!) }.thenBy { it[AssessmentAttempts.score]!! })
         val visibleAchievements = if (privacy.fspAchievements) achievements[id].orEmpty() else emptyList()
         val lastActive = listOfNotNull(
@@ -74,16 +76,16 @@ internal fun Transaction.poolCandidates(rows: List<ResultRow>): List<PoolCandida
             }
             if (privacy.cvHistory) row[CandidateProfiles.cvHistory].forEach { add(it.role); add(it.description) }
             if (privacy.softSkills) addAll(row[CandidateProfiles.softSkills])
-        }.filter { it.isNotBlank() }.joinToString("\n")
+        }.filter { it.isNotBlank() }.joinToString("\n").let(::visible)
         val signals = CandidateSignals(
             id = id.toString(),
-            displayName = if (privacy.fullName) row[CandidateProfiles.fullName] else anonymousName(id),
-            specialization = row[CandidateProfiles.specialization],
-            industry = row[CandidateProfiles.industry],
+            displayName = if (privacy.fullName) employerText(row[CandidateProfiles.fullName], row[CandidateProfiles.email], row[CandidateProfiles.phone]) else anonymousName(id),
+            specialization = visible(row[CandidateProfiles.specialization]),
+            industry = visible(row[CandidateProfiles.industry]),
             assessedGrade = best?.get(AssessmentAttempts.grade),
             testScore = best?.get(AssessmentAttempts.score),
             assessedAt = best?.get(AssessmentAttempts.submittedAt)?.toInstant(),
-            selfReportedSkills = if (privacy.techStack) row[CandidateProfiles.techStack] else emptyList(),
+            selfReportedSkills = if (privacy.techStack) row[CandidateProfiles.techStack].map(::visible) else emptyList(),
             profileText = text,
             achievements = visibleAchievements.map(::achievementSignal),
             fspLinked = row[CandidateProfiles.fspId] != null,
@@ -121,7 +123,7 @@ private fun CategoryStat.toDto() = MatchCategory(
 
 private fun Need.toQuery() = NeedQuery(specialization, minGrade, industry, techStack, description)
 
-internal fun Transaction.matchForNeed(employer: UUID, filter: CandidateFilter, limit: Int): MatchResponse {
+internal fun Transaction.matchForNeed(employer: UUID, filter: CandidateFilter, limit: Int, offset: Int = 0): MatchResponse {
     val need = need(employer)
     if (need.specialization.isBlank() && filter.specialization == null) bad("Set employer needs first or provide specialization")
     val pool = publishedCandidates()
@@ -135,11 +137,12 @@ internal fun Transaction.matchForNeed(employer: UUID, filter: CandidateFilter, l
             need.industry, need.techStack, need.description, filter.query.orEmpty()
         ),
         total = ranking.results.size, categories = ranking.categories.map { it.toDto() },
-        matches = ranking.results.take(limit).map { it.toDto(byId, statuses) }, formula = needFormula(),
+        matches = ranking.results.drop(offset).take(limit).map { it.toDto(byId, statuses) }, formula = needFormula(),
+        nextOffset = (offset.toLong() + limit).takeIf { it < ranking.results.size }?.toInt(),
     )
 }
 
-internal fun Transaction.browseCandidates(employer: UUID, filter: CandidateFilter, limit: Int): MatchResponse {
+internal fun Transaction.browseCandidates(employer: UUID, filter: CandidateFilter, limit: Int, offset: Int = 0): MatchResponse {
     val pool = publishedCandidates()
     val byId = pool.associateBy { it.signals.id }
     val ranking = MatchingEngine().browse(PreparedPool(pool.map { it.signals }), filter)
@@ -148,7 +151,8 @@ internal fun Transaction.browseCandidates(employer: UUID, filter: CandidateFilte
         mode = "bank",
         total = ranking.results.size,
         categories = ranking.categories.map { it.toDto() },
-        matches = ranking.results.take(limit).map { it.toDto(byId, statuses) },
+        matches = ranking.results.drop(offset).take(limit).map { it.toDto(byId, statuses) },
+        nextOffset = (offset.toLong() + limit).takeIf { it < ranking.results.size }?.toInt(),
         formula = bankFormula()
     )
 }
@@ -183,6 +187,8 @@ internal fun Transaction.candidateCard(employer: UUID, candidateId: UUID): Candi
             )
         }
     val signals = member.signals
+    fun visible(text: String) = if (disclosed) text else employerText(text, row[CandidateProfiles.email], row[CandidateProfiles.phone],
+        row[CandidateProfiles.fullName].takeUnless { privacy.fullName }.orEmpty())
     return CandidateCard(
         candidateId = candidateId.toString(),
         fullName = if (disclosed) row[CandidateProfiles.fullName] else signals.displayName,
@@ -192,11 +198,14 @@ internal fun Transaction.candidateCard(employer: UUID, candidateId: UUID): Candi
         assessedAt = signals.assessedAt?.toString(),
         category = signals.assessedGrade?.let { categoryLabel(signals.specialization, it) },
         industry = signals.industry,
-        techStack = row[CandidateProfiles.techStack].takeIf { privacy.techStack },
-        experience = row[CandidateProfiles.experience].takeIf { privacy.experience },
-        targetRoles = row[CandidateProfiles.targetRoles].takeIf { privacy.experience },
-        cvHistory = row[CandidateProfiles.cvHistory].takeIf { privacy.cvHistory },
-        softSkills = row[CandidateProfiles.softSkills].takeIf { privacy.softSkills },
+        techStack = row[CandidateProfiles.techStack].map(::visible).takeIf { privacy.techStack },
+        experience = visible(row[CandidateProfiles.experience]).takeIf { privacy.experience },
+        targetRoles = row[CandidateProfiles.targetRoles].map(::visible).takeIf { privacy.experience },
+        cvHistory = row[CandidateProfiles.cvHistory].map {
+            it.copy(company = visible(it.company), role = visible(it.role), description = visible(it.description),
+                startDate = visible(it.startDate), endDate = visible(it.endDate))
+        }.takeIf { privacy.cvHistory },
+        softSkills = row[CandidateProfiles.softSkills].map(::visible).takeIf { privacy.softSkills },
         achievements = member.achievements.takeIf { privacy.fspAchievements },
         fspLinked = signals.fspLinked.takeIf { privacy.fspAchievements },
         hiddenSections = listOfNotNull(

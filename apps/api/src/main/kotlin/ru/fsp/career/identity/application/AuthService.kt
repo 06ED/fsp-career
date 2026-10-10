@@ -3,7 +3,8 @@ package ru.fsp.career.identity.application
 import ru.fsp.career.identity.domain.*
 import java.util.UUID
 
-internal class AuthService(private val identities: IdentityRepository, private val passwords: PasswordHasher) {
+internal class AuthService(private val identities: IdentityRepository, private val passwords: PasswordHasher,
+    private val mailer: VerificationMailer) {
     suspend fun register(input: Credentials): UUID {
         val email = registrationEmail(input)
         val hash = passwords.hash(input.password)
@@ -14,6 +15,10 @@ internal class AuthService(private val identities: IdentityRepository, private v
         val valid = passwords.verify(input.password, credentials?.second ?: passwords.dummyHash)
         return credentials?.first?.takeIf { valid }
     }
+    suspend fun sendVerification(identity: UUID) {
+        identities.requestVerification(identity)?.let { (email, token) -> mailer.send(email, token) }
+    }
+    suspend fun verifyEmail(token: String) = identities.verifyEmail(token)
     suspend fun external(provider: String, issuer: String, subject: String, email: String, verified: Boolean, legacyIssuer: String,
         linkTo: UUID? = null): UUID {
         if (linkTo == null) return identities.external(provider, issuer, subject, email, verified, legacyIssuer)

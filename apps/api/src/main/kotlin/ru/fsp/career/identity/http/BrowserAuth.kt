@@ -115,7 +115,8 @@ internal fun Route.browserAuthRoutes(keys: JwkProvider? = null) {
     }
     fun ApplicationCall.cookie() = sessions.get<BrowserCookie>()?.value
     suspend fun response(session: BrowserSession) = SessionResponse(session.identity != null, session.identity?.email, session.csrf,
-        Providers(config.fsp != null, config.vk != null), session.identity?.let { identities.linkedProviders(it.id) } ?: Providers(false, false))
+        Providers(config.fsp != null, config.vk != null), session.identity?.let { identities.linkedProviders(it.id) } ?: Providers(false, false),
+        emailVerificationRequired = session.identity?.let { it.provider == "local" && !it.verified } == true)
     suspend fun ApplicationCall.sessionResponse(): SessionResponse {
         val cookie = cookie() ?: identities.issueSession(null, null).also { sessions.set(BrowserCookie(it)) }
         val session = identities.session(cookie) ?: identities.issueSession(cookie, null).also { sessions.set(BrowserCookie(it)) }.let { identities.session(it)!! }
@@ -131,12 +132,34 @@ internal fun Route.browserAuthRoutes(keys: JwkProvider? = null) {
         rateLimit(RateLimitName("login")) {
             post("/register") {
                 call.requireCsrf(config.frontendOrigin, identities.session(call.cookie()))
-                call.respond(HttpStatusCode.Created, call.rotate(service.register(call.receive<Credentials>())))
+                val id = service.register(call.receive<Credentials>())
+                val session = call.rotate(id)
+                try { service.sendVerification(id) }
+                catch (e: CancellationException) { throw e }
+                catch (_: Exception) { throw ApiError(HttpStatusCode.ServiceUnavailable, "Account created, but email could not be sent. Sign in and request another verification email.") }
+                call.respond(HttpStatusCode.Created, session)
             }
             post("/login") {
                 call.requireCsrf(config.frontendOrigin, identities.session(call.cookie()))
                 val id = service.login(call.receive<Credentials>()) ?: throw ApiError(HttpStatusCode.Unauthorized, "Invalid email or password")
                 call.respond(call.rotate(id))
+            }
+            post("/verify-email") {
+                call.requireCsrf(config.frontendOrigin, identities.session(call.cookie()))
+                service.verifyEmail(call.receive<EmailVerification>().token)
+                    ?: throw ApiError(HttpStatusCode.BadRequest, "Verification link is invalid or expired")
+                // Mailbox proof is not a login credential; preserve only the existing authenticated identity.
+                call.respond(call.rotate(identities.session(call.cookie())?.identity?.id))
+            }
+            post("/verification-email") {
+                val session = identities.session(call.cookie())
+                call.requireCsrf(config.frontendOrigin, session)
+                val id = session?.identity?.id ?: throw ApiError(HttpStatusCode.Unauthorized, "Sign in to request a verification email")
+                try { service.sendVerification(id) }
+                catch (e: CancellationException) { throw e }
+                catch (e: ru.fsp.career.shared.domain.DomainError) { throw e }
+                catch (_: Exception) { throw ApiError(HttpStatusCode.ServiceUnavailable, "Email could not be sent; try again later") }
+                call.respond(HttpStatusCode.NoContent)
             }
         }
         post("/logout") { call.requireCsrf(config.frontendOrigin, identities.session(call.cookie())); call.respond(call.rotate(null)) }

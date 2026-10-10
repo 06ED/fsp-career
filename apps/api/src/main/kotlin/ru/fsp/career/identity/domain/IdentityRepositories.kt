@@ -10,6 +10,8 @@ internal interface AccountRepository {
 internal interface IdentityRepository {
     suspend fun registerLocal(email: String, hash: String): UUID
     suspend fun localPassword(email: String): Pair<UUID, String>?
+    suspend fun requestVerification(identity: UUID): Pair<String, String>?
+    suspend fun verifyEmail(token: String): UUID?
     suspend fun external(provider: String, issuer: String, subject: String, email: String, verified: Boolean, legacyIssuer: String): UUID
     suspend fun linkExternal(identity: UUID, provider: String, issuer: String, subject: String, email: String, verified: Boolean, legacyIssuer: String)
     suspend fun linkedProviders(identity: UUID): Providers
@@ -17,6 +19,10 @@ internal interface IdentityRepository {
     suspend fun issueSession(old: String?, identity: UUID?): String
     suspend fun saveState(state: String, cookie: String, provider: String, attempt: OAuthAttempt)
     suspend fun consumeState(state: String?, cookie: String?, provider: String): OAuthAttempt?
+}
+
+internal fun interface VerificationMailer {
+    suspend fun send(email: String, token: String)
 }
 
 internal interface PasswordHasher {

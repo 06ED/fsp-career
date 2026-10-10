@@ -52,7 +52,9 @@ private fun Transaction.invitationRows(rows: List<ResultRow>): List<Invitation> 
             contactPhone = candidate[CandidateProfiles.phone].takeIf { contacts },
             companyName = company[EmployerCompanies.name],
             candidateName =
-                if (contacts || candidate[CandidateProfiles.privacy].fullName) candidate[CandidateProfiles.fullName]
+                if (contacts) candidate[CandidateProfiles.fullName]
+                else if (candidate[CandidateProfiles.privacy].fullName)
+                    employerText(candidate[CandidateProfiles.fullName], candidate[CandidateProfiles.email], candidate[CandidateProfiles.phone])
                 else anonymousName(candidateId),
             contactMethod = row[InvitationsTable.contactMethod]
                 .ifBlank { companyContactLine(companyFrom(company)) },

@@ -250,12 +250,15 @@ private fun Transaction.employerSubmissions(rows: List<ResultRow>): List<Employe
             id = row[ShortTaskSubmissions.id].toString(),
             taskId = row[ShortTaskSubmissions.taskId].toString(),
             candidateId = candidateId.toString(),
-            candidateName = profile[CandidateProfiles.fullName],
-            specialization = profile[CandidateProfiles.specialization],
+            candidateName = if (profile[CandidateProfiles.privacy].fullName)
+                employerText(profile[CandidateProfiles.fullName], profile[CandidateProfiles.email], profile[CandidateProfiles.phone])
+                else anonymousName(candidateId),
+            specialization = employerText(profile[CandidateProfiles.specialization], profile[CandidateProfiles.email], profile[CandidateProfiles.phone]),
             assessedGrade = categories[candidateId]?.first,
             score = categories[candidateId]?.second,
             kind = row[ShortTaskSubmissions.kind],
-            answer = row[ShortTaskSubmissions.answer],
+            answer = employerText(row[ShortTaskSubmissions.answer], profile[CandidateProfiles.email], profile[CandidateProfiles.phone],
+                profile[CandidateProfiles.fullName].takeUnless { profile[CandidateProfiles.privacy].fullName }.orEmpty()),
             submittedAt = row[ShortTaskSubmissions.submittedAt].toInstant().toString(),
             rating = row[ShortTaskSubmissions.rating],
             ratingComment = row[ShortTaskSubmissions.ratingComment],

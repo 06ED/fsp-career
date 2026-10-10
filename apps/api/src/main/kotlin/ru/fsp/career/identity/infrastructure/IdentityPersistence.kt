@@ -19,7 +19,7 @@ internal suspend fun Database.session(cookie: String?): BrowserSession? {
             IdentityEntity.findById(id)?.let {
                 BrowserIdentity(id, it.accountId?.let { account ->
                     AccountEntity[account].subject
-                } ?: "pending:$id", it.email, it.emailVerified)
+                } ?: "pending:$id", it.email, it.emailVerified, it.provider)
             }
         }
         BrowserSession(identity, row.csrfToken)
@@ -101,4 +101,35 @@ internal fun Transaction.linkedProviders(identity: UUID): Providers {
 internal suspend fun Database.localPassword(email: String): Pair<UUID, String>? = tx {
     val id = IdentityEntity.find { (AuthIdentities.provider eq "local") and (AuthIdentities.email eq email) }.singleOrNull()?.id?.value
     id?.let { CredentialEntity.findById(it)?.let { row -> id to row.passwordHash } }
+}
+
+internal suspend fun Database.requestVerification(identity: UUID): Pair<String, String>? = tx {
+    val account = IdentityEntity[identity]
+    if (account.provider != "local" || account.emailVerified) return@tx null
+    val credentials = LocalCredentials.selectAll().where { LocalCredentials.identityId eq identity }.forUpdate().single()
+    val now = now()
+    if (credentials[LocalCredentials.verificationSentAt]?.isAfter(now.minusMinutes(1)) == true)
+        conflict("Please wait one minute before requesting another verification email")
+    val token = opaque()
+    LocalCredentials.update({ LocalCredentials.identityId eq identity }) {
+        it[verificationHash] = digest(token)
+        it[verificationExpiresAt] = now.plusHours(24)
+        it[verificationSentAt] = now
+    }
+    account.email to token
+}
+
+internal suspend fun Database.verifyEmail(token: String): UUID? {
+    if (token.length != 43) return null
+    return tx {
+        val row = LocalCredentials.selectAll().where { LocalCredentials.verificationHash eq digest(token) }
+            .forUpdate().singleOrNull() ?: return@tx null
+        if (row[LocalCredentials.verificationExpiresAt]?.isAfter(now()) != true) return@tx null
+        val id = row[LocalCredentials.identityId]
+        IdentityEntity[id].emailVerified = true
+        LocalCredentials.update({ LocalCredentials.identityId eq id }) {
+            it[verificationHash] = null; it[verificationExpiresAt] = null
+        }
+        id
+    }
 }

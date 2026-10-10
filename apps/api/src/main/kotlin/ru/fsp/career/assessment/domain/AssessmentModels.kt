@@ -99,7 +99,7 @@ import ru.fsp.career.shared.domain.Option
     /** 100·Φ(θ̂), stored in assessment_attempts.score. */
     val score: Int,
     /** Confirmed grade in the specialization after this attempt (never lower than before). */
-    val grade: String,
+    val grade: String?,
     val previousGrade: String? = null,
     val answered: Int,
     val correct: Int,

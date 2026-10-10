@@ -122,7 +122,7 @@ class MatchingHttpTest {
                 ))
                 call("PUT", "/api/candidates/me", bearer, body.toString())
             }
-            profile(ivan, "Иван Петров", """["Kotlin","PostgreSQL","Kafka"]""", "Платёжные микросервисы на Kotlin, PostgreSQL и Kafka")
+            profile(ivan, "Иван Петров", """["Kotlin","PostgreSQL","Kafka"]""", "Иван Петров: ivan.petrov@demo.fsp.local +7 (999) 123-45-67 https://t.me/ivan_hr. Платёжные микросервисы на Kotlin, PostgreSQL и Kafka")
             profile(other, "Пётр Сидоров", """["Kotlin","PostgreSQL"]""", "Сервисы на Kotlin и PostgreSQL")
             runBlocking {
                 db.tx {
@@ -174,6 +174,8 @@ class MatchingHttpTest {
             assertTrue("Пётр Сидоров" !in call("GET", "/api/matches?techStack=kafka", employer).obj.names())
             call("GET", "/api/matches?grade=lead", employer, expected = 400)
             call("GET", "/api/matches?limit=0", employer, expected = 400)
+            call("GET", "/api/matches?offset=-1", employer, expected = 400)
+            call("GET", "/api/bank/candidates?offset=1.5", employer, expected = 400)
             call("GET", "/api/matches", ivan, expected = 403)
 
             // Candidate bank + card.
@@ -186,6 +188,11 @@ class MatchingHttpTest {
             assertFalse(card.getValue("contactsDisclosed").jsonPrimitive.boolean)
             assertNull(card["contactEmail"]?.takeUnless { it.toString() == "null" })
             assertEquals(4, card.getValue("achievements").jsonArray.size)
+            assertTrue(listOf("ivan.petrov@", "999", "t.me/").none { it in card.str("experience") })
+            val firstPage = call("GET", "/api/bank/candidates?category=backend:middle&limit=1", employer).obj
+            assertEquals(1, firstPage.getValue("nextOffset").jsonPrimitive.int)
+            val secondPage = call("GET", "/api/bank/candidates?category=backend:middle&limit=1&offset=1", employer).obj
+            assertTrue(firstPage.names().intersect(secondPage.names().toSet()).isEmpty())
             call("GET", "/api/bank/candidates/${UUID.randomUUID()}", employer, expected = 404)
             call("GET", "/api/bank/candidates/not-a-uuid", employer, expected = 400)
 
@@ -193,6 +200,7 @@ class MatchingHttpTest {
             call("PUT", "/api/candidates/me/privacy", ivan, """{"fullName":false,"techStack":true,"experience":true,"cvHistory":true,"softSkills":true,"fspAchievements":false}""")
             val hiddenCard = call("GET", "/api/bank/candidates/$ivanId", employer).obj
             assertTrue(hiddenCard.str("fullName").startsWith("Кандидат №"))
+            assertTrue(listOf("Иван", "Петров", "ivan.petrov@").none { it in hiddenCard.str("experience") })
             assertTrue(hiddenCard["achievements"].toString() == "null")
             assertTrue(hiddenCard.getValue("hiddenSections").jsonArray.map { it.jsonPrimitive.content }.containsAll(listOf("ФИО", "Достижения ФСП")))
             assertTrue(call("GET", "/api/matches?verifiedAchievements=true", employer).obj.names().none { it.startsWith("Кандидат №" + ivanId.take(6).uppercase()) })
@@ -209,6 +217,7 @@ class MatchingHttpTest {
             assertTrue(opened.getValue("contactsDisclosed").jsonPrimitive.boolean)
             assertEquals("ivan.petrov@demo.fsp.local", opened.str("contactEmail"))
             assertEquals("Иван Петров", opened.str("fullName"))
+            assertTrue("ivan.petrov@demo.fsp.local" in opened.str("experience"))
 
             // Unlink removes imported results; consent revocation clears the binding.
             assertEquals(0, call("DELETE", "/api/candidates/me/fsp", ivan).obj.getValue("totalPoints").jsonPrimitive.int)

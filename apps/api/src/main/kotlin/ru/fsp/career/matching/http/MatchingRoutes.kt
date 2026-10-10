@@ -12,7 +12,7 @@ import io.ktor.server.plugins.di.*
 
 private const val DEFAULT_LIMIT = 100
 private const val MAX_LIMIT = 500
-private data class SearchParams(val filter: CandidateFilter, val limit: Int)
+private data class SearchParams(val filter: CandidateFilter, val limit: Int, val offset: Int)
 private fun searchParams(params: Parameters): SearchParams {
     var specialization = params["specialization"]?.trim()?.takeIf { it.isNotBlank() }
     if (specialization != null && specialization.length > 100) bad("Specialization too long")
@@ -30,19 +30,20 @@ private fun searchParams(params: Parameters): SearchParams {
     val query = params["q"]?.trim()?.takeIf { it.isNotBlank() }
     if (query != null && query.length > 300) bad("q must contain at most 300 characters")
     val limit = params["limit"]?.let { raw -> raw.toIntOrNull()?.takeIf { it in 1..MAX_LIMIT } ?: bad("limit must be 1..$MAX_LIMIT") } ?: DEFAULT_LIMIT
-    return SearchParams(CandidateFilter(specialization, gradeFilter, stack, flag("verifiedAchievements") || flag("fsp"), industry, query, flag("allowLowerGrade")), limit)
+    val offset = params["offset"]?.let { it.toIntOrNull()?.takeIf { it >= 0 } ?: bad("offset must be a non-negative integer") } ?: 0
+    return SearchParams(CandidateFilter(specialization, gradeFilter, stack, flag("verifiedAchievements") || flag("fsp"), industry, query, flag("allowLowerGrade")), limit, offset)
 }
 internal fun Route.matchingRoutes(audience: String) {
     val service: MatchingService by application.dependencies
     get("/matches") {
         val sub = call.role(audience, "employer")
-        val (filter, limit) = searchParams(call.request.queryParameters)
-        call.respond(service.need(sub, filter, limit))
+        val (filter, limit, offset) = searchParams(call.request.queryParameters)
+        call.respond(service.need(sub, filter, limit, offset))
     }
     get("/bank/candidates") {
         val sub = call.role(audience, "employer")
-        val (filter, limit) = searchParams(call.request.queryParameters)
-        call.respond(service.browse(sub, filter, limit))
+        val (filter, limit, offset) = searchParams(call.request.queryParameters)
+        call.respond(service.browse(sub, filter, limit, offset))
     }
     get("/bank/candidates/{id}") { call.respond(service.card(call.role(audience, "employer"), uuid(call.parameters["id"] ?: bad("Candidate ID required")))) }
 }

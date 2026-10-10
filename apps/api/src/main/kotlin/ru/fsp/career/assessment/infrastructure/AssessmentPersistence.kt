@@ -40,7 +40,7 @@ private fun ResultRow.toPast() = PastAttempt(
     target = Grade.of(this[AssessmentAttempts.targetGrade]),
     passed = this[AssessmentAttempts.passed],
     confident = this[AssessmentAttempts.confident],
-    confirmed = Grade.of(this[AssessmentAttempts.grade]) ?: Grade.JUNIOR,
+    confirmed = Grade.of(this[AssessmentAttempts.grade]),
     submittedAt = this[AssessmentAttempts.submittedAt]!!.toInstant(),
 )
 
@@ -51,7 +51,7 @@ private fun Transaction.optionViews(candidate: UUID, specialization: String, now
 
 internal fun Transaction.eligibility(candidate: UUID, specialization: String, now: OffsetDateTime): AssessmentEligibilityView {
     val done = completed(candidate, specialization)
-    val best = done.maxWithOrNull(compareBy<ResultRow> { Grade.of(it[AssessmentAttempts.grade])?.ordinal ?: 0 }.thenBy { it[AssessmentAttempts.score] ?: 0 })
+    val best = done.filter { it[AssessmentAttempts.grade] != null && it[AssessmentAttempts.passed] != false }.maxWithOrNull(compareBy<ResultRow> { Grade.of(it[AssessmentAttempts.grade])!!.ordinal }.thenBy { it[AssessmentAttempts.score] ?: 0 })
     return AssessmentEligibilityView(
         specialization = specialization,
         confirmedGrade = best?.get(AssessmentAttempts.grade),
@@ -226,7 +226,7 @@ private fun Transaction.finalize(attempt: ResultRow, now: OffsetDateTime, expire
     AssessmentAttemptEntity[attemptId].apply {
         submittedAt = now
         score = decision.score
-        grade = confirmed.id
+        grade = confirmed?.id
         theta = estimate.theta
         thetaSe = estimate.se
         passed = decision.passed
@@ -240,14 +240,14 @@ private fun Transaction.finalize(attempt: ResultRow, now: OffsetDateTime, expire
 
 private fun summary(row: ResultRow, previous: Grade?): String {
     val target = Grade.of(row[AssessmentAttempts.targetGrade]) ?: return "Тест старого формата: 5 вопросов, оценка по доле верных ответов."
-    val confirmed = Grade.of(row[AssessmentAttempts.grade]) ?: Grade.JUNIOR
+    val confirmed = Grade.of(row[AssessmentAttempts.grade])
     val expiredNote = if (row[AssessmentAttempts.expired]) " Время попытки истекло — засчитаны данные ответы." else ""
     // Outcome only; what the candidate may do next comes from RetakePolicy (nextOptions / eligibility).
     return if (row[AssessmentAttempts.passed] == true) {
         val upgrade = target.next()?.takeIf { row[AssessmentAttempts.confident] == true }
         "Уровень ${target.label} подтверждён." + (upgrade?.let { " Результат уверенный — выше порога ${it.label}." } ?: "") + expiredNote
     } else {
-        val kept = if (previous != null) " Подтверждённый ранее грейд ${confirmed.label} сохранён." else " Категория по умолчанию — Junior."
+        val kept = if (previous != null) " Подтверждённый ранее грейд ${confirmed?.label} сохранён." else " Подтверждённого грейда пока нет; для категории нужен успешный тест."
         "Уровень ${target.label} пока не подтверждён.$kept$expiredNote"
     }
 }
@@ -266,7 +266,7 @@ private fun resultView(row: ResultRow, served: List<ResultRow>, previous: Grade?
         theta = row[AssessmentAttempts.theta],
         thetaSe = row[AssessmentAttempts.thetaSe],
         score = row[AssessmentAttempts.score]!!,
-        grade = row[AssessmentAttempts.grade]!!,
+        grade = row[AssessmentAttempts.grade],
         previousGrade = previous?.id,
         answered = if (legacy) legacyTotal else served.count { it[AssessmentItems.answeredAt] != null },
         correct = if (legacy) row[AssessmentAttempts.score]!! * legacyTotal / 100 else served.count { it[AssessmentItems.correct] == true },

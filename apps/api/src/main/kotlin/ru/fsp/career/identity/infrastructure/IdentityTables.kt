@@ -28,6 +28,9 @@ internal object LocalCredentials : IdTable<UUID>("local_credentials") {
     val identityId = reference("identity_id", AuthIdentities.key)
     override val id = identityId.entityId().also { it.foreignKey = identityId.foreignKey }
     val passwordHash = text("password_hash")
+    val verificationHash = text("verification_hash").nullable()
+    val verificationExpiresAt = timestampWithTimeZone("verification_expires_at").nullable()
+    val verificationSentAt = timestampWithTimeZone("verification_sent_at").nullable()
     override val primaryKey = PrimaryKey(identityId)
 }
 internal object BrowserSessions : IdTable<String>("browser_sessions") {

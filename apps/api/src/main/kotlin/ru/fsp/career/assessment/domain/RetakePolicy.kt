@@ -8,7 +8,7 @@ data class PastAttempt(
     val target: Grade?,
     val passed: Boolean?,
     val confident: Boolean?,
-    val confirmed: Grade,
+    val confirmed: Grade?,
     val submittedAt: Instant,
 )
 
@@ -37,7 +37,7 @@ object RetakePolicy {
     const val COOLDOWN_DAYS = 90L
 
     fun options(history: List<PastAttempt>, now: Instant): List<GradeOption> {
-        val confirmed = history.maxOfOrNull { it.confirmed.ordinal }?.let { Grade.entries[it] }
+        val confirmed = history.mapNotNull { it.confirmed }.maxOrNull()
         val last = history.maxByOrNull { it.submittedAt }
         return Grade.entries.map { grade ->
             when {
@@ -50,9 +50,9 @@ object RetakePolicy {
                     val failedRecently = history.any { it.passed == false && it.target == grade && it.submittedAt.isAfter(windowStart) }
                     when {
                         !now.isBefore(unlock) -> GradeOption(grade, true, RetakeReason.COOLDOWN_OVER, null)
-                        last.passed == false && grade == lastTarget.previous() ->
+                        last.passed == false && grade == lastTarget?.previous() ->
                             GradeOption(grade, true, RetakeReason.LOWER_AFTER_FAIL, null)
-                        last.confident == true && grade == lastTarget.next() && !failedRecently ->
+                        last.confident == true && grade == lastTarget?.next() && !failedRecently ->
                             GradeOption(grade, true, RetakeReason.UPGRADE_AFTER_CONFIDENT_PASS, null)
                         else -> GradeOption(grade, false, RetakeReason.COOLDOWN, unlock)
                     }

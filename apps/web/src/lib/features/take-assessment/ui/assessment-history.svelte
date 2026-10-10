@@ -36,7 +36,9 @@
         </div>
         <div style="text-align: right;">
           <div class="d-ui-status">грейд после теста</div>
-          <strong style="font-size: 18px;">{gradeLabel(attempt.grade)}</strong>
+          <strong style="font-size: 18px;">
+            {attempt.grade ? gradeLabel(attempt.grade) : "Не подтверждён"}
+          </strong>
           <div class="d-a-small">
             {attempt.score} / 100{attempt.theta !== null && attempt.theta !== undefined
               ? ` · θ ${formatNumber(attempt.theta)} ± ${formatNumber(attempt.thetaSe)}`

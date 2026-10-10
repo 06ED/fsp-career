@@ -7,7 +7,7 @@ import ru.fsp.career.shared.infrastructure.Database
 import java.util.UUID
 
 internal class ExposedMatchingQueries(private val db: Database) : MatchingQueries {
-    override suspend fun need(subject: String, filter: CandidateFilter, limit: Int) = db.tx { matchForNeed(account(subject, "employer"), filter, limit) }
-    override suspend fun browse(subject: String, filter: CandidateFilter, limit: Int) = db.tx { browseCandidates(account(subject, "employer"), filter, limit) }
+    override suspend fun need(subject: String, filter: CandidateFilter, limit: Int, offset: Int) = db.tx { matchForNeed(account(subject, "employer"), filter, limit, offset) }
+    override suspend fun browse(subject: String, filter: CandidateFilter, limit: Int, offset: Int) = db.tx { browseCandidates(account(subject, "employer"), filter, limit, offset) }
     override suspend fun card(subject: String, id: UUID) = db.tx { candidateCard(account(subject, "employer"), id) }
 }

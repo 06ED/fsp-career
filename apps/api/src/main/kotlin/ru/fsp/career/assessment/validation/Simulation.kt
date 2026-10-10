@@ -41,7 +41,7 @@ data class SimItem(val family: ItemFamily, val key: QuestionKey, val correct: Bo
 
 data class SimAttempt(val target: Grade, val estimate: Estimate, val decision: Decision, val items: List<SimItem>)
 
-data class SimPath(val declared: Grade, val confirmed: Grade, val attempts: List<SimAttempt>)
+data class SimPath(val declared: Grade, val confirmed: Grade?, val attempts: List<SimAttempt>)
 
 class SimConfig(
     /** SD of instance-level difficulty around the family b (imperfect isomorphism). */
@@ -110,12 +110,12 @@ class Simulator(val specialization: String, val config: SimConfig) {
             history += PastAttempt(target, attempt.decision.passed, attempt.decision.confident, after, now)
             now = now.plusSeconds(3600)
             val next = RetakePolicy.options(history, now).firstOrNull {
-                it.allowed && it.grade > after &&
+                it.allowed && (after == null || it.grade > after) &&
                     (it.reason == RetakeReason.LOWER_AFTER_FAIL || it.reason == RetakeReason.UPGRADE_AFTER_CONFIDENT_PASS)
             } ?: break
             target = next.grade
         }
-        return SimPath(declared, confirmed!!, attempts)
+        return SimPath(declared, confirmed, attempts)
     }
 }
 

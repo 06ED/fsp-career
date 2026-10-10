@@ -5,27 +5,27 @@ import kotlin.math.sqrt
 
 /** Classification and reliability statistics used by the validation report. */
 object Metrics {
-    fun accuracy(reference: List<Grade>, predicted: List<Grade>): Double =
+    fun accuracy(reference: List<Grade?>, predicted: List<Grade?>): Double =
         reference.indices.count { reference[it] == predicted[it] }.toDouble() / reference.size
 
     /** Unweighted mean of per-class F1 (classes with no support and no predictions are skipped). */
-    fun macroF1(reference: List<Grade>, predicted: List<Grade>): Double = Grade.entries.mapNotNull { c ->
+    fun macroF1(reference: List<Grade?>, predicted: List<Grade?>): Double = Grade.entries.mapNotNull { c ->
         val tp = reference.indices.count { reference[it] == c && predicted[it] == c }
         val fp = reference.indices.count { reference[it] != c && predicted[it] == c }
         val fn = reference.indices.count { reference[it] == c && predicted[it] != c }
         if (tp + fp + fn == 0) null else 2.0 * tp / (2.0 * tp + fp + fn)
     }.average()
 
-    /** confusion[reference][predicted] */
-    fun confusion(reference: List<Grade>, predicted: List<Grade>): List<List<Int>> =
-        Grade.entries.map { r -> Grade.entries.map { p -> reference.indices.count { reference[it] == r && predicted[it] == p } } }
+    /** Rows: grades; columns: grades, then unconfirmed. */
+    fun confusion(reference: List<Grade?>, predicted: List<Grade?>): List<List<Int>> =
+        Grade.entries.map { r -> (Grade.entries + null).map { p -> reference.indices.count { reference[it] == r && predicted[it] == p } } }
 
     /** Cohen's kappa with quadratic (or linear) disagreement weights for ordered grades. */
-    fun weightedKappa(a: List<Grade>, b: List<Grade>, quadratic: Boolean = true): Double {
-        val k = Grade.entries.size
+    fun weightedKappa(a: List<Grade?>, b: List<Grade?>, quadratic: Boolean = true): Double {
+        val k = Grade.entries.size + 1
         val n = a.size.toDouble()
         val observed = Array(k) { DoubleArray(k) }
-        a.indices.forEach { observed[a[it].ordinal][b[it].ordinal] += 1.0 }
+        a.indices.forEach { observed[(a[it]?.ordinal ?: -1) + 1][(b[it]?.ordinal ?: -1) + 1] += 1.0 }
         val rows = DoubleArray(k) { i -> observed[i].sum() }
         val cols = DoubleArray(k) { j -> (0 until k).sumOf { observed[it][j] } }
         var num = 0.0; var den = 0.0

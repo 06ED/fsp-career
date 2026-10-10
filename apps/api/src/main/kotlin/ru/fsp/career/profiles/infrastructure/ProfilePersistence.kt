@@ -20,8 +20,9 @@ internal fun Transaction.profile(id: UUID): CandidateProfile {
         .where {
             (AssessmentAttempts.candidateId eq id) and
                     (AssessmentAttempts.specialization eq row.specialization) and
-                    AssessmentAttempts.submittedAt.isNotNull()
+                    AssessmentAttempts.submittedAt.isNotNull() and AssessmentAttempts.grade.isNotNull()
         }
+        .filter { it[AssessmentAttempts.passed] != false }
         .maxWithOrNull(
             compareBy<ResultRow> { gradeRank(it[AssessmentAttempts.grade]!!) }
                 .thenBy { it[AssessmentAttempts.score]!! }

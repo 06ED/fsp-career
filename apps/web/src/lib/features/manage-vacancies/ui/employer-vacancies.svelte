@@ -218,7 +218,7 @@
         </select>
       </div>
       <div>
-        <label for="vac-min" class="d-ui-label">Зарплата от, ₽ в месяц</label>
+        <label for="vac-min" class="d-ui-label">Зарплата от, ₽/месяц до вычета НДФЛ</label>
         <input
           id="vac-min"
           type="number"
@@ -232,7 +232,7 @@
         />
       </div>
       <div>
-        <label for="vac-max" class="d-ui-label">Зарплата до, ₽ в месяц</label>
+        <label for="vac-max" class="d-ui-label">Зарплата до, ₽/месяц до вычета НДФЛ</label>
         <input
           id="vac-max"
           type="number"
@@ -444,7 +444,7 @@
         </h2>
         <div class="d-vx-salary">
           {salaryRange(vacancy.salaryMinRub, vacancy.salaryMaxRub)}
-          <span class="d-vx-salary-unit">в месяц</span>
+          <span class="d-vx-salary-unit">в месяц, до вычета НДФЛ</span>
         </div>
       </div>
       <span

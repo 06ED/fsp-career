@@ -79,6 +79,12 @@ services:
       KEYCLOAK_AUDIENCE: fsp-api
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
       API_ORIGIN: ${API_ORIGIN:-http://localhost:8080}
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_FROM: ${SMTP_FROM:-noreply@career.local}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_STARTTLS: ${SMTP_STARTTLS:-false}
       FSP_CLIENT_ID: ${FSP_CLIENT_ID:-}
       FSP_CLIENT_SECRET: ${FSP_CLIENT_SECRET:-}
       FSP_ISSUER: ${FSP_ISSUER:-http://localhost:${KEYCLOAK_PORT:-8081}/realms/fsp-career}
@@ -92,6 +98,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      mailpit:
+        condition: service_started
       keycloak:
         condition: service_healthy
 

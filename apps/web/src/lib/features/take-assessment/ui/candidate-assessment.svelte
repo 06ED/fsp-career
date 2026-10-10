@@ -99,12 +99,11 @@
     await refreshProfile();
   }
 
-  async function start(grade: GradeId, vacancyId: string | null) {
+  async function start(grade: GradeId) {
     await run(async () => {
       attempt = await assessmentApi.start({
         survey,
         targetGrade: grade,
-        ...(vacancyId ? { vacancyId } : {}),
       });
       result = null;
       view = "test";
@@ -159,12 +158,7 @@
   />
 {:else}
   {#if view === "result" && result}
-    <AssessmentResultPanel
-      {result}
-      {busy}
-      onRetake={(grade) => start(grade, null)}
-      onClose={() => (view = "status")}
-    />
+    <AssessmentResultPanel {result} {busy} onRetake={start} onClose={() => (view = "status")} />
   {/if}
   <div class="d-ui-panel">
     <div class="d-ui-row">

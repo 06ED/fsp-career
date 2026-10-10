@@ -1,5 +1,5 @@
 import { api, save } from "$lib/shared/api";
-import type { CandidatePrivacy, Profile, ResumeDraft } from "..";
+import type { CandidatePrivacy, FspStatus, Profile, ResumeDraft } from "..";
 
 export const candidateApi = {
   profile: () => api<Profile>("/api/candidates/me"),
@@ -31,6 +31,11 @@ export const candidateApi = {
       "POST",
     ),
   privacy: () => api<CandidatePrivacy>("/api/candidates/me/privacy"),
+  fsp: () => api<FspStatus>("/api/candidates/me/fsp"),
+  importFsp: (fspId: string) =>
+    save<FspStatus>("/api/candidates/me/fsp", { fspId }, "POST"),
+  unlinkFsp: () =>
+    api<FspStatus>("/api/candidates/me/fsp", { method: "DELETE" }),
   savePrivacy: (privacy: CandidatePrivacy) =>
     save<CandidatePrivacy>("/api/candidates/me/privacy", privacy),
 };

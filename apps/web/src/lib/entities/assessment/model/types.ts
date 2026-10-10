@@ -92,7 +92,7 @@ export type AssessmentResult = {
   theta?: number | null;
   thetaSe?: number | null;
   score: number;
-  grade: GradeId;
+  grade: GradeId | null;
   previousGrade?: GradeId | null;
   answered: number;
   correct: number;

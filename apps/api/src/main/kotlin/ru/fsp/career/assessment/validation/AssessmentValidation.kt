@@ -255,8 +255,8 @@ class AssessmentStudy(private val seed: Long) {
                 "hitRate" to hits,
                 "scoreGain" to rows.map { (it.third.attempts.first().decision.score - it.second.attempts.first().decision.score).toDouble() }.average(),
                 "thetaGain" to rows.map { it.third.attempts.first().estimate.theta - it.second.attempts.first().estimate.theta }.average(),
-                "overGradingHonest" to Metrics.rate(rows.map { it.second.confirmed > Grade.reference(it.first) }),
-                "overGradingAttack" to Metrics.rate(rows.map { it.third.confirmed > Grade.reference(it.first) }),
+                "overGradingHonest" to Metrics.rate(rows.map { (it.second.confirmed?.ordinal ?: -1) > Grade.reference(it.first).ordinal }),
+                "overGradingAttack" to Metrics.rate(rows.map { (it.third.confirmed?.ordinal ?: -1) > Grade.reference(it.first).ordinal }),
             )
         }
         val rng = rng(900 + SPECS.indexOf(spec))
@@ -323,8 +323,9 @@ class AssessmentStudy(private val seed: Long) {
                 "accuracy" to Metrics.accuracy(reference, confirmed),
                 "macroF1" to Metrics.macroF1(reference, confirmed),
                 "confusion" to Metrics.confusion(reference, confirmed),
-                "overGrading" to Metrics.rate(records.map { it.first.confirmed > it.reference }),
-                "underGrading" to Metrics.rate(records.map { it.first.confirmed < it.reference }),
+                "overGrading" to Metrics.rate(records.map { (it.first.confirmed?.ordinal ?: -1) > it.reference.ordinal }),
+                "underGrading" to Metrics.rate(records.map { (it.first.confirmed?.ordinal ?: -1) < it.reference.ordinal }),
+                "unconfirmed" to Metrics.rate(records.map { it.first.confirmed == null }),
                 "retestAgreement" to Metrics.accuracy(confirmed, retest),
                 "retestQwk" to Metrics.weightedKappa(confirmed, retest),
                 "retestLinearKappa" to Metrics.weightedKappa(confirmed, retest, quadratic = false),

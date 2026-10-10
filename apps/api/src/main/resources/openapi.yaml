@@ -11,6 +11,7 @@ info:
     After the first login the user chooses
     an application role once (POST /api/me/role); role-specific routes return 403 until then
     or for the other role. Errors have the same JSON shape at every API endpoint.
+    Local accounts must verify email before using resource routes. All salaries are monthly RUB before income tax (gross).
 servers:
   - url: /
 security:
@@ -46,6 +47,8 @@ components:
       {in: query, name: allowLowerGrade, schema: {type: boolean}, description: 'Need mode only: include candidates one grade below the required one (×0.60, flagged).'}
     MatchingLimit:
       {in: query, name: limit, schema: {type: integer, minimum: 1, maximum: 500, default: 100}, description: Maximum number of returned candidates; `total` reports how many matched.}
+    MatchingOffset:
+      {in: query, name: offset, schema: {type: integer, minimum: 0, default: 0}, description: Number of ranked candidates to skip; use nextOffset to load the next page.}
     CandidateId:
       name: id
       in: path
@@ -60,9 +63,10 @@ components:
         password: {type: string, maxLength: 128, writeOnly: true, description: Registration requires at least 12 characters}
     BrowserSession:
       type: object
-      required: [authenticated, email, csrfToken, providers, linkedProviders]
+      required: [authenticated, email, csrfToken, providers, linkedProviders, emailVerificationRequired]
       properties:
         authenticated: {type: boolean}
+        emailVerificationRequired: {type: boolean, description: Local session awaiting email confirmation; resource routes return 403}
         email: {type: string, nullable: true}
         csrfToken: {type: string}
         providers:
@@ -111,7 +115,7 @@ components:
       type: object
       properties:
         fullName: {type: string, maxLength: 200}
-        email: {type: string, description: Verified provider email only; local and VK identities do not supply a verified email}
+        email: {type: string, description: Verified identity email; local accounts supply it after email confirmation}
         phone: {type: string, maxLength: 50}
         processingConsent: {type: boolean, description: "Required true for profile update, assessment and resume upload"}
         consentPublication: {type: boolean, description: Independent opt-in for employer discoverability}
@@ -218,11 +222,12 @@ components:
     AssessmentStartRequest:
       type: object
       required: [survey, targetGrade]
+      description: Qualification test for the category only. Non-null vacancyId or vacancyText is rejected with 400; vacancy tasks are separate.
       properties:
         survey: {$ref: '#/components/schemas/AssessmentSurvey'}
         targetGrade: {type: string, enum: [junior, middle, senior], description: Declared grade the test is for}
-        vacancyId: {type: string, nullable: true, description: "Demo vacancy of the same specialization (test for this vacancy)"}
-        vacancyText: {type: string, nullable: true, maxLength: 6000, description: Free vacancy text; mutually exclusive with vacancyId}
+        vacancyId: {type: string, nullable: true, deprecated: true, description: Must be absent or null}
+        vacancyText: {type: string, nullable: true, deprecated: true, description: Must be absent or null}
     AssessmentItem:
       type: object
       required: [topic, topicLabel, prompt, format, options]
@@ -288,7 +293,7 @@ components:
         theta: {type: number, nullable: true, description: EAP ability estimate}
         thetaSe: {type: number, nullable: true}
         score: {type: integer, minimum: 0, maximum: 100, description: "100·Φ(θ̂)"}
-        grade: {type: string, enum: [junior, middle, senior], description: Confirmed grade in the specialization after this attempt (never decreases)}
+        grade: {type: string, nullable: true, enum: [junior, middle, senior], description: Confirmed grade after this attempt; null if no successful confirmation yet}
         previousGrade: {type: string, nullable: true, enum: [junior, middle, senior]}
         answered: {type: integer}
         correct: {type: integer}
@@ -484,6 +489,7 @@ components:
             description: {type: string}
             query: {type: string}
         total: {type: integer, description: Number of candidates that passed the gate and filters}
+        nextOffset: {type: integer, nullable: true, description: Offset for the next page; null on the last page}
         categories: {type: array, items: {$ref: '#/components/schemas/MatchingCategory'}, description: 'Need mode: recommended categories for the need (exact, higher, lower, adjacent by text). Bank mode: all categories.'}
         matches: {type: array, items: {$ref: '#/components/schemas/MatchingCandidate'}}
         formula: {type: array, items: {type: string}, description: Russian description of the ranking formula for the UI}
@@ -867,7 +873,7 @@ paths:
     post:
       summary: Register a local account and rotate the browser session
       security: []
-      description: Requires the cookie from GET /api/auth/session, exact Origin and X-CSRF-Token. Local email remains unverified.
+      description: Requires the cookie from GET /api/auth/session, exact Origin and X-CSRF-Token. Sends a 24-hour single-use verification link by SMTP; resource routes remain blocked until confirmation.
       requestBody:
         required: true
         content:
@@ -875,13 +881,44 @@ paths:
             schema: {$ref: '#/components/schemas/Credentials'}
       responses:
         '201':
-          description: Authenticated session
+          description: Provisional session requiring email verification
           content:
             application/json:
               schema: {$ref: '#/components/schemas/BrowserSession'}
         '400': {description: Invalid credentials or duplicate email}
         '403': {description: Invalid Origin or CSRF token}
         '429': {description: Too many registration or login attempts}
+        '503': {description: Account created but SMTP failed; sign in and request another verification email}
+  /api/auth/verify-email:
+    post:
+      summary: Consume an email confirmation token and rotate the browser session
+      security: []
+      description: Requires exact Origin and the current session CSRF token. Tokens are hashed, single-use, expire after 24 hours and are replaced on resend. Confirms email but never signs an anonymous caller in; an existing session is preserved.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: {type: string, minLength: 43, maxLength: 43, writeOnly: true}
+      responses:
+        '200': {description: Current session after confirmation, content: {application/json: {schema: {$ref: '#/components/schemas/BrowserSession'}}}}
+        '400': {description: Invalid or expired token}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '429': {description: Too many attempts}
+  /api/auth/verification-email:
+    post:
+      summary: Resend the current local account's verification email
+      description: Requires an authenticated session, exact Origin and CSRF token. At most once per minute per account.
+      responses:
+        '204': {description: Sent, or verification is not required}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {description: Wait one minute before resending}
+        '429': {description: Too many attempts}
+        '503': {description: SMTP delivery failed}
   /api/auth/login:
     post:
       summary: Sign in with local email and password and rotate the browser session
@@ -1171,6 +1208,7 @@ paths:
         - {$ref: '#/components/parameters/MatchingQuery'}
         - {$ref: '#/components/parameters/MatchingAllowLowerGrade'}
         - {$ref: '#/components/parameters/MatchingLimit'}
+        - {$ref: '#/components/parameters/MatchingOffset'}
       responses:
         '200': {description: Ranked selection, content: {application/json: {schema: {$ref: '#/components/schemas/MatchingResponse'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}
@@ -1193,6 +1231,7 @@ paths:
         - {$ref: '#/components/parameters/MatchingIndustry'}
         - {$ref: '#/components/parameters/MatchingQuery'}
         - {$ref: '#/components/parameters/MatchingLimit'}
+        - {$ref: '#/components/parameters/MatchingOffset'}
       responses:
         '200': {description: Candidates ordered by strength, content: {application/json: {schema: {$ref: '#/components/schemas/MatchingResponse'}}}}
         '400': {$ref: '#/components/responses/BadRequest'}

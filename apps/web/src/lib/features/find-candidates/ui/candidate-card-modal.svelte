@@ -145,7 +145,7 @@
       Ваши приглашения: {card.invitations
         .map(
           (item) =>
-            `${invitationStatusLabels[item.status] ?? item.status} (${rub(item.salaryMinRub)}–${rub(item.salaryMaxRub)} ₽)`,
+            `${invitationStatusLabels[item.status] ?? item.status} (${rub(item.salaryMinRub)}–${rub(item.salaryMaxRub)} ₽/месяц до вычета НДФЛ)`,
         )
         .join("; ")}
     </p>

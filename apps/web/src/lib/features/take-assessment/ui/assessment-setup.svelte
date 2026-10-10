@@ -22,13 +22,12 @@
     eligibility: AssessmentEligibility | null;
     busy: boolean;
     onSpecializationChange: (specialization: string) => Promise<void>;
-    onStart: (grade: GradeId, vacancyId: string | null) => Promise<void>;
+    onStart: (grade: GradeId) => Promise<void>;
     onCancel: () => void;
   } = $props();
 
   let step = $state<1 | 2 | 3>(1);
   let grade = $state<GradeId | null>(null);
-  let vacancyId = $state<string | null>(null);
 
   const stepTitles = ["01 · ОПРОС", "02 · ГРЕЙД", "03 · ФОРМАТ ТЕСТА"];
   let surveyValid = $derived(
@@ -40,9 +39,6 @@
   );
   let options = $derived(
     eligibility?.specialization === survey.specialization ? eligibility.options : [],
-  );
-  let vacancies = $derived(
-    catalog.vacancies.filter((v) => v.specialization === survey.specialization),
   );
   // Typical experience per grade — a soft hint only; the test decides.
   let experienceHint = $derived(
@@ -196,30 +192,11 @@
       <button class="d-ui-outline" onclick={() => (step = 1)}>Назад</button>
     </div>
   {:else}
-    <h2 class="d-ui-panel-title">Формат теста</h2>
+    <h2 class="d-ui-panel-title">Квалификационный тест категории</h2>
     <p class="d-ui-muted">
-      Можно пройти общий тест по специализации или тест «под вакансию»: тогда темы заданий берутся
-      из описания вакансии. Сложность и шкала оценки одинаковы — результаты сопоставимы.
+      Темы определяются специализацией, сложность — выбранным грейдом. Вакансии и достижения ФСП не
+      влияют на подтверждение грейда. Задания работодателя проходят отдельно.
     </p>
-    <label class="d-ui-answer">
-      <input type="radio" name="vacancy" value={null} bind:group={vacancyId} />
-      <span>
-        <strong>Общий тест</strong>
-        — темы по профилю специализации
-      </span>
-    </label>
-    {#each vacancies as vacancy (vacancy.id)}
-      <label class="d-ui-answer">
-        <input type="radio" name="vacancy" value={vacancy.id} bind:group={vacancyId} />
-        <span>
-          <strong>{vacancy.title}</strong>
-          <br />
-          <span class="d-a-small">
-            {vacancy.company} · уровень вакансии {gradeLabel(vacancy.grade)}
-          </span>
-        </span>
-      </label>
-    {/each}
     <div class="d-ui-note" style="margin-top: 16px;">
       Тест на {gradeLabel(grade)}: {catalog.testLength} заданий, {catalog.timeLimitMinutes}
       минут. Каждое задание сгенерировано лично для вас: новые числа, таблицы и фрагменты кода. Задания
@@ -228,11 +205,7 @@
       дней.
     </div>
     <div class="d-ui-inline">
-      <button
-        class="d-ui-button"
-        disabled={busy || !grade}
-        onclick={() => grade && onStart(grade, vacancyId)}
-      >
+      <button class="d-ui-button" disabled={busy || !grade} onclick={() => grade && onStart(grade)}>
         Начать тест <ActionIcon name="assessment" />
       </button>
       <button class="d-ui-outline" onclick={() => (step = 2)}>Назад</button>

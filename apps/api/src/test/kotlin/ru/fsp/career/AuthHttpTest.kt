@@ -1,6 +1,7 @@
 package ru.fsp.career
 
 import ru.fsp.career.identity.infrastructure.*
+import ru.fsp.career.identity.domain.VerificationMailer
 import ru.fsp.career.shared.infrastructure.Database
 
 import io.ktor.client.request.*
@@ -18,12 +19,38 @@ import kotlin.test.*
 import java.util.UUID
 
 class AuthHttpTest {
+    @Test fun emailConfirmationDoesNotSignAnAnonymousBrowserIn() = testApplication {
+        val url = System.getenv("TEST_DATABASE_URL")
+        assumeTrue(!url.isNullOrBlank(), "TEST_DATABASE_URL not configured")
+        Database(url!!, System.getenv("TEST_DATABASE_USER") ?: "career", System.getenv("TEST_DATABASE_PASSWORD") ?: "career").use { db ->
+            application { dependencies { provide<Database> { db } }; careerModule("http://issuer.invalid", "career") }
+            val id = db.registerLocal("anonymous-verify-${UUID.randomUUID()}@example.com", "test hash")
+            try {
+                val token = assertNotNull(db.requestVerification(id)).second
+                val bootstrap = client.get("/api/auth/session")
+                val cookie = bootstrap.headers[HttpHeaders.SetCookie]!!.substringBefore(';')
+                val csrf = Json.parseToJsonElement(bootstrap.bodyAsText()).jsonObject["csrfToken"]!!.jsonPrimitive.content
+                val response = client.post("/api/auth/verify-email") {
+                    header(HttpHeaders.Cookie, cookie); header(HttpHeaders.Origin, "http://localhost:5173")
+                    header("X-CSRF-Token", csrf); contentType(ContentType.Application.Json)
+                    setBody("""{"token":"$token"}""")
+                }
+                assertEquals(HttpStatusCode.OK, response.status)
+                assertFalse(Json.parseToJsonElement(response.bodyAsText()).jsonObject["authenticated"]!!.jsonPrimitive.boolean)
+                assertNull(db.verifyEmail(token))
+            } finally { db.tx { AuthIdentities.deleteWhere { AuthIdentities.key eq id } } }
+        }
+    }
     @Test fun registerRoleAndLogoutRequireCsrf() = testApplication {
         val url = System.getenv("TEST_DATABASE_URL")
         assumeTrue(!url.isNullOrBlank(), "TEST_DATABASE_URL not configured")
         Database(url!!, System.getenv("TEST_DATABASE_USER") ?: "career", System.getenv("TEST_DATABASE_PASSWORD") ?: "career").use { db ->
+            var verificationToken = ""
             application {
-                dependencies { provide<Database> { db } }
+                dependencies {
+                    provide<Database> { db }
+                    provide<VerificationMailer> { VerificationMailer { _, token -> verificationToken = token } }
+                }
                 careerModule("http://issuer.invalid", "career")
             }
             val bootstrap = client.get("/api/auth/session")
@@ -47,17 +74,34 @@ class AuthHttpTest {
                     setBody("""{"email":"$email","password":"safe password 123"}""")
                 }
                 assertEquals(HttpStatusCode.Created, registered.status)
-                val currentCookie = registered.headers[HttpHeaders.SetCookie]!!.substringBefore(';')
+                var currentCookie = registered.headers[HttpHeaders.SetCookie]!!.substringBefore(';')
                 val logged = Json.parseToJsonElement(registered.bodyAsText()).jsonObject
                 assertEquals(true, logged["authenticated"]!!.jsonPrimitive.boolean)
                 assertEquals(email, logged["email"]!!.jsonPrimitive.content)
-                val currentCsrf = logged["csrfToken"]!!.jsonPrimitive.content
+                var currentCsrf = logged["csrfToken"]!!.jsonPrimitive.content
+                assertTrue(logged["emailVerificationRequired"]!!.jsonPrimitive.boolean)
+                assertEquals(43, verificationToken.length)
                 assertNotEquals(csrf, currentCsrf)
                 assertEquals(HttpStatusCode.Forbidden, client.post("/api/me/role") {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
                     header("X-CSRF-Token", csrf)
                     contentType(ContentType.Application.Json); setBody("""{"role":"candidate"}""")
                 }.status)
+                assertEquals(HttpStatusCode.Forbidden, client.post("/api/me/role") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
+                    header("X-CSRF-Token", currentCsrf)
+                    contentType(ContentType.Application.Json); setBody("""{"role":"candidate"}""")
+                }.status)
+                val verified = client.post("/api/auth/verify-email") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
+                    header("X-CSRF-Token", currentCsrf)
+                    contentType(ContentType.Application.Json); setBody("""{"token":"$verificationToken"}""")
+                }
+                assertEquals(HttpStatusCode.OK, verified.status)
+                currentCookie = verified.headers[HttpHeaders.SetCookie]!!.substringBefore(';')
+                val verifiedSession = Json.parseToJsonElement(verified.bodyAsText()).jsonObject
+                currentCsrf = verifiedSession["csrfToken"]!!.jsonPrimitive.content
+                assertFalse(verifiedSession["emailVerificationRequired"]!!.jsonPrimitive.boolean)
                 assertEquals(HttpStatusCode.OK, client.post("/api/me/role") {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
                     header("X-CSRF-Token", currentCsrf)
@@ -67,7 +111,7 @@ class AuthHttpTest {
                     header(HttpHeaders.Cookie, currentCookie)
                 }.bodyAsText()).jsonObject
                 assertEquals("candidate", me["role"]!!.jsonPrimitive.content)
-                assertFalse(me["emailVerified"]!!.jsonPrimitive.boolean)
+                assertTrue(me["emailVerified"]!!.jsonPrimitive.boolean)
                 assertEquals(HttpStatusCode.OK, client.put("/api/candidates/me") {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
                     header("X-CSRF-Token", currentCsrf)
@@ -78,7 +122,7 @@ class AuthHttpTest {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
                     header("X-CSRF-Token", currentCsrf)
                     contentType(ContentType.Application.Json)
-                    setBody("""{"email":"$email","processingConsent":true}""")
+                    setBody("""{"email":"another@example.org","processingConsent":true}""")
                 }.status)
                 assertEquals(HttpStatusCode.NotFound, client.get("/api/candidates/me/resume.pdf") {
                     header(HttpHeaders.Cookie, currentCookie)
@@ -109,7 +153,7 @@ class AuthHttpTest {
                 assertEquals(HttpStatusCode.OK, confirmed.status)
                 val reviewed = Json.parseToJsonElement(confirmed.bodyAsText()).jsonObject
                 assertEquals("Reviewed candidate", reviewed["fullName"]!!.jsonPrimitive.content)
-                assertEquals("", reviewed["email"]!!.jsonPrimitive.content)
+                assertEquals(email, reviewed["email"]!!.jsonPrimitive.content)
                 assertFalse(reviewed["consentPublication"]!!.jsonPrimitive.boolean)
                 val logout = client.post("/api/auth/logout") {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")

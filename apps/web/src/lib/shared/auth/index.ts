@@ -7,6 +7,7 @@ type Session = {
   csrfToken: string;
   providers: { fsp: boolean; vk: boolean };
   linkedProviders: { fsp: boolean; vk: boolean };
+  emailVerificationRequired: boolean;
 };
 
 export const auth: Session = {
@@ -15,6 +16,7 @@ export const auth: Session = {
   csrfToken: "",
   providers: { fsp: false, vk: false },
   linkedProviders: { fsp: false, vk: false },
+  emailVerificationRequired: false,
 };
 let initialization: Promise<boolean> | undefined;
 
@@ -84,6 +86,22 @@ export async function logout(): Promise<void> {
     await (await authRequest("/api/auth/logout", { method: "POST" })).json(),
   );
   window.location.assign("/");
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+  Object.assign(
+    auth,
+    await (
+      await authRequest("/api/auth/verify-email", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      })
+    ).json(),
+  );
+}
+
+export async function resendVerification(): Promise<void> {
+  await authRequest("/api/auth/verification-email", { method: "POST" });
 }
 
 export function providerUrl(

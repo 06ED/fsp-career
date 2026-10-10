@@ -54,6 +54,7 @@ export type MatchResponse = {
     query: string;
   } | null;
   total: number;
+  nextOffset?: number | null;
   categories: MatchCategory[];
   matches: Match[];
   formula: string[];
@@ -68,6 +69,7 @@ export type MatchQuery = {
   q?: string;
   allowLowerGrade?: boolean;
   limit?: number;
+  offset?: number;
 };
 export type CandidateCard = {
   candidateId: string;

@@ -1,0 +1,86 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: fsp-career
+  namespace: fsp-career
+  labels:
+    app.kubernetes.io/part-of: fsp-career
+spec:
+  parentRefs:
+    - name: homelab
+      namespace: gateway-system
+      sectionName: fsp-career-https
+  hostnames:
+    - brokenbrain.online
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+        - path:
+            type: Exact
+            value: /openapi.yaml
+        - path:
+            type: Exact
+            value: /health
+      backendRefs:
+        - name: fsp-career-api
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /auth
+      backendRefs:
+        - name: fsp-career-keycloak
+          port: 80
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /mail
+      backendRefs:
+        - name: fsp-career-mailpit
+          port: 80
+    - backendRefs:
+        - name: fsp-career-web
+          port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: fsp-career-http-redirect
+  namespace: fsp-career
+spec:
+  parentRefs:
+    - name: homelab
+      namespace: gateway-system
+      sectionName: http
+  hostnames:
+    - brokenbrain.online
+    - fsp-career.homelab.lan
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: brokenbrain.online
+            statusCode: 301
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: fsp-career-homelab-redirect
+  namespace: fsp-career
+spec:
+  parentRefs:
+    - name: homelab
+      namespace: gateway-system
+      sectionName: https
+  hostnames:
+    - fsp-career.homelab.lan
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            hostname: brokenbrain.online
+            statusCode: 301

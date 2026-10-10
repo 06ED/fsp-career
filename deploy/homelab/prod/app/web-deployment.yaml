@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fsp-career-web
+  namespace: fsp-career
+  labels:
+    app.kubernetes.io/name: fsp-career-web
+    app.kubernetes.io/part-of: fsp-career
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fsp-career-web
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: fsp-career-web
+        app.kubernetes.io/part-of: fsp-career
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: goodman
+      imagePullSecrets:
+        - name: ghcr-registry-fsp-career
+      containers:
+        - name: web
+          image: ghcr.io/06ed/fsp-career-web
+          ports:
+            - name: http
+              containerPort: 3000
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOST
+              value: 0.0.0.0
+            - name: PORT
+              value: "3000"
+            - name: ORIGIN
+              value: https://brokenbrain.online
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 128Mi
+            limits:
+              memory: 512Mi

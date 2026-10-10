@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: fsp-career
+components:
+- ../runtime
+resources:
+- api-deployment.yaml
+- api-service.yaml
+- web-deployment.yaml
+- web-service.yaml
+- httproutes.yaml
+images:
+- name: ghcr.io/06ed/fsp-career-api
+  newTag: sha-e46c57c31318d2ed788d6f721fdc6de17d8ed34f
+  digest: sha256:5c666d7d38d376bb9b1341d442de53a27ad986d85e91a135331a59badc32e3be
+- name: ghcr.io/06ed/fsp-career-web
+  newTag: sha-e46c57c31318d2ed788d6f721fdc6de17d8ed34f
+  digest: sha256:beeba45100d149dd898e1249a42020b9b0cf3eda5ad1ce9c790ad1721381b5be

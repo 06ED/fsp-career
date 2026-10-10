@@ -11,8 +11,8 @@ resources:
 - httproutes.yaml
 images:
 - name: ghcr.io/06ed/fsp-career-api
-  newTag: sha-e46c57c31318d2ed788d6f721fdc6de17d8ed34f
-  digest: sha256:5c666d7d38d376bb9b1341d442de53a27ad986d85e91a135331a59badc32e3be
+  newTag: sha-4a1fc1916706599580432fe598897f6ac987d376
+  digest: sha256:301383ea3f90f1224aeaa17793675e223553814f61ed24bed6eec0264e15b705
 - name: ghcr.io/06ed/fsp-career-web
-  newTag: sha-e46c57c31318d2ed788d6f721fdc6de17d8ed34f
-  digest: sha256:beeba45100d149dd898e1249a42020b9b0cf3eda5ad1ce9c790ad1721381b5be
+  newTag: sha-4a1fc1916706599580432fe598897f6ac987d376
+  digest: sha256:090fc2cc4b73c98775e630e7ac1bd7a485adf7b64b0e836a1784659a7acd7071

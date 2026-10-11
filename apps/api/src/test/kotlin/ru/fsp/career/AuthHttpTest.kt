@@ -118,12 +118,26 @@ class AuthHttpTest {
                     contentType(ContentType.Application.Json)
                     setBody("""{"fullName":"Local candidate","processingConsent":true}""")
                 }.status)
+                val contactEmail = "another@example.org"
+                val saved = client.put("/api/candidates/me") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
+                    header("X-CSRF-Token", currentCsrf)
+                    contentType(ContentType.Application.Json)
+                    setBody("""{"fullName":"Local candidate","email":" $contactEmail ","processingConsent":true}""")
+                }
+                assertEquals(HttpStatusCode.OK, saved.status)
+                assertEquals(contactEmail, Json.parseToJsonElement(saved.bodyAsText()).jsonObject["email"]!!.jsonPrimitive.content)
                 assertEquals(HttpStatusCode.BadRequest, client.put("/api/candidates/me") {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
                     header("X-CSRF-Token", currentCsrf)
                     contentType(ContentType.Application.Json)
-                    setBody("""{"email":"another@example.org","processingConsent":true}""")
+                    setBody("""{"email":"not-an-email","processingConsent":true}""")
                 }.status)
+                val identity = Json.parseToJsonElement(client.get("/api/me") {
+                    header(HttpHeaders.Cookie, currentCookie)
+                }.bodyAsText()).jsonObject
+                assertEquals(email, identity["email"]!!.jsonPrimitive.content)
+                assertTrue(identity["emailVerified"]!!.jsonPrimitive.boolean)
                 assertEquals(HttpStatusCode.NotFound, client.get("/api/candidates/me/resume.pdf") {
                     header(HttpHeaders.Cookie, currentCookie)
                 }.status)
@@ -145,6 +159,7 @@ class AuthHttpTest {
                     header(HttpHeaders.Cookie, currentCookie)
                 }.bodyAsText()).jsonObject
                 assertEquals("Local candidate", unchanged["fullName"]!!.jsonPrimitive.content)
+                assertEquals(contactEmail, unchanged["email"]!!.jsonPrimitive.content)
                 val confirmed = client.post("/api/candidates/me/resume-confirm") {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")
                     header("X-CSRF-Token", currentCsrf); contentType(ContentType.Application.Json)
@@ -153,7 +168,7 @@ class AuthHttpTest {
                 assertEquals(HttpStatusCode.OK, confirmed.status)
                 val reviewed = Json.parseToJsonElement(confirmed.bodyAsText()).jsonObject
                 assertEquals("Reviewed candidate", reviewed["fullName"]!!.jsonPrimitive.content)
-                assertEquals(email, reviewed["email"]!!.jsonPrimitive.content)
+                assertEquals(contactEmail, reviewed["email"]!!.jsonPrimitive.content)
                 assertFalse(reviewed["consentPublication"]!!.jsonPrimitive.boolean)
                 val logout = client.post("/api/auth/logout") {
                     header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, "http://localhost:5173")

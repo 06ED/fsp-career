@@ -142,6 +142,19 @@ class OAuthHttpTest {
                     setBody("""{"role":"candidate"}""")
                 }.status)
                 val meBefore = browser.get("/api/me") { header(HttpHeaders.Cookie, currentCookie) }.bodyAsText()
+                val contactEmail = "contact-$provider@example.org"
+                val saved = browser.put("/api/candidates/me") {
+                    header(HttpHeaders.Cookie, currentCookie); header(HttpHeaders.Origin, config.frontendOrigin)
+                    header("X-CSRF-Token", csrf); contentType(ContentType.Application.Json)
+                    setBody("""{"email":"$contactEmail","processingConsent":true}""")
+                }
+                assertEquals(HttpStatusCode.OK, saved.status)
+                assertEquals(contactEmail, Json.parseToJsonElement(saved.bodyAsText()).jsonObject["email"]!!.jsonPrimitive.content)
+                val profile = Json.parseToJsonElement(browser.get("/api/candidates/me") {
+                    header(HttpHeaders.Cookie, currentCookie)
+                }.bodyAsText()).jsonObject
+                assertEquals(contactEmail, profile["email"]!!.jsonPrimitive.content)
+                assertEquals(meBefore, browser.get("/api/me") { header(HttpHeaders.Cookie, currentCookie) }.bodyAsText())
                 val otherProvider = if (provider == "fsp") "vk" else "fsp"
                 assertEquals(HttpStatusCode.Unauthorized, browser.post("/api/auth/$otherProvider/link") {
                     header(HttpHeaders.Origin, config.frontendOrigin)

@@ -25,7 +25,7 @@ export function createDashboard(account: Me) {
     busy: false,
     profile: {
       fullName: "",
-      email: "",
+      email: account.email || "",
       phone: "",
       processingConsent: false,
       consentPublication: false,
@@ -84,7 +84,7 @@ export function createDashboard(account: Me) {
       state.profile = {
         ...state.profile,
         ...profile,
-        email: profile.email || "",
+        email: profile.email || account.email || "",
       };
       state.invitations = invitations;
       syncTags();

@@ -15,12 +15,12 @@ internal fun validateProfile(profile: CandidateProfile, trustedEmail: String): C
         profile.cvHistory
     )
 
-    if (profile.email.isNotBlank() && profile.email.trim() != trustedEmail)
-        bad("Email must match verified identity email")
-    if (trustedEmail.isNotBlank() && !Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches(trustedEmail))
-        bad("Invalid verified email")
+    val email = profile.email.trim().ifBlank { trustedEmail.trim() }
+    if (email.isNotBlank() && !Regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$").matches(email))
+        bad("Invalid contact email")
     if (profile.fullName.length > 200 ||
         profile.email.length > 320 ||
+        email.length > 320 ||
         profile.phone.length > 50 ||
         profile.specialization.length > 100 ||
         profile.industry.length > 100
@@ -28,7 +28,7 @@ internal fun validateProfile(profile: CandidateProfile, trustedEmail: String): C
 
     return profile.copy(
         fullName = profile.fullName.trim(),
-        email = trustedEmail,
+        email = email,
         phone = profile.phone.trim(),
         specialization = profile.specialization.trim(),
         industry = profile.industry.trim(),

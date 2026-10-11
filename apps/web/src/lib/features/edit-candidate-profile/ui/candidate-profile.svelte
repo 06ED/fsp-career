@@ -33,7 +33,7 @@
   <h2 class="d-ui-panel-title">Загрузить резюме PDF</h2>
   <p class="d-ui-muted">
     Файл до 5 МБ. Распознавание создаёт только черновик: проверьте данные перед сохранением;
-    подтверждённый email и настройка публикации не меняются.
+    контактный email и настройка публикации не меняются.
   </p>
   <input
     type="file"
@@ -106,17 +106,19 @@
       </select>
     </div>
     <div>
-      <label for="email" class="d-ui-label">Электронная почта</label>
+      <label for="email" class="d-ui-label">Электронная почта для связи</label>
       <input
         id="email"
         type="email"
-        readonly
+        autocomplete="email"
+        maxlength={320}
         aria-describedby="email-hint"
         bind:value={profile.email}
         class="d-ui-field"
       />
       <small id="email-hint" class="d-ui-muted">
-        Адрес подтверждённой учётной записи; не переносится из загруженного резюме.
+        Контактный адрес для работодателей. Не меняет почту для входа и не переносится из
+        загруженного резюме.
       </small>
     </div>
   </div>

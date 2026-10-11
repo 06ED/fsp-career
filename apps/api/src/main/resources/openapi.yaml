@@ -115,7 +115,7 @@ components:
       type: object
       properties:
         fullName: {type: string, maxLength: 200}
-        email: {type: string, description: Verified identity email; local accounts supply it after email confirmation}
+        email: {type: string, maxLength: 320, description: Editable contact email; defaults to verified identity email when blank. Does not change the login email or its verification status.}
         phone: {type: string, maxLength: 50}
         processingConsent: {type: boolean, description: "Required true for profile update, assessment and resume upload"}
         consentPublication: {type: boolean, description: Independent opt-in for employer discoverability}

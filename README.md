@@ -1,6 +1,6 @@
 # FSP Career — local development
 
-> **Документация (RU, PDF):** [`docs/FSP-Career-documentation.pdf`](docs/FSP-Career-documentation.pdf) — архитектура, механики тестирования и подбора, валидация с результатами, интеграция с ФСП, API, развёртывание. Исходники: `docs/documentation/` (`build.sh`). Демо: <https://brokenbrain.online> (логины в разделе «Обзор решения»).
+> **Техническая документация (RU, PDF):** [`docs/FSP-Career-documentation.pdf`](docs/FSP-Career-documentation.pdf) — архитектура, модель данных, авторизация, CAT/IRT-оценка, подбор, API, конфигурация, тестирование и CI/CD. [Исходник и сборка](docs/documentation/README.md): `bash docs/documentation/build.sh`. Демо: <https://brokenbrain.online>.
 
 > **Скринкасты проекта:** [Яндекс Диск](https://disk.yandex.ru/d/8Kw-km6dKgXJEQ) · [Google Диск](https://drive.google.com/drive/folders/1nd1SiafMHe-dXMK5UbNHw3jTvEp_fZPU?usp=sharing).
 

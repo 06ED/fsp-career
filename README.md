@@ -9,6 +9,7 @@
 
 [Открыть демо](https://brokenbrain.online) ·
 [Техническая документация PDF](docs/FSP-Career-documentation.pdf) ·
+[Презентация](docs/FSP-Career-presentation.pdf) ·
 [Скринкасты](#демонстрация) ·
 [Быстрый запуск](#быстрый-запуск)
 
@@ -54,6 +55,8 @@
 | Скринкасты — Яндекс Диск | [Посмотреть записи](https://disk.yandex.ru/d/8Kw-km6dKgXJEQ) |
 | Скринкасты — Google Диск | [Посмотреть записи](https://drive.google.com/drive/folders/1nd1SiafMHe-dXMK5UbNHw3jTvEp_fZPU?usp=sharing) |
 | Техническая документация | [PDF, 26 страниц](docs/FSP-Career-documentation.pdf) |
+| Презентация для показа | [PDF, 16 слайдов](docs/FSP-Career-presentation.pdf) |
+| Редактируемая презентация | [PowerPoint / PPTX](docs/FSP-Career-presentation.pptx) |
 | Контракт API | [OpenAPI](https://brokenbrain.online/openapi.yaml) |
 
 При регистрации по email в демо письмо подтверждения попадает в
@@ -133,6 +136,7 @@ compose.yaml           полный локальный стек
 | [Production-манифесты](deploy/homelab/README.md) | Kustomize-наборы и runtime-конфигурация |
 | [Техническая документация PDF](docs/FSP-Career-documentation.pdf) | Архитектура, PostgreSQL, алгоритмы, API и эксплуатация |
 | [Сборка PDF](docs/documentation/README.md) | Редактируемый Typst-исходник и воспроизводимая сборка |
+| [Презентация проекта](docs/presentation/README.md) | PPTX, PDF, заметки докладчика и исходник сборки |
 
 ## Проверки и доставка
 

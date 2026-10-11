@@ -14,6 +14,7 @@
 | Проверить релиз и окружение | [Развёртывание](homelab.md) |
 | Изменить runtime-манифесты | [Production-конфигурация](../deploy/homelab/README.md) |
 | Получить полное техническое описание | [PDF-документация](FSP-Career-documentation.pdf) |
+| Подготовить выступление | [Презентация: PPTX, PDF и заметки](presentation/README.md) |
 | Обновить PDF | [Исходник и сборка](documentation/README.md) |
 
 ## Основные правила системы

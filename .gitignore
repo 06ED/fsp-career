@@ -1,5 +1,6 @@
 # Local credentials and machine-specific configuration
 .env
+.venv/
 compose.override.yaml
 .zed/
 .env.*

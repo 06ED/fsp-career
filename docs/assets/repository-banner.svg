@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="280" viewBox="0 0 1280 280" role="img" aria-labelledby="title description">
+  <title id="title">FSP Career — навыки и возможности</title>
+  <desc id="description">Платформа оценки навыков и объяснимого подбора. Основной путь: профиль, оценка, подбор.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1280" y2="280" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#2d1044"/>
+      <stop offset="1" stop-color="#650b8c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="280" rx="24" fill="url(#background)"/>
+  <circle cx="1230" cy="12" r="155" fill="#ffb4d4" opacity=".07"/>
+  <circle cx="708" cy="330" r="160" fill="#ffffff" opacity=".04"/>
+  <g font-family="Arial, DejaVu Sans, sans-serif">
+    <text x="52" y="51" fill="#ffd4e7" font-size="14" letter-spacing="2">ФСП / КАРЬЕРА</text>
+    <text x="48" y="121" fill="#ffffff" font-size="58" font-weight="700">FSP Career</text>
+    <text x="52" y="170" fill="#ffffff" font-size="29">Навыки → возможности</text>
+    <text x="52" y="222" fill="#e4c8f0" font-size="17">Оценка навыков · Категории · Объяснимый подбор</text>
+    <g fill="#ffffff" fill-opacity=".08" stroke="#ffffff" stroke-opacity=".22">
+      <rect x="780" y="69" width="120" height="148" rx="12"/>
+      <rect x="930" y="69" width="120" height="148" rx="12"/>
+      <rect x="1080" y="69" width="120" height="148" rx="12"/>
+    </g>
+    <g fill="none" stroke="#ffd4e7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M903 143h24m126 0h24"/>
+      <circle cx="840" cy="117" r="12"/>
+      <path d="M819 151v-5c0-11 9-20 21-20s21 9 21 20v5"/>
+      <circle cx="990" cy="128" r="24"/>
+      <path d="m978 128 9 9 17-19"/>
+      <circle cx="1136" cy="123" r="17"/>
+      <path d="m1149 137 14 14m-32-35h9m-9 8h5"/>
+    </g>
+    <g fill="#ffffff" font-size="16" text-anchor="middle">
+      <text x="840" y="187">Профиль</text>
+      <text x="990" y="187">Оценка</text>
+      <text x="1140" y="187">Подбор</text>
+    </g>
+  </g>
+</svg>

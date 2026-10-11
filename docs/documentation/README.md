@@ -1,7 +1,9 @@
 # Техническая документация FSP Career
 
-Готовый документ: [`../FSP-Career-documentation.pdf`](../FSP-Career-documentation.pdf).
-Редактируемый исходник: [`project.typ`](project.typ).
+[← Документация](../README.md) · [О проекте](../../README.md)
+
+**Готовый документ:** [техническая документация PDF](../FSP-Career-documentation.pdf).
+**Редактируемый исходник:** [project.typ](project.typ).
 
 Документ описывает текущий код приложения: архитектуру и слои, модель PostgreSQL,
 авторизацию, профили и PDF-резюме, CAT/IRT-оценку и пересдачи, ранжирование, приглашения,
@@ -33,13 +35,14 @@ nix shell nixpkgs#typst --command bash docs/documentation/build.sh
 и ревизия исходного кода. Для повторной сборки с одинаковыми значениями:
 
 ```sh
-DOC_DATE=2026-10-11 DOC_REVISION=<source-sha> bash docs/documentation/build.sh
+DOC_DATE=2026-10-11 DOC_REVISION="<source-sha>" bash docs/documentation/build.sh
 ```
 
 После изменения бизнес-правил обновите текст `project.typ` и пересоберите PDF.
 OpenAPI является источником каталога API, а реализация Kotlin/TypeScript — источником
-описания поведения. Подробности текущего окружения находятся в `docs/homelab.md`
-и `deploy/homelab/README.md`.
+описания поведения. Подробности текущего окружения находятся в
+[руководстве по развёртыванию](../homelab.md) и
+[описании runtime-манифестов](../../deploy/homelab/README.md).
 
 ## Проверка результата
 

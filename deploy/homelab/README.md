@@ -1,13 +1,47 @@
-# Homelab runtime configuration
+# Production-манифесты FSP Career
 
-Flux reconciles `prod/data`, `prod/identity`, `prod/identity-config` and
-`prod/app` from this repository into the isolated `fsp-career` namespace.
-See `docs/homelab.md` for the platform access contract and release process.
+[← О проекте](../../README.md) · [Развёртывание](../../docs/homelab.md) ·
+[Авторизация](../../docs/authentication.md)
 
-## Email verification
+Kustomize-конфигурация приложения для namespace `fsp-career`.
+Flux читает эти файлы напрямую из репозитория и применяет их в порядке зависимостей.
 
-Native email/password registration requires email confirmation. The API uses
-the namespace-local Mailpit SMTP service:
+## Структура
+
+| Каталог | Назначение |
+| --- | --- |
+| [`prod/data`](prod/data) | Зашифрованные runtime Secrets |
+| [`prod/identity`](prod/identity) | Keycloak, realm и Mailpit |
+| [`prod/identity-config`](prod/identity-config) | Job настройки OAuth callbacks |
+| [`prod/app`](prod/app) | API/web, Services и HTTPRoutes |
+| [`prod/runtime`](prod/runtime) | Общий security context и параметры workloads |
+
+Все application-ресурсы ограничены namespace. Namespace/RBAC, NetworkPolicy,
+Flux controllers, registry access и общие Gateway-ресурсы управляются платформой.
+
+## Версии образов
+
+CI/CD публикует API, web и Keycloak в GHCR и одним promotion-коммитом закрепляет
+их digests в `prod/app/kustomization.yaml` и `prod/identity/kustomization.yaml`.
+Ручное обновление release должно сохранять согласованность всех трёх образов.
+
+Описание pipeline, доступов и отката: [развёртывание](../../docs/homelab.md).
+
+## Проверка manifests
+
+Из корня репозитория, с kubectl, Python 3 и PyYAML:
+
+```sh
+kubectl kustomize deploy/homelab/prod/app \
+  | python3 infra/deploy/validate_manifests.py
+```
+
+Аналогично проверяются `prod/data`, `prod/identity` и `prod/identity-config`.
+CI выполняет проверки всех наборов до публикации images.
+
+## Подтверждение email
+
+Локальная регистрация требует подтверждения почты. API использует namespace-local SMTP:
 
 ```dotenv
 SMTP_HOST=fsp-career-mailpit
@@ -16,19 +50,18 @@ SMTP_FROM=no-reply@brokenbrain.online
 SMTP_STARTTLS=false
 ```
 
-Mailpit is unauthenticated inside the project namespace. NetworkPolicy allows
-namespace-local SMTP; these public connection settings belong in the API
-Deployment. Messages from both the API and Keycloak are captured in the test
-inbox at `https://brokenbrain.online/mail/`. Mailpit does not forward messages
-to external inboxes, and its message store is ephemeral.
+Mailpit не требует авторизации внутри namespace; NetworkPolicy разрешает этот SMTP-трафик.
+Публичные параметры подключения заданы в [API Deployment](prod/app/api-deployment.yaml).
+Credentials БД и OAuth находятся в SOPS-шифрованных Secrets.
 
-After registration, open the confirmation link from Mailpit and press
-**Подтвердить почту**. An existing unverified account can request a new message
-with **Отправить письмо ещё раз**. Resends have a one-minute cooldown, and a new
-link replaces the old one. Creating another account with the same email is not
-necessary when the initial SMTP delivery failed.
+Письма API и Keycloak доступны в <https://brokenbrain.online/mail/>.
+Mailpit не пересылает их во внешние ящики; хранилище сообщений эфемерно.
 
-A real external SMTP provider requires its corresponding host/TLS settings,
-SOPS-encrypted credentials, and a platform-approved network egress rule for
-the provider's SMTP port. Do not use the Compose-only `mailpit` hostname in
-Kubernetes; the service here is named `fsp-career-mailpit`.
+После регистрации пользователь открывает ссылку и нажимает **«Подтвердить почту»**.
+Повторная отправка доступна через **«Отправить письмо ещё раз»** раз в минуту;
+новая ссылка заменяет старую. При первоначальном сбое доставки можно войти
+в созданный аккаунт и запросить письмо заново.
+
+Для внешнего SMTP задаются host/TLS-настройки, шифрованные credentials и соответствующий
+платформенный egress. Compose-имя `mailpit` отличается от Kubernetes-сервиса
+`fsp-career-mailpit`.

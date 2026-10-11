@@ -14,5 +14,5 @@ configMapGenerator:
   - fsp-career-realm.json
 images:
 - name: ghcr.io/06ed/fsp-career-keycloak
-  newTag: sha-0a0b91e682b514402d76bb1e2c08d75cc555e693
-  digest: sha256:75e9ebb89c0ac90c50b03ab493d1843299ab946a8368948ba26750b1dc310eb3
+  newTag: sha-9b651e050800f7daf56186e007992f82c64fc040
+  digest: sha256:2954e9c941db42349c4aa368cd0250bed69a930ab4b2b2004dfa50567047f7a1

@@ -48,6 +48,14 @@ spec:
               value: https://brokenbrain.online
             - name: API_ORIGIN
               value: https://brokenbrain.online
+            - name: SMTP_HOST
+              value: fsp-career-mailpit
+            - name: SMTP_PORT
+              value: "1025"
+            - name: SMTP_FROM
+              value: no-reply@brokenbrain.online
+            - name: SMTP_STARTTLS
+              value: "false"
             - name: KEYCLOAK_ISSUER
               value: https://brokenbrain.online/auth/realms/fsp-career
             - name: KEYCLOAK_AUDIENCE

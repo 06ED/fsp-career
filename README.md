@@ -2,7 +2,7 @@
 
 > **Документация (RU, PDF):** [`docs/FSP-Career-documentation.pdf`](docs/FSP-Career-documentation.pdf) — архитектура, механики тестирования и подбора, валидация с результатами, интеграция с ФСП, API, развёртывание. Исходники: `docs/documentation/` (`build.sh`). Демо: <https://brokenbrain.online> (логины в разделе «Обзор решения»).
 
-> **Скринкасты проекта:** [посмотреть на Яндекс Диске](https://disk.yandex.ru/d/8Kw-km6dKgXJEQ).
+> **Скринкасты проекта:** [Яндекс Диск](https://disk.yandex.ru/d/8Kw-km6dKgXJEQ) · [Google Диск](https://drive.google.com/drive/folders/1nd1SiafMHe-dXMK5UbNHw3jTvEp_fZPU?usp=sharing).
 
 A prototype of a candidate/employer matching service. The planned flow is candidate registration with verified email, survey and test responses that produce a category, followed by employer ranked search and invitations; candidate contact details must remain hidden until an invitation has been accepted. This describes the product boundary, **not a claim that every flow is implemented or production-ready**. Consult the running API's OpenAPI document and application UI for the behavior currently available.
 

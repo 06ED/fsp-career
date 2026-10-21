@@ -1,4 +1,4 @@
 creation_rules:
   - path_regex: deploy/homelab/.*\.sops\.ya?ml$
     encrypted_regex: "^(data|stringData)$"
-    age: age1nva8v4k0ss2satewyl62te3huqg4q246tdta2earj9ag686rvv2q6a4pq8,age1r3wu4l9vgxhrff3a5gckseez2rz6zjc0zevr3lvxjv06rvgy699qwmkz95
+    age: age1nva8v4k0ss2satewyl62te3huqg4q246tdta2earj9ag686rvv2q6a4pq8,age1d2y6252fs0tgh0j5qaevfy8h2wsem8pt22uu5zjy9hpgne6p048s9c80au,age1zgsx4y6g4dxm6k7pvrh6zcuqlr7zaev6rjw7g6t3r4zl76788qxq9xzq65
